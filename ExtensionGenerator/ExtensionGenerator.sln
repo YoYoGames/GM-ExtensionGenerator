@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36908.2 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "extgen", "extgen\extgen.csproj", "{C05B01E1-F797-4B37-A34F-4889B7965303}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "codegencore", "codegencore\codegencore.csproj", "{F8685793-9D75-49C6-BD53-04268E221521}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C05B01E1-F797-4B37-A34F-4889B7965303}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C05B01E1-F797-4B37-A34F-4889B7965303}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C05B01E1-F797-4B37-A34F-4889B7965303}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C05B01E1-F797-4B37-A34F-4889B7965303}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8685793-9D75-49C6-BD53-04268E221521}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8685793-9D75-49C6-BD53-04268E221521}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8685793-9D75-49C6-BD53-04268E221521}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8685793-9D75-49C6-BD53-04268E221521}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6CF2092B-00E0-4DB9-8BD4-B78DF5FD74FF}
+	EndGlobalSection
+EndGlobal
