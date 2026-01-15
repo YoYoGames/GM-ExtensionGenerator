@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace codegencore.Ir
+namespace extgen.Model
 {
     public sealed record IrFunction(string Name, IrType ReturnType, ImmutableArray<IrParameter> Parameters);
 

@@ -1,6 +1,5 @@
-﻿using extgen.Ir;
+﻿using extgen.Model;
 using extgen.Options;
-using codegencore.Ir;
 
 namespace extgen.TypeSystem.Cpp
 {

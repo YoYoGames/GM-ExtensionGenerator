@@ -1,6 +1,6 @@
-﻿using codegencore.Ir;
-using extgen.Emitters.Java;
+﻿using extgen.Emitters.Java;
 using extgen.Emitters.Utils;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem;
 

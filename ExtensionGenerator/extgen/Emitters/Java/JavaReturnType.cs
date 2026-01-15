@@ -1,6 +1,6 @@
-﻿using codegencore.Ir;
-using codegencore.Writers.Lang;
+﻿using codegencore.Writers.Lang;
 using extgen.Emitters.Utils;
+using extgen.Model;
 
 namespace extgen.Emitters.Java
 {

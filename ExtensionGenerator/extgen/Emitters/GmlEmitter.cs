@@ -1,8 +1,8 @@
-﻿using codegencore.Ir;
-using codegencore.Writers;
+﻿using codegencore.Writers;
 using codegencore.Writers.JSDoc;
 using codegencore.Writers.Lang;
-using extgen.Ir;
+using extgen.Emitters.Doc;
+using extgen.Model;
 using extgen.Options;
 using extgencore.Helpers;
 
@@ -227,10 +227,10 @@ namespace extgen.Emitters
             w.JsDoc(builder => {
                 foreach (var p in fn.Parameters)
                 {
-                    builder.Param(new ParamDoc($"_{p.Name}", DocWriter.JsDocType(p.Type)));
+                    builder.Param(new ParamDoc($"_{p.Name}", DocEmitter.JsDocType(p.Type)));
                 }
                 if (fn.ReturnType.Kind != IrTypeKind.Void)
-                    builder.Returns(DocWriter.JsDocType(fn.ReturnType));
+                    builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
             });
             w.Function(fn.Name, fn.Parameters.Select(p => $"_{p.Name}"), funcBody =>
             {

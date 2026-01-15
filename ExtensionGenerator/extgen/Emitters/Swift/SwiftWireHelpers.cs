@@ -1,7 +1,6 @@
-﻿using codegencore.Ir;
-using codegencore.Writers.Lang;
+﻿using codegencore.Writers.Lang;
 using extgen.Bridge;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem.Swift;
 

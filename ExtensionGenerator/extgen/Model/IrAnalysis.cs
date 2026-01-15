@@ -1,7 +1,4 @@
-﻿
-using codegencore.Ir;
-
-namespace extgen.Ir
+﻿namespace extgen.Model
 {
     public static class IrAnalysis
     {

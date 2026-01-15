@@ -1,5 +1,5 @@
 ﻿using extgen.Emitters.ObjcNative;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.Utils;
 

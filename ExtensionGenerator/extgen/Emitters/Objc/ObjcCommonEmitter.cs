@@ -1,9 +1,8 @@
-﻿using codegencore.Ir;
-using codegencore.Writers.Concrete;
+﻿using codegencore.Writers.Concrete;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Objc;
 using extgen.Emitters.Utils;
-using extgen.Ir;
+using extgen.Model;
 using extgen.TypeSystem;
 using extgen.Utils;
 using System.Text;

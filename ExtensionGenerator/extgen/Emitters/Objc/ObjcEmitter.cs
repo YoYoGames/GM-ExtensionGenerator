@@ -1,5 +1,5 @@
 ﻿using extgen.Bridge.Objc;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem.Objc;
 

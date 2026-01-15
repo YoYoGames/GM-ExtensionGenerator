@@ -1,7 +1,7 @@
 ﻿using extgencore.Helpers;
 using System.Collections.Immutable;
 
-namespace codegencore.Ir
+namespace extgen.Model
 {
     public sealed record IrType(
         IrTypeKind Kind,

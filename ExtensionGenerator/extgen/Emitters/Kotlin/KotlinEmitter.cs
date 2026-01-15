@@ -1,9 +1,8 @@
-﻿using codegencore.Ir;
-using codegencore.Writers;
+﻿using codegencore.Writers;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Kotlin;
 using extgen.Emitters.Java;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem.Java;
 using extgen.TypeSystem.Kotlin;

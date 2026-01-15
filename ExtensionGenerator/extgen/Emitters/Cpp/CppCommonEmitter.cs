@@ -1,6 +1,5 @@
-﻿using codegencore.Ir;
-using codegencore.Writers.Lang;
-using extgen.Ir;
+﻿using codegencore.Writers.Lang;
+using extgen.Model;
 using extgen.TypeSystem.Cpp;
 using System.Collections.Immutable;
 

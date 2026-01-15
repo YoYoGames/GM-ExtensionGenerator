@@ -1,4 +1,4 @@
-﻿using codegencore.Ir;
+﻿using extgen.Model;
 
 namespace extgen.TypeSystem
 {

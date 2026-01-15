@@ -1,8 +1,7 @@
-﻿using codegencore.Ir;
-using codegencore.Writers;
+﻿using codegencore.Writers;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Java;
-using extgen.Ir;
+using extgen.Model;
 using extgen.TypeSystem.Java;
 using extgen.Utils;
 using System.Text;

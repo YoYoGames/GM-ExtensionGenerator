@@ -1,6 +1,4 @@
-﻿using codegencore.Ir;
-
-namespace extgen.Ir
+﻿namespace extgen.Model
 {
     internal static class IrHelpers
     {

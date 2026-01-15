@@ -1,4 +1,4 @@
-﻿namespace codegencore.Ir
+﻿namespace extgen.Model
 {
     public sealed record IrField(
         string Name,

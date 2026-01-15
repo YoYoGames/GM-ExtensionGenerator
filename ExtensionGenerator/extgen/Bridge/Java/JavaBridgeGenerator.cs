@@ -1,9 +1,8 @@
 ﻿// Bridge/Java/JavaBridgeBase.cs
-using codegencore.Ir;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Java;
 using extgen.Emitters.Utils;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem;
 using System.Collections.Immutable;

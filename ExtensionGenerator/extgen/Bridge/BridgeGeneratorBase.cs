@@ -1,5 +1,5 @@
-﻿using codegencore.Ir;
-using extgen.Emitters.Utils;
+﻿using extgen.Emitters.Utils;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem;
 using System.Collections.Immutable;

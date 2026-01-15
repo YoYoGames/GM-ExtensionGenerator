@@ -1,5 +1,4 @@
-﻿using extgen.Ir;
-using codegencore.Ir;
+﻿using extgen.Model;
 
 namespace extgen.TypeSystem.Java
 {

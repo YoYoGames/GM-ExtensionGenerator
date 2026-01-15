@@ -9,7 +9,7 @@ using extgen.Emitters.Objc;
 using extgen.Emitters.ObjcNative;
 using extgen.Emitters.Swift;
 using extgen.Emitters.Yy;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.Parsing.Gmidl;
 using NDesk.Options;

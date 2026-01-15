@@ -1,7 +1,6 @@
-﻿using codegencore.Ir;
-using codegencore.Writers.Lang;
+﻿using codegencore.Writers.Lang;
 using extgen.Emitters.Objc;
-using extgen.Ir;
+using extgen.Model;
 using extgen.TypeSystem;
 using extgen.TypeSystem.Cpp;
 

@@ -1,5 +1,4 @@
-﻿using codegencore.Ir;
-using extgen.Ir;
+﻿using extgen.Model;
 using System.Collections.Immutable;
 
 namespace extgen.Parsing.Validation

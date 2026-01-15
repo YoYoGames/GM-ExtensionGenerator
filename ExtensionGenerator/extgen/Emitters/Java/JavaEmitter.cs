@@ -1,5 +1,5 @@
 ﻿using extgen.Bridge.Java;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem.Java;
 

@@ -1,6 +1,5 @@
-﻿using codegencore.Ir;
-using codegencore.Writers.Lang;
-using extgen.Ir;
+﻿using codegencore.Writers.Lang;
+using extgen.Model;
 using extgen.Options;
 
 namespace extgen.Emitters.Utils

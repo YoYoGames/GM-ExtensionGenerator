@@ -1,7 +1,6 @@
-﻿using codegencore.Ir;
-using codegencore.Writers;
+﻿using codegencore.Writers;
 using codegencore.Writers.Concrete;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using System.Collections.Immutable;
 using System.Text;
@@ -17,8 +16,7 @@ namespace extgen.Emitters.Doc
 
             WriteFileDoc(layout.OutputDir, $"documentation.js", w => EmitAll(w, comp));
         }
-
-        private static void WriteFileDoc(string dir, string name, Action<DocWriter> emit)
+        private static void WriteFileDoc(string dir, string name, Action<DocWriter> emit) 
         {
             Directory.CreateDirectory(dir);
             using var tw = new StreamWriter(Path.Combine(dir, name), false, new UTF8Encoding(false));
@@ -51,9 +49,9 @@ namespace extgen.Emitters.Doc
                     spec.Tag("function_partial", f.Name);
                     foreach (var p in f.Parameters)
                     {
-                        spec.Param(new(p.Name, DocWriter.JsDocType(p.Type), null, p.Type.IsNullable));
+                        spec.Param(new(p.Name, JsDocType(p.Type), null, p.Type.IsNullable));
                     }
-                    if (f.ReturnType.Kind != IrTypeKind.Void) spec.Returns(DocWriter.JsDocType(f.ReturnType));
+                    if (f.ReturnType.Kind != IrTypeKind.Void) spec.Returns(JsDocType(f.ReturnType));
                     spec.Tag("function_end");
                 });
                 w.Line();
@@ -69,7 +67,7 @@ namespace extgen.Emitters.Doc
                     spec.Tag("struct_partial", s.Name);
                     foreach (var f in s.Fields)
                     {
-                        spec.Member(new(f.Name, DocWriter.JsDocType(f.Type), null, f.Type.IsNullable));
+                        spec.Member(new(f.Name, JsDocType(f.Type), null, f.Type.IsNullable));
                     }
                     spec.Tag("struct_end");
                 });
@@ -86,7 +84,7 @@ namespace extgen.Emitters.Doc
                     spec.Tag("enum_partial", e.Name);
                     foreach (var m in e.Members)
                     {
-                        spec.Member(new(m.Name, DocWriter.JsDocType(e.Underlying)));
+                        spec.Member(new(m.Name, JsDocType(e.Underlying)));
                     }
                     spec.Tag("enum_end");
                 });
@@ -96,6 +94,32 @@ namespace extgen.Emitters.Doc
 
         private static void EmitConstants(DocWriter w, ImmutableArray<IrConstant> constants)
         {
+        }
+
+        public static string JsDocType(IrType t)
+        {
+            if (t.IsCollection)
+            {
+                var inner = t with { IsCollection = false };
+                return $"Array[{JsDocType(inner)}]";
+            }
+
+            return t.Kind switch
+            {
+                IrTypeKind.Scalar when t.Name == "bool" => "Bool",
+                IrTypeKind.Scalar when t.IsNumericScalar => "Real",
+                IrTypeKind.Scalar when t.IsStringScalar => "String",
+                IrTypeKind.Scalar => "Real",
+                IrTypeKind.AnyArray => "Array",
+                IrTypeKind.AnyMap => "Struct",
+                IrTypeKind.Function => $"Function",
+                IrTypeKind.Buffer => $"Id.Buffer",
+                IrTypeKind.Struct => $"Struct.{t.Name}",
+                IrTypeKind.Enum => $"Enum.{t.Name}",
+                IrTypeKind.Variant => "Any",
+                IrTypeKind.Void => throw new NotImplementedException(),
+                _ => throw new NotImplementedException($"JSDoc conversion not implemented for type: {t}"),
+            };
         }
     }
 }

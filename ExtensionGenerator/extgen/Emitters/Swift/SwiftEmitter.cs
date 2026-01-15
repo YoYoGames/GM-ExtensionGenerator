@@ -1,10 +1,9 @@
-using codegencore.Ir;
 using codegencore.Writers.Concrete;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Swift;
 using extgen.Emitters.Objc;
 using extgen.Emitters.Utils;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.TypeSystem.Cpp;
 using extgen.TypeSystem.Swift;

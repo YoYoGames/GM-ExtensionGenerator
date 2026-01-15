@@ -1,5 +1,4 @@
-﻿using codegencore.Ir;
-using extgen.Ir;
+﻿using extgen.Model;
 using extgen.Options;
 using System.Text;
 using System.Text.Json;

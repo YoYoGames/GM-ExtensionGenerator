@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace codegencore.Ir
+namespace extgen.Model
 {
     public sealed record IrStruct(string Name, ImmutableArray<IrField> Fields, string? Description = null);
 }

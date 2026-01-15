@@ -1,9 +1,8 @@
-﻿using codegencore.Ir;
-using codegencore.Writers;
+﻿using codegencore.Writers;
 using codegencore.Writers.Concrete;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Utils;
-using extgen.Ir;
+using extgen.Model;
 using extgen.Options;
 using extgen.Utils;
 using System.Security.Cryptography;
