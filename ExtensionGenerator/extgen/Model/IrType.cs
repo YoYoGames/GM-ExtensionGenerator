@@ -20,6 +20,8 @@ namespace extgen.Model
         public static readonly IrType UInt32 = new (IrTypeKind.Scalar, "uint32");
         public static readonly IrType Int64 = new (IrTypeKind.Scalar, "int64");
         public static readonly IrType UInt64 = new (IrTypeKind.Scalar, "uint64");
+        public static readonly IrType Int8 = new (IrTypeKind.Scalar, "int8");
+        public static readonly IrType UInt8 = new (IrTypeKind.Scalar, "uint8");
         public static readonly IrType Bool = new (IrTypeKind.Scalar, "bool");
         public static readonly IrType Buffer = new (IrTypeKind.Buffer, "bool");
 

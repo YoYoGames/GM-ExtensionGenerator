@@ -194,16 +194,18 @@ namespace extgen.Parsing.Gmidl
 
             IrType ResolveFromHint(string hint, bool isOpt, bool isColl, int? len)
             {
+                if (hint.Equals("uint8", StringComparison.OrdinalIgnoreCase))
+                    return IrType.UInt8 with { IsNullable = isOpt, IsCollection = isColl, FixedLength = len };
+
+                if (hint.Equals("int8", StringComparison.OrdinalIgnoreCase))
+                    return IrType.Int8 with { IsNullable = isOpt, IsCollection = isColl, FixedLength = len };
+
                 if (hint.Equals("uint64", StringComparison.OrdinalIgnoreCase))
                     return IrType.UInt64 with { IsNullable = isOpt, IsCollection = isColl, FixedLength = len };
 
                 // builtin keywords that are not in GMIDLPrimitive mapping, if any:
                 if (hint.Equals("buffer", StringComparison.OrdinalIgnoreCase))
                     return IrType.Buffer with { IsNullable = isOpt, IsCollection = isColl, FixedLength = len };
-
-                if (hint.Equals("func", StringComparison.OrdinalIgnoreCase) ||
-                    hint.Equals("function", StringComparison.OrdinalIgnoreCase))
-                    return IrType.Function with { IsNullable = isOpt, IsCollection = isColl, FixedLength = len };
 
                 // named types (enum/struct)
                 return ResolveNamed(hint, isOpt, isColl, len);
