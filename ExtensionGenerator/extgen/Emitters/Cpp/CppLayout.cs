@@ -14,8 +14,6 @@ namespace extgen.Emitters.Cpp
             CodeGenDir = Path.GetFullPath(Path.Combine($"./code_gen/native"), root);
             SourceDir = Path.GetFullPath(Path.Combine($"./src/{options.UserImplOutputFolder}"), root);
 
-            Directory.Delete(CodeGenDir, true);
-
             Directory.CreateDirectory(CodeGenDir);
             Directory.CreateDirectory(SourceDir);
         }
