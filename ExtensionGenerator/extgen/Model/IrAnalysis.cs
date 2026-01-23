@@ -15,6 +15,13 @@
                 // non‑directable
                 return false;
             }
+
+            if (NeedsRetBuffer(fn)) 
+            {
+                hasString = true;
+                directCount+=2;
+            }
+
             //  now validate meta‑rules
             if (directCount > 4 && hasString) return false;          // char* not allowed when >4 args
             if (directCount > 16) return false;          // engine hard‑limit
