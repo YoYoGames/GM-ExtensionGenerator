@@ -1,6 +1,4 @@
-﻿using codegencore.Writers;
-using codegencore.Writers.Concrete;
-using codegencore.Writers.Lang;
+﻿using codegencore.Writers.Lang;
 using extgen.Emitters.Utils;
 using extgen.Model;
 using extgen.Options;
@@ -264,7 +262,7 @@ namespace extgen.Emitters.Jni
             .Include("cstddef")
             .Include("algorithm")
             .Include("string")
-            .Include($"{ctx.ExtName}Internal.h", false)
+            .Include($"native/{ctx.ExtName}Internal_native.h", false)
             .Line()
             .Lines($$"""
                 // Per-library globals
