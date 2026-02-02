@@ -97,7 +97,7 @@
 
 
     {
-      "name": "ios-package-release",
+      "name": "ios-xcframework-release",
       "displayName": "iOS XCFramework (Release)",
       "hidden": ${EXTGEN_IOS_DISABLED},
       "inherits": "macos-release",
@@ -105,11 +105,11 @@
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "iOS",
         "EXT_APPLE_PACKAGE_CONFIG": "Release",
-        "EXT_IOS_AS_FRAMEWORK": "OFF"
+        "EXT_APPLE_NATIVE_FRAMEWORK": "OFF"
       }
     },
     {
-      "name": "ios-package-debug",
+      "name": "ios-xcframework-debug",
       "displayName": "iOS XCFramework (Debug)",
       "hidden": ${EXTGEN_IOS_DISABLED},
       "inherits": "macos-debug",
@@ -117,11 +117,37 @@
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "iOS",
         "EXT_APPLE_PACKAGE_CONFIG": "Debug",
-        "EXT_IOS_AS_FRAMEWORK": "OFF"
+        "EXT_APPLE_NATIVE_FRAMEWORK": "OFF"
+      }
+    },
+
+    {
+      "name": "ios-xcframework-native-release",
+      "displayName": "iOS XCFramework Native (Release)",
+      "hidden": ${EXTGEN_IOS_NATIVE_DISABLED},
+      "inherits": "macos-release",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "iOS",
+        "EXT_APPLE_PACKAGE_CONFIG": "Release",
+        "EXT_APPLE_NATIVE_FRAMEWORK": "ON"
       }
     },
     {
-      "name": "tvos-package-release",
+      "name": "ios-xcframework-native-debug",
+      "displayName": "iOS XCFramework Native (Debug)",
+      "hidden": ${EXTGEN_IOS_NATIVE_DISABLED},
+      "inherits": "macos-debug",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "iOS",
+        "EXT_APPLE_PACKAGE_CONFIG": "Debug",
+        "EXT_APPLE_NATIVE_FRAMEWORK": "ON"
+      }
+    },
+
+    {
+      "name": "tvos-xcframework-release",
       "displayName": "tvOS XCFramework (Release)",
       "hidden": ${EXTGEN_TVOS_DISABLED},
       "inherits": "macos-release",
@@ -129,11 +155,11 @@
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "tvOS",
         "EXT_APPLE_PACKAGE_CONFIG": "Release",
-        "EXT_TVOS_AS_FRAMEWORK": "OFF"
+        "EXT_APPLE_NATIVE_FRAMEWORK": "OFF"
       }
     },
     {
-      "name": "tvos-package-debug",
+      "name": "tvos-xcframework-debug",
       "displayName": "tvOS XCFramework (Debug)",
       "hidden": ${EXTGEN_TVOS_DISABLED},
       "inherits": "macos-debug",
@@ -141,61 +167,32 @@
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "tvOS",
         "EXT_APPLE_PACKAGE_CONFIG": "Debug",
-        "EXT_TVOS_AS_FRAMEWORK": "OFF"
+        "EXT_APPLE_NATIVE_FRAMEWORK": "OFF"
       }
     },
 
-
     {
-      "name": "ios-native-framework-release",
-      "displayName": "iOS Native Framework (Release)",
-      "hidden": ${EXTGEN_IOS_NATIVE_DISABLED},
-      "inherits": "macos-release",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
-      "cacheVariables": {
-        "CMAKE_SYSTEM_NAME": "iOS",
-        "EXT_APPLE_NATIVE_FRAMEWORK": "ON",
-        "EXT_IOS_AS_FRAMEWORK": "ON",
-        "EXT_APPLE_PACKAGE_CONFIG": "Release"
-      }
-    },
-    {
-      "name": "ios-native-framework-debug",
-      "displayName": "iOS Native Framework (Debug)",
-      "hidden": ${EXTGEN_IOS_NATIVE_DISABLED},
-      "inherits": "macos-debug",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
-      "cacheVariables": {
-        "CMAKE_SYSTEM_NAME": "iOS",
-        "EXT_APPLE_NATIVE_FRAMEWORK": "ON",
-        "EXT_IOS_AS_FRAMEWORK": "ON",
-        "EXT_APPLE_PACKAGE_CONFIG": "Debug"
-      }
-    },
-    {
-      "name": "tvos-native-framework-release",
-      "displayName": "tvOS Native Framework (Release)",
+      "name": "tvos-xcframework-native-release",
+      "displayName": "tvOS XCFramework Native (Release)",
       "hidden": ${EXTGEN_TVOS_NATIVE_DISABLED},
       "inherits": "macos-release",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "tvOS",
-        "EXT_APPLE_NATIVE_FRAMEWORK": "ON",
-        "EXT_TVOS_AS_FRAMEWORK": "ON",
-        "EXT_APPLE_PACKAGE_CONFIG": "Release"
+        "EXT_APPLE_PACKAGE_CONFIG": "Release",
+        "EXT_APPLE_NATIVE_FRAMEWORK": "ON"
       }
     },
     {
-      "name": "tvos-native-framework-debug",
-      "displayName": "tvOS Native Framework (Debug)",
+      "name": "tvos-xcframework-native-debug",
+      "displayName": "tvOS XCFramework Native (Debug)",
       "hidden": ${EXTGEN_TVOS_NATIVE_DISABLED},
       "inherits": "macos-debug",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "tvOS",
-        "EXT_APPLE_NATIVE_FRAMEWORK": "ON",
-        "EXT_TVOS_AS_FRAMEWORK": "ON",
-        "EXT_APPLE_PACKAGE_CONFIG": "Debug"
+        "EXT_APPLE_PACKAGE_CONFIG": "Debug",
+        "EXT_APPLE_NATIVE_FRAMEWORK": "ON"
       }
     },
 
@@ -242,7 +239,7 @@
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "Android",
         "ANDROID_PLATFORM": "21",
-        "ANDROID_STL": "c++_shared",
+        "ANDROID_STL": "c++_static",
         "BUILD_SHARED_LIBS": "ON",
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -255,7 +252,7 @@
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "Android",
         "ANDROID_PLATFORM": "21",
-        "ANDROID_STL": "c++_shared",
+        "ANDROID_STL": "c++_static",
         "BUILD_SHARED_LIBS": "ON",
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -531,46 +528,51 @@
     {
       "name": "ios-xcframework-release",
       "displayName": "Build iOS XCFramework (Release)",
-      "configurePreset": "ios-package-release",
+      "configurePreset": "ios-xcframework-release",
       "targets": [ "package_ios_xcframework" ]
     },
     {
       "name": "ios-xcframework-debug",
       "displayName": "Build iOS XCFramework (Debug)",
-      "configurePreset": "ios-package-debug",
+      "configurePreset": "ios-xcframework-debug",
       "targets": [ "package_ios_xcframework" ]
     },
     {
+      "name": "ios-xcframework-native-release",
+      "displayName": "Build iOS XCFramework Native (Release)",
+      "configurePreset": "ios-xcframework-native-release",
+      "targets": [ "package_ios_xcframework" ]
+    },
+    {
+      "name": "ios-xcframework-native-debug",
+      "displayName": "Build iOS XCFramework Native (Debug)",
+      "configurePreset": "ios-xcframework-native-debug",
+      "targets": [ "package_ios_xcframework" ]
+    },
+
+    {
       "name": "tvos-xcframework-release",
       "displayName": "Build tvOS XCFramework (Release)",
-      "configurePreset": "tvos-package-release",
+      "configurePreset": "tvos-xcframework-release",
       "targets": [ "package_tvos_xcframework" ]
     },
     {
       "name": "tvos-xcframework-debug",
       "displayName": "Build tvOS XCFramework (Debug)",
-      "configurePreset": "tvos-package-debug",
+      "configurePreset": "tvos-xcframework-debug",
       "targets": [ "package_tvos_xcframework" ]
     },
     {
-      "name": "ios-native-framework-release",
-      "displayName": "Build iOS Native Framework (Release)",
-      "configurePreset": "ios-native-framework-release"
+      "name": "tvos-xcframework-native-release",
+      "displayName": "Build tvOS XCFramework Native (Release)",
+      "configurePreset": "tvos-xcframework-native-release",
+      "targets": [ "package_tvos_xcframework" ]
     },
     {
-      "name": "ios-native-framework-debug",
-      "displayName": "Build iOS Native Framework (Debug)",
-      "configurePreset": "ios-native-framework-debug"
-    },
-    {
-      "name": "tvos-native-framework-release",
-      "displayName": "Build tvOS Native Framework (Release)",
-      "configurePreset": "tvos-native-framework-release"
-    },
-    {
-      "name": "tvos-native-framework-debug",
-      "displayName": "Build tvOS Native Framework (Debug)",
-      "configurePreset": "tvos-native-framework-debug"
+      "name": "tvos-xcframework-native-debug",
+      "displayName": "Build tvOS XCFramework Native (Debug)",
+      "configurePreset": "tvos-xcframework-native-debug",
+      "targets": [ "package_tvos_xcframework" ]
     }
   ]
 }

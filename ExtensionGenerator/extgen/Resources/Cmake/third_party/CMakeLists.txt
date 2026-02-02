@@ -117,87 +117,22 @@ if(WIN32)
       $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:${SDK_WIN_DLL_RELEASE}>
     )
   endif()
-endif()
-
 # =============================================================================
 # APPLE: split macOS vs iOS/tvOS
 # =============================================================================
-if(APPLE)
-  # Detect the Apple SDK in use
-  set(_IS_IOS FALSE)
-  set(_IS_TVOS FALSE)
-  set(_IS_MACOS FALSE)
-  if(CMAKE_OSX_SYSROOT MATCHES "iphone") # iphoneos / iphonesimulator
-    set(_IS_IOS TRUE)
-  elseif(CMAKE_OSX_SYSROOT MATCHES "appletv") # appletvos / appletvsimulator
-    set(_IS_TVOS TRUE)
-  else()
-    # Default to macOS for other Apple SDKs (macosx)
-    set(_IS_MACOS TRUE)
-  endif()
-
-  # ----------------------
-  # macOS (desktop)
-  # ----------------------
-  if(_IS_MACOS)
-    # Choose either a macOS .dylib or a (XC)Framework
-    option(EXT_TP_MAC_USE_DYLIB "macOS: link prebuilt .dylib" OFF)
-    option(EXT_TP_MAC_USE_FRAMEWORK
-           "macOS: link Framework/XCFramework via -F/-framework" OFF)
-
-    if(EXT_TP_MAC_USE_DYLIB)
-      set(SDK_MAC_DYLIB_DEBUG
-          "${SDK_ROOT}/lib/debug/lib${SDK_BASENAME}.dylib"
-          CACHE FILEPATH "macOS .dylib (Debug)")
-      set(SDK_MAC_DYLIB_RELEASE
-          "${SDK_ROOT}/lib/release/lib${SDK_BASENAME}.dylib"
-          CACHE FILEPATH "macOS .dylib (Release)")
-
-      add_library(${SDK_BASENAME}_mac_dylib SHARED IMPORTED GLOBAL)
-      set_target_properties(
-        ${SDK_BASENAME}_mac_dylib
-        PROPERTIES
-          IMPORTED_CONFIGURATIONS "Debug;Release"
-          IMPORTED_LOCATION_DEBUG "${SDK_MAC_DYLIB_DEBUG}"
-          IMPORTED_LOCATION_RELEASE "${SDK_MAC_DYLIB_RELEASE}"
-          MAP_IMPORTED_CONFIG_RELWITHDEBINFO "${_MAP_REL_CONFIGS}"
-          MAP_IMPORTED_CONFIG_MINSIZEREL "${_MAP_REL_CONFIGS}"
-          INTERFACE_INCLUDE_DIRECTORIES
-          "$<TARGET_PROPERTY:ext_third_party,INTERFACE_INCLUDE_DIRECTORIES>")
-      target_link_libraries(ext_third_party INTERFACE ${SDK_BASENAME}_mac_dylib)
-
-      _ext_tp_append_runtime(
-        $<$<CONFIG:Debug>:${SDK_MAC_DYLIB_DEBUG}>
-        $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:${SDK_MAC_DYLIB_RELEASE}>
-      )
-    endif()
-
-    if(EXT_TP_MAC_USE_FRAMEWORK)
-      set(SDK_MAC_FRAMEWORK_DIR
-          "${SDK_ROOT}/lib/macos"
-          CACHE PATH "macOS -F search path to (XC)Framework")
-      set(SDK_MAC_FRAMEWORK_NAME
-          "DiscordPartnerSDK"
-          CACHE STRING "macOS framework name (without .framework)")
-      target_link_options(
-        ext_third_party INTERFACE "-F${SDK_MAC_FRAMEWORK_DIR}" "-framework"
-        "${SDK_MAC_FRAMEWORK_NAME}")
-      # Optional extra frameworks: target_link_options(ext_third_party INTERFACE
-      # "-framework" "Cocoa" "-framework" "IOKit")
-    endif()
-  endif() # macOS
+elseif(APPLE)
 
   # ----------------------
   # iOS / tvOS (mobile)
   # ----------------------
-  if(_IS_IOS OR _IS_TVOS)
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "tvOS")
     # Choose either xcframework/framework or static .a for mobile
     option(EXT_TP_IOS_USE_XCFRAMEWORK
            "iOS/tvOS: link (XC)Framework via -F/-framework" OFF)
     option(EXT_TP_IOS_USE_STATIC "iOS/tvOS: link static .a" OFF)
 
     # Common defaults; feel free to tweak
-    if(_IS_IOS)
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
       set(_PLAT_NAME "ios")
       set(_IOS_FRAME_DIR_DEFAULT
           "${SDK_ROOT}/lib/release/discord_partner_sdk.xcframework"
@@ -257,67 +192,62 @@ if(APPLE)
       # target_link_options(ext_third_party INTERFACE "-framework" "Foundation"
       # "-framework" "Security")
     endif()
-  endif() # iOS/tvOS
-endif() # APPLE
 
-# =============================================================================
-# LINUX (shared .so or static .a)
-# =============================================================================
-if(UNIX
-   AND NOT APPLE
-   AND NOT ANDROID)
-  option(EXT_TP_LINUX_USE_SHARED "Link prebuilt .so on Linux" OFF)
-  option(EXT_TP_LINUX_USE_STATIC "Link prebuilt .a (and system libs)" OFF)
+  # ----------------------
+  # macOS (desktop)
+  # ----------------------
+  else()
+    # Choose either a macOS .dylib or a (XC)Framework
+    option(EXT_TP_MAC_USE_DYLIB "macOS: link prebuilt .dylib" OFF)
+    option(EXT_TP_MAC_USE_FRAMEWORK
+           "macOS: link Framework/XCFramework via -F/-framework" OFF)
 
-  if(EXT_TP_LINUX_USE_SHARED)
-    set(SDK_LNX_SO_DEBUG
-        "${SDK_ROOT}/lib/debug/lib${SDK_BASENAME}.so"
-        CACHE FILEPATH "Linux .so (Debug)")
-    set(SDK_LNX_SO_RELEASE
-        "${SDK_ROOT}/lib/release/lib${SDK_BASENAME}.so"
-        CACHE FILEPATH "Linux .so (Release)")
+    if(EXT_TP_MAC_USE_DYLIB)
+      set(SDK_MAC_DYLIB_DEBUG
+          "${SDK_ROOT}/lib/debug/lib${SDK_BASENAME}.dylib"
+          CACHE FILEPATH "macOS .dylib (Debug)")
+      set(SDK_MAC_DYLIB_RELEASE
+          "${SDK_ROOT}/lib/release/lib${SDK_BASENAME}.dylib"
+          CACHE FILEPATH "macOS .dylib (Release)")
 
-    add_library(${SDK_BASENAME}_linux_so SHARED IMPORTED GLOBAL)
-    set_target_properties(
-      ${SDK_BASENAME}_linux_so
-      PROPERTIES
-        IMPORTED_CONFIGURATIONS "Debug;Release"
-        IMPORTED_LOCATION_DEBUG "${SDK_LNX_SO_DEBUG}"
-        IMPORTED_LOCATION_RELEASE "${SDK_LNX_SO_RELEASE}"
-        MAP_IMPORTED_CONFIG_RELWITHDEBINFO "${_MAP_REL_CONFIGS}"
-        MAP_IMPORTED_CONFIG_MINSIZEREL "${_MAP_REL_CONFIGS}"
-        INTERFACE_INCLUDE_DIRECTORIES
-        "$<TARGET_PROPERTY:ext_third_party,INTERFACE_INCLUDE_DIRECTORIES>")
-    target_link_libraries(ext_third_party INTERFACE ${SDK_BASENAME}_linux_so)
+      add_library(${SDK_BASENAME}_mac_dylib SHARED IMPORTED GLOBAL)
+      set_target_properties(
+        ${SDK_BASENAME}_mac_dylib
+        PROPERTIES
+          IMPORTED_CONFIGURATIONS "Debug;Release"
+          IMPORTED_LOCATION_DEBUG "${SDK_MAC_DYLIB_DEBUG}"
+          IMPORTED_LOCATION_RELEASE "${SDK_MAC_DYLIB_RELEASE}"
+          MAP_IMPORTED_CONFIG_RELWITHDEBINFO "${_MAP_REL_CONFIGS}"
+          MAP_IMPORTED_CONFIG_MINSIZEREL "${_MAP_REL_CONFIGS}"
+          INTERFACE_INCLUDE_DIRECTORIES
+          "$<TARGET_PROPERTY:ext_third_party,INTERFACE_INCLUDE_DIRECTORIES>")
+      target_link_libraries(ext_third_party INTERFACE ${SDK_BASENAME}_mac_dylib)
 
-    _ext_tp_append_runtime(
-      $<$<CONFIG:Debug>:${SDK_LNX_SO_DEBUG}>
-      $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:${SDK_LNX_SO_RELEASE}>
-    )
-  endif()
+      _ext_tp_append_runtime(
+        $<$<CONFIG:Debug>:${SDK_MAC_DYLIB_DEBUG}>
+        $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:${SDK_MAC_DYLIB_RELEASE}>
+      )
+    endif()
 
-  if(EXT_TP_LINUX_USE_STATIC)
-    set(SDK_LNX_STATIC_A
-        "${SDK_ROOT}/lib/linux/x86_64/lib${SDK_BASENAME}.a"
-        CACHE FILEPATH "Linux static .a")
-    add_library(${SDK_BASENAME}_linux_static STATIC IMPORTED GLOBAL)
-    set_target_properties(
-      ${SDK_BASENAME}_linux_static
-      PROPERTIES
-        IMPORTED_LOCATION "${SDK_LNX_STATIC_A}"
-        INTERFACE_INCLUDE_DIRECTORIES
-        "$<TARGET_PROPERTY:ext_third_party,INTERFACE_INCLUDE_DIRECTORIES>")
-    # Link typical system libs (uncomment as needed)
-    # target_link_libraries(${SDK_BASENAME}_linux_static INTERFACE pthread dl)
-    target_link_libraries(ext_third_party
-                          INTERFACE ${SDK_BASENAME}_linux_static)
-  endif()
-endif()
+    if(EXT_TP_MAC_USE_FRAMEWORK)
+      set(SDK_MAC_FRAMEWORK_DIR
+          "${SDK_ROOT}/lib/macos"
+          CACHE PATH "macOS -F search path to (XC)Framework")
+      set(SDK_MAC_FRAMEWORK_NAME
+          "DiscordPartnerSDK"
+          CACHE STRING "macOS framework name (without .framework)")
+      target_link_options(
+        ext_third_party INTERFACE "-F${SDK_MAC_FRAMEWORK_DIR}" "-framework"
+        "${SDK_MAC_FRAMEWORK_NAME}")
+      # Optional extra frameworks: target_link_options(ext_third_party INTERFACE
+      # "-framework" "Cocoa" "-framework" "IOKit")
+    endif()
+  endif() # macOS
 
 # =============================================================================
 # ANDROID (AAR w/ Prefab or raw per-ABI .so)
 # =============================================================================
-if(ANDROID)
+elseif(ANDROID)
   # Choose one strategy:
   option(EXT_TP_ANDROID_USE_AAR
          "Consume AAR (Prefab) and pick embedded jni/<abi> .so" OFF)
@@ -425,6 +355,56 @@ if(ANDROID)
         "[third_party] ANDROID set, but neither EXT_TP_ANDROID_USE_AAR nor EXT_TP_ANDROID_USE_RAW_SO is ON."
     )
   endif()
+# =============================================================================
+# LINUX (shared .so or static .a)
+# =============================================================================
+elseif(UNIX)
+  option(EXT_TP_LINUX_USE_SHARED "Link prebuilt .so on Linux" OFF)
+  option(EXT_TP_LINUX_USE_STATIC "Link prebuilt .a (and system libs)" OFF)
+
+  if(EXT_TP_LINUX_USE_SHARED)
+    set(SDK_LNX_SO_DEBUG
+        "${SDK_ROOT}/lib/debug/lib${SDK_BASENAME}.so"
+        CACHE FILEPATH "Linux .so (Debug)")
+    set(SDK_LNX_SO_RELEASE
+        "${SDK_ROOT}/lib/release/lib${SDK_BASENAME}.so"
+        CACHE FILEPATH "Linux .so (Release)")
+
+    add_library(${SDK_BASENAME}_linux_so SHARED IMPORTED GLOBAL)
+    set_target_properties(
+      ${SDK_BASENAME}_linux_so
+      PROPERTIES
+        IMPORTED_CONFIGURATIONS "Debug;Release"
+        IMPORTED_LOCATION_DEBUG "${SDK_LNX_SO_DEBUG}"
+        IMPORTED_LOCATION_RELEASE "${SDK_LNX_SO_RELEASE}"
+        MAP_IMPORTED_CONFIG_RELWITHDEBINFO "${_MAP_REL_CONFIGS}"
+        MAP_IMPORTED_CONFIG_MINSIZEREL "${_MAP_REL_CONFIGS}"
+        INTERFACE_INCLUDE_DIRECTORIES
+        "$<TARGET_PROPERTY:ext_third_party,INTERFACE_INCLUDE_DIRECTORIES>")
+    target_link_libraries(ext_third_party INTERFACE ${SDK_BASENAME}_linux_so)
+
+    _ext_tp_append_runtime(
+      $<$<CONFIG:Debug>:${SDK_LNX_SO_DEBUG}>
+      $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:${SDK_LNX_SO_RELEASE}>
+    )
+  endif()
+
+  if(EXT_TP_LINUX_USE_STATIC)
+    set(SDK_LNX_STATIC_A
+        "${SDK_ROOT}/lib/linux/x86_64/lib${SDK_BASENAME}.a"
+        CACHE FILEPATH "Linux static .a")
+    add_library(${SDK_BASENAME}_linux_static STATIC IMPORTED GLOBAL)
+    set_target_properties(
+      ${SDK_BASENAME}_linux_static
+      PROPERTIES
+        IMPORTED_LOCATION "${SDK_LNX_STATIC_A}"
+        INTERFACE_INCLUDE_DIRECTORIES
+        "$<TARGET_PROPERTY:ext_third_party,INTERFACE_INCLUDE_DIRECTORIES>")
+    # Link typical system libs (uncomment as needed)
+    # target_link_libraries(${SDK_BASENAME}_linux_static INTERFACE pthread dl)
+    target_link_libraries(ext_third_party
+                          INTERFACE ${SDK_BASENAME}_linux_static)
+  endif()
 endif()
 
 # =============================================================================
@@ -438,6 +418,4 @@ endif()
 # =============================================================================
 # Bubble up runtime list to parent
 # =============================================================================
-set(EXT_TP_RUNTIME_DLLS
-    "${_EXT_TP_RUNTIME_DLLS}"
-    PARENT_SCOPE)
+set(EXT_TP_RUNTIME_DLLS "${_EXT_TP_RUNTIME_DLLS}" PARENT_SCOPE)

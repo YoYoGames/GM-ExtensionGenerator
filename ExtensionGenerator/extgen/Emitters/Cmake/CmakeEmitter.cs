@@ -21,6 +21,8 @@ namespace extgen.Emitters.Cmake
 
             EmitSource(layout);
 
+            EmitScripts(layout);
+
             EmitThirdParty(layout);
 
             EmitCmakePresets(ctx, layout);
@@ -52,6 +54,12 @@ namespace extgen.Emitters.Cmake
             {
                 ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.src.CMakeLists.txt", Path.Combine(layout.SourceDir, "CMakeLists.txt"));
             }
+        }
+
+        private void EmitScripts(CmakeLayout layout)
+        {
+            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_xcframework.cmake"));
+            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_package_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_package_xcframework.cmake"));
         }
 
         private static void EmitThirdParty(CmakeLayout layout)

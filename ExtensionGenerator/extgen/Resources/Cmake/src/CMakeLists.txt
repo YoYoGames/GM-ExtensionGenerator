@@ -1,38 +1,36 @@
 set(SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 # =============================================================================
-# WINDOWS
+# Public headers for Apple XCFramework packaging
+# Users should edit these to match their project structure.
+# The packager will copy these into a headers folder passed to xcodebuild.
+# =============================================================================
+set(EXT_PUBLIC_HEADERS_IOS
+    "${CMAKE_SOURCE_DIR}/src/ios/${PROJECT_NAME}_ios.h;${CMAKE_SOURCE_DIR}/code_gen/ios/${PROJECT_NAME}Internal_ios.h"
+    CACHE STRING "Semicolon-separated list of public headers to embed in the iOS xcframework")
+
+set(EXT_PUBLIC_HEADERS_TVOS
+    "${CMAKE_SOURCE_DIR}/src/tvos/${PROJECT_NAME}_tvos.h;${CMAKE_SOURCE_DIR}/code_gen/tvos/${PROJECT_NAME}Internal_tvos.h"
+    CACHE STRING "Semicolon-separated list of public headers to embed in the tvOS xcframework")
+
+# =============================================================================
+# User implementation sources per platform (editable template)
 # =============================================================================
 if(WIN32)
   file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/native/*.cpp")
-  # =============================================================================
-  # APPLE (macOS, iOS, tvOS)
-  # =============================================================================
+
 elseif(APPLE)
-  # =============================================================================
-  # iOS
-  # =============================================================================
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/ios/*.mm")
-    # =============================================================================
-    # tvOS
-    # =============================================================================
+    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/ios/*.mm" "${SRC_DIR}/ios/*.cpp")
   elseif(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
-    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/tvos/*.mm")
-    # =============================================================================
-    # macOS
-    # =============================================================================
+    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/tvos/*.mm" "${SRC_DIR}/tvos/*.cpp")
   else()
-    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/native/*.cpp")
+    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/native/*.cpp" "${SRC_DIR}/native/*.mm")
   endif()
-  # =============================================================================
-  # ANDROID
-  # =============================================================================
+
 elseif(ANDROID)
-    file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/android/*.cpp")
-  # =============================================================================
-  # LINUX
-  # =============================================================================
+  file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/android/*.cpp")
+
 elseif(UNIX)
   file(GLOB TARGET_SRCS CONFIGURE_DEPENDS "${SRC_DIR}/native/*.cpp")
 endif()

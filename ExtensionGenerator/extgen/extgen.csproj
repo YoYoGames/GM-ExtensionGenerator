@@ -11,6 +11,8 @@
     <None Remove="Resources\Cmake\.clang-format" />
     <None Remove="Resources\Cmake\CMakeLists.txt" />
     <None Remove="Resources\Cmake\CMakePresets.json" />
+    <None Remove="Resources\Cmake\cmake\extgen_package_xcframework.cmake" />
+    <None Remove="Resources\Cmake\cmake\extgen_xcframework.cmake" />
     <None Remove="Resources\Cmake\src\CMakeLists.txt" />
     <None Remove="Resources\Cmake\third_party\CMakeLists.txt" />
     <None Remove="Resources\Cpp\GMExtUtils.cpp" />
@@ -32,6 +34,8 @@
     <EmbeddedResource Include="Resources\Cmake\CMakePresets.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Cmake\cmake\extgen_package_xcframework.cmake" />
+    <EmbeddedResource Include="Resources\Cmake\cmake\extgen_xcframework.cmake" />
     <EmbeddedResource Include="Resources\Cmake\src\CMakeLists.txt">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
