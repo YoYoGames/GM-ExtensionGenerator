@@ -126,7 +126,8 @@ namespace extgen.TypeSystem.Cpp
         private bool ShouldPassByConstRef(IrType t, bool owned)
         {
             // If it's nullable, the wrapper (std::optional<...>) is usually non-trivial.
-            if (IrType.IsNullable(t)) return false;
+            if (IrType.IsNullable(t)) 
+                t = t.NonNull();
 
             return t switch
             {
@@ -137,11 +138,11 @@ namespace extgen.TypeSystem.Cpp
                 IrType.Builtin b => b.Kind switch
                 {
                     BuiltinKind.String => owned, // std::string by ref, string_view by value
-                    BuiltinKind.Any => owned,    // streams are heavier than GMValue handles
-                    BuiltinKind.AnyArray => owned,
-                    BuiltinKind.AnyMap => owned,
+                    BuiltinKind.Any => true,    // streams are heavier than GMValue handles
+                    BuiltinKind.AnyArray => true,
+                    BuiltinKind.AnyMap => true,
                     BuiltinKind.Buffer => false,   // GMBuffer handle
-                    BuiltinKind.Function => false, // GMFunction handle
+                    BuiltinKind.Function => true, // GMFunction handle
                     _ => false
                 },
 

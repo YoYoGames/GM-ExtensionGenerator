@@ -22,7 +22,7 @@ endif()
 # The packager runs via `cmake -P` (script mode), which does NOT load the cache
 # from your configured build. Therefore, we must pass header lists explicitly.
 
-# Escape semicolons for command-line safety (so the shell / generator doesn’t split them)
+# Escape semicolons for command-line safety (so the shell / generator doesn't split them)
 set(_IOS_HDRS_ESC "")
 set(_TVOS_HDRS_ESC "")
 

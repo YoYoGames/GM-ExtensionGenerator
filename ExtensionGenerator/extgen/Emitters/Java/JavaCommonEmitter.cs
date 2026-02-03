@@ -51,7 +51,7 @@ namespace extgen.Emitters.Java
             w.Package($"{pkg}.enums").Line();
 
             // Build JavaEnumMembers with the underlying numeric literal as ctor argument
-            var members = e.Members.Select(m => new JavaEnumMember(m.Name, m.DefaultLiteral));
+            var members = e.Members.Select(m => new JavaEnumMember(m.Name, m.DefaultLiteral, null, u));
 
             w.Enum(name: e.Name, members: members, body: body =>
             {

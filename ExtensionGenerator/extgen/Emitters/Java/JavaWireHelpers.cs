@@ -324,11 +324,21 @@ namespace extgen.Emitters.Java
 
             return b.Kind switch
             {
-                BuiltinKind.Bool => "boolean",
-                BuiltinKind.Int8 or BuiltinKind.UInt8 => "byte",
-                BuiltinKind.Int16 or BuiltinKind.UInt16 => "short",
-                BuiltinKind.Int32 or BuiltinKind.UInt32 => "int",
-                BuiltinKind.Int64 or BuiltinKind.UInt64 => "long",
+                // signed
+                BuiltinKind.Int8 => "byte",
+                BuiltinKind.Int16 => "short",
+                BuiltinKind.Int32 => "int",
+
+                // unsigned -> int
+                BuiltinKind.UInt8 => "int",
+                BuiltinKind.UInt16 => "int",
+                BuiltinKind.UInt32 => "int",
+
+                // hard NO
+                BuiltinKind.Int64 or BuiltinKind.UInt64 =>
+                    throw new NotSupportedException(
+                        "Java enums cannot use 64-bit underlying types"),
+
                 _ => throw new NotSupportedException($"Invalid enum underlying type for Java: {b.Kind}")
             };
         }

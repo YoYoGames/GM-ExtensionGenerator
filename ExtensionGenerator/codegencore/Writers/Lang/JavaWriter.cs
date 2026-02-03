@@ -1,11 +1,12 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
-    public readonly record struct JavaEnumMember(string Name, string? CtorArg = null, string? Comment = null)
+    public readonly record struct JavaEnumMember(string Name, string? CtorArg = null, string? Comment = null, string? Type = null)
     {
         public string ToMemberString()
         {
-            var core = CtorArg is null ? Name : $"{Name}({CtorArg})";
+            var typeCast = string.IsNullOrEmpty(Type) ? string.Empty : $"({Type})";
+            var core = CtorArg is null ? Name : $"{Name}({typeCast}{CtorArg})";
             if (!string.IsNullOrEmpty(Comment))
                 core += $" // {Comment}";
             return core;
