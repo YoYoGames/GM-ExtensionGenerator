@@ -40,6 +40,20 @@ namespace extgen.Utils
         }
 
         // Convenience overloads so call sites stay short / nice:
+        public static void WriteGml(
+            string dir,
+            string fileName,
+            Action<GmlWriter> emit,
+            bool createDirectories = true,
+            bool emitUtf8Bom = false) => WriteFile(dir, fileName, cw => new GmlWriter(cw), emit, createDirectories, emitUtf8Bom, replace: true);
+
+        public static void WriteGmlIfMissing(
+            string dir,
+            string fileName,
+            Action<GmlWriter> emit,
+            bool createDirectories = true,
+            bool emitUtf8Bom = false) => WriteFile(dir, fileName, cw => new GmlWriter(cw), emit, createDirectories, emitUtf8Bom, replace: false);
+
         public static void WriteJava(
             string dir,
             string fileName,

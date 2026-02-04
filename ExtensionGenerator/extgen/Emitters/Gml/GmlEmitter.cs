@@ -4,16 +4,17 @@ using codegencore.Writers.JSDoc;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Doc;
 using extgen.Model;
+using extgen.Model.Utils;
 using extgen.Options;
 using extgen.Utils;
 using extgencore.Helpers;
+using System.Collections.Immutable;
 
 namespace extgen.Emitters.Gml
 {
-
-    public sealed class GmlEmitter(GmlEmitterOptions opts) : IIrEmitter
+    public sealed class GmlEmitter(GmlEmitterOptions options) : IIrEmitter
     {
-        private readonly GmlEmitterOptions _opts = opts ?? throw new ArgumentNullException(nameof(opts));
+        private readonly GmlEmitterOptions _options = options ?? throw new ArgumentNullException(nameof(options));
 
         private const string InternalArgBuffer = "__args_buffer";
         private const string InternalRetBuffer = "__ret_buffer";
@@ -27,82 +28,89 @@ namespace extgen.Emitters.Gml
 
         public void Emit(IrCompilation comp, string dir)
         {
-            dir = string.IsNullOrWhiteSpace(dir) ? Environment.CurrentDirectory : dir;
-            dir = Environment.ExpandEnvironmentVariables(dir);
+            var ctx = new GmlEmitterContext(comp.Name, _options);
+            var layout = new GmlLayout(dir, _options);
 
-            string outputFile = Environment.ExpandEnvironmentVariables(_opts.OutputFile);
-            outputFile = Path.GetFullPath(outputFile, dir);
+            var enums = new IrTypeEnumResolver(comp.Enums);
 
-            var ctx = new GmlEmitterContext(comp.Name, _opts);
-
-            if (!File.Exists(outputFile))
-                throw new ArgumentException($"GML Emitter: output file path doesn't exist ({outputFile}).");
-
-            // Update the extension core if requested
-            if (!string.IsNullOrEmpty(_opts.OutputCoreFile))
-            {
-                string outputCoreFile = Environment.ExpandEnvironmentVariables(_opts.OutputCoreFile);
-                outputCoreFile = Path.GetFullPath(outputCoreFile, dir);
-                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Gml.ext_core_api.gml", outputCoreFile);
-            }
-
-            using TextWriter textWriter = new StreamWriter(outputFile);
-            var iw = CodeWriter.From(textWriter, "    ");
-            var w = new GmlWriter(iw);
-
-            EmitGml(ctx, comp, w);
+            FileEmitHelpers.WriteGml(layout.OutputFolder, layout.OutputFile, w => EmitAll(ctx, comp, enums, w));
         }
 
         // ============================================================
         // Top-level emission
         // ============================================================
 
-        private static void EmitGml(GmlEmitterContext ctx, IrCompilation c, GmlWriter w)
+        private static void EmitAll(GmlEmitterContext ctx, IrCompilation c, IIrTypeEnumResolver enums, GmlWriter w)
         {
-            w.Line("/// Auto-generated – do not edit\n");
+            w.Comment("Auto-generated – do not edit\n");
 
-            // 0) constants
-            w.Section("Macros").Line();
-            foreach (var cst in c.Constants)
+            EmitMacros(c.Constants, w);
+            EmitEnums(c.Enums, w);
+            EmitConstructors(ctx, c.Structs, w);
+            EmitCodecs(ctx, c.Structs, enums, w);
+            EmitFunctions(ctx, c.Functions, enums, w);
+
+            EmitHandlerRegistration(c, w);
+        }
+
+        // ============================================================
+        // Higher level
+        // ============================================================
+
+        private static void EmitFunctions(GmlEmitterContext ctx, ImmutableArray<IrFunction> funcs, IIrTypeEnumResolver enums, GmlWriter w)
+        {
+            w.Section("Functions").Line();
+            foreach (var fn in funcs)
             {
-                EmitConstant(cst, w);
+                EmitWrapper(ctx, enums, fn, w);
                 w.Line();
             }
+        }
 
-            // 1) enums
-            w.Section("Enums").Line();
-            foreach (var e in c.Enums)
+        private static void EmitCodecs(GmlEmitterContext ctx, ImmutableArray<IrStruct> structs, IIrTypeEnumResolver enums, GmlWriter w)
+        {
+            w.Section("Codecs").Line();
+            foreach (var s in structs)
             {
-                EmitEnum(e, w);
+                EmitEncoder(ctx, enums, s, w);
+                w.Line();
+                EmitDecoder(ctx, enums, s, w);
                 w.Line();
             }
+        }
 
-            // 2) struct constructors
+        private static void EmitConstructors(GmlEmitterContext ctx, ImmutableArray<IrStruct> structs, GmlWriter w)
+        {
             w.Section("Constructors").Line();
-            foreach (var s in c.Structs)
+            foreach (var s in structs)
             {
                 EmitStruct(ctx, s, w);
                 w.Line();
             }
+        }
 
-            // 3) struct codecs
-            w.Section("Codecs").Line();
-            foreach (var s in c.Structs)
+        private static void EmitEnums(ImmutableArray<IrEnum> enums, GmlWriter w)
+        {
+            w.Section("Enums").Line();
+            foreach (var e in enums)
             {
-                EmitEncoder(ctx, c, s, w);
-                w.Line();
-                EmitDecoder(ctx, c, s, w);
+                EmitEnum(e, w);
                 w.Line();
             }
+        }
 
-            // 4) function wrappers
-            w.Section("Functions").Line();
-            foreach (var fn in c.Functions)
+        private static void EmitMacros(ImmutableArray<IrConstant> constants, GmlWriter w)
+        {
+            w.Section("Macros").Line();
+            foreach (var cst in constants)
             {
-                EmitWrapper(ctx, c, fn, w);
+                EmitConstant(cst, w);
                 w.Line();
             }
+        }
 
+        private static void EmitHandlerRegistration(IrCompilation c, GmlWriter w)
+        {
             // decoder registry
             w.Line("/// @ignore");
             w.Function($"__{c.Name}_get_decoders", [], funcBody =>
@@ -128,15 +136,15 @@ namespace extgen.Emitters.Gml
             }
         }
 
+        // ============================================================
+        // Lower level
+        // ============================================================
+
         private static void EmitConstant(IrConstant cst, GmlWriter w)
             => w.Line($"#macro {cst.Name} {cst.Literal}");
 
         private static void EmitEnum(IrEnum e, GmlWriter w)
             => w.Enum(e.Name, e.Members.Select(m => new EnumMember(m.Name, m.DefaultLiteral)));
-
-        // ============================================================
-        // Struct constructor
-        // ============================================================
 
         private static void EmitStruct(GmlEmitterContext ctx, IrStruct s, GmlWriter w)
         {
@@ -149,11 +157,7 @@ namespace extgen.Emitters.Gml
             });
         }
 
-        // ============================================================
-        // Struct codecs
-        // ============================================================
-
-        private static void EmitEncoder(GmlEmitterContext ctx, IrCompilation c, IrStruct s, GmlWriter w)
+        private static void EmitEncoder(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrStruct s, GmlWriter w)
         {
             const string bufferName = "_buffer";
 
@@ -175,15 +179,15 @@ namespace extgen.Emitters.Gml
                 {
                     foreach (var f in s.Fields)
                     {
-                        fn.Comment($"field: {f.Name}, type: {ToDebugString(f.Type)}");
-                        WriteValue(ctx, c, fn, f.Name, f.Type, bufferName, "_where");
+                        fn.Comment($"field: {f.Name}, type: {f.Type.ToDebugString()}");
+                        WriteValue(ctx, enums, fn, f.Name, f.Type, bufferName, "_where");
                         fn.Line();
                     }
                 });
             });
         }
 
-        private static void EmitDecoder(GmlEmitterContext ctx, IrCompilation c, IrStruct s, GmlWriter w)
+        private static void EmitDecoder(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrStruct s, GmlWriter w)
         {
             const string bufferName = "_buffer";
 
@@ -214,8 +218,8 @@ namespace extgen.Emitters.Gml
                 {
                     foreach (var f in s.Fields)
                     {
-                        fn.Comment($"field: {f.Name}, type: {ToDebugString(f.Type)}");
-                        ReadValue(c, fn, f.Name, f.Type, bufferName);
+                        fn.Comment($"field: {f.Name}, type: {f.Type.ToDebugString()}");
+                        ReadValue(enums, fn, f.Name, f.Type, bufferName);
                         fn.Line();
                     }
                 });
@@ -225,11 +229,7 @@ namespace extgen.Emitters.Gml
             });
         }
 
-        // ============================================================
-        // Function wrappers
-        // ============================================================
-
-        private static void EmitWrapper(GmlEmitterContext ctx, IrCompilation c, IrFunction fn, GmlWriter w)
+        private static void EmitWrapper(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrFunction fn, GmlWriter w)
         {
             bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
             bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
@@ -254,17 +254,17 @@ namespace extgen.Emitters.Gml
                 foreach (var p in fn.Parameters)
                     builder.Param(new ParamDoc($"_{p.Name}", DocEmitter.JsDocType(p.Type)));
 
-                if (!IsVoid(fn.ReturnType))
+                if (!IrTypeUtil.IsVoid(fn.ReturnType))
                     builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
             });
 
             w.Function(fn.Name, fn.Parameters.Select(p => $"_{p.Name}"), body =>
             {
                 if (usesFunctions)
-                    body.Assign("__dispatcher", $"__{c.Name}_get_dispatcher()", VariableScope.Static).Line();
+                    body.Assign("__dispatcher", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Static).Line();
 
                 if (usesDynamic)
-                    body.Assign("__decoders", $"__{c.Name}_get_decoders()", VariableScope.Static).Line();
+                    body.Assign("__decoders", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
 
                 // --- encode params ---
                 if (needArgsBuf)
@@ -273,8 +273,8 @@ namespace extgen.Emitters.Gml
 
                     foreach (var p in fn.Parameters)
                     {
-                        body.Comment($"param: _{p.Name}, type: {ToDebugString(p.Type)}");
-                        WriteValue(ctx, c, body, $"_{p.Name}", p.Type, InternalArgBuffer, "_GMFUNCTION_");
+                        body.Comment($"param: _{p.Name}, type: {p.Type.ToDebugString()}");
+                        WriteValue(ctx, enums, body, $"_{p.Name}", p.Type, InternalArgBuffer, "_GMFUNCTION_");
                         body.Line();
                     }
                 }
@@ -300,7 +300,7 @@ namespace extgen.Emitters.Gml
                 if (needRetBuf)
                 {
                     body.Assign("_result", "undefined", VariableScope.Local);
-                    ReadValue(c, body, "_result", fn.ReturnType, InternalRetBuffer);
+                    ReadValue(enums, body, "_result", fn.ReturnType, InternalRetBuffer);
                     body.Line("return _result;");
                 }
                 else
@@ -314,12 +314,12 @@ namespace extgen.Emitters.Gml
         // Encode / Decode helpers
         // ============================================================
 
-        private static void WriteValue(GmlEmitterContext ctx, IrCompilation c, GmlWriter w, string id, IrType t, string buf, string where)
+        private static void WriteValue(GmlEmitterContext ctx, IIrTypeEnumResolver enums, GmlWriter w, string id, IrType t, string buf, string where)
         {
             // Nullable: presence bool + payload
             if (t is IrType.Nullable nn)
             {
-                WriteOptional(ctx, c, w, id, nn.Underlying, buf, where);
+                WriteOptional(ctx, enums, w, id, nn.Underlying, buf, where);
                 return;
             }
 
@@ -337,7 +337,7 @@ namespace extgen.Emitters.Gml
                 var lenExpr = arr.FixedLength.HasValue ? arr.FixedLength.Value.ToString() : "_length";
                 w.For("var _i = 0", $"_i < {lenExpr}", "++_i", forBody =>
                 {
-                    WriteValue(ctx, c, forBody, $"{id}[_i]", arr.Element, buf, where);
+                    WriteValue(ctx, enums, forBody, $"{id}[_i]", arr.Element, buf, where);
                 });
                 return;
             }
@@ -357,14 +357,14 @@ namespace extgen.Emitters.Gml
 
                 case IrType.Named { Kind: NamedKind.Enum, Name: var enumName }:
                     {
-                        var underlying = GetEnumUnderlying(c, enumName);
+                        var underlying = enums.GetUnderlying(enumName);
                         w.Line(EmitCheck(id, underlying, where));
                         w.Call("buffer_write", buf, GmlBufCode(underlying), id).Line(";");
                         return;
                     }
 
                 default:
-                    throw new NotSupportedException($"GML emitter: write type ({ToDebugString(t)}) not supported.");
+                    throw new NotSupportedException($"GML emitter: write type ({t.ToDebugString()}) not supported.");
             }
         }
 
@@ -417,12 +417,12 @@ namespace extgen.Emitters.Gml
             }
         }
 
-        private static void ReadValue(IrCompilation c, GmlWriter w, string id, IrType t, string buf)
+        private static void ReadValue(IIrTypeEnumResolver enums, GmlWriter w, string id, IrType t, string buf)
         {
             // Nullable: presence bool + payload
             if (t is IrType.Nullable nn)
             {
-                ReadOptional(c, w, id, nn.Underlying, buf);
+                ReadOptional(enums, w, id, nn.Underlying, buf);
                 return;
             }
 
@@ -437,7 +437,7 @@ namespace extgen.Emitters.Gml
                 w.Assign(id, expr => expr.Call("array_create", lenExpr));
                 w.For("var _i = 0", $"_i < {lenExpr}", "++_i", forBody =>
                 {
-                    ReadValue(c, forBody, $"{id}[_i]", arr.Element, buf);
+                    ReadValue(enums, forBody, $"{id}[_i]", arr.Element, buf);
                 });
                 return;
             }
@@ -451,7 +451,7 @@ namespace extgen.Emitters.Gml
 
                 case IrType.Named { Kind: NamedKind.Enum, Name: var enumName }:
                     {
-                        var underlying = GetEnumUnderlying(c, enumName);
+                        var underlying = enums.GetUnderlying(enumName);
                         w.Assign(id, expr => expr.Call("buffer_read", buf, GmlBufCode(underlying)));
                         return;
                     }
@@ -461,7 +461,7 @@ namespace extgen.Emitters.Gml
                     return;
 
                 default:
-                    throw new NotSupportedException($"GML emitter: read type ({ToDebugString(t)}) not supported.");
+                    throw new NotSupportedException($"GML emitter: read type ({t.ToDebugString()}) not supported.");
             }
         }
 
@@ -505,7 +505,7 @@ namespace extgen.Emitters.Gml
         // Optional helpers
         // ============================================================
 
-        private static void WriteOptional(GmlEmitterContext ctx, IrCompilation c, GmlWriter w, string id, IrType inner, string buf, string where)
+        private static void WriteOptional(GmlEmitterContext ctx, IIrTypeEnumResolver enums, GmlWriter w, string id, IrType inner, string buf, string where)
         {
             w.If($"is_undefined({id})", thenBody =>
             {
@@ -513,51 +513,20 @@ namespace extgen.Emitters.Gml
             }, elseBody =>
             {
                 elseBody.Call("buffer_write", buf, "buffer_bool", "true").Line(";");
-                WriteValue(ctx, c, elseBody, id, inner, buf, where);
+                WriteValue(ctx, enums, elseBody, id, inner, buf, where);
             });
         }
 
-        private static void ReadOptional(IrCompilation c, GmlWriter w, string id, IrType inner, string buf)
+        private static void ReadOptional(IIrTypeEnumResolver enums, GmlWriter w, string id, IrType inner, string buf)
         {
             w.If($"buffer_read({buf}, buffer_bool)", thenBody =>
             {
-                ReadValue(c, thenBody, id, inner, buf);
+                ReadValue(enums, thenBody, id, inner, buf);
             }, elseBody =>
             {
                 elseBody.Assign(id, "undefined");
             });
         }
-
-        // ============================================================
-        // Type helpers (new IrType)
-        // ============================================================
-
-        private static bool IsVoid(IrType t) =>
-            t is IrType.Builtin { Kind: BuiltinKind.Void };
-
-
-        private static IrType GetEnumUnderlying(IrCompilation c, string enumName)
-        {
-            var en = c.Enums.FirstOrDefault(e => e.Name == enumName);
-            if (en is null)
-                throw new NotSupportedException($"Enum '{enumName}' not found in compilation; cannot resolve underlying type.");
-            return en.Underlying;
-        }
-
-        private static string ToDebugString(IrType t) =>
-            t switch
-            {
-                IrType.Nullable n => $"optional<{ToDebugString(n.Underlying)}>",
-                IrType.Array a => a.FixedLength is int n
-                    ? $"{ToDebugString(a.Element)}[{n}]"
-                    : $"{ToDebugString(a.Element)}[]",
-
-                IrType.Named { Kind: NamedKind.Struct, Name: var s } => $"struct {s}",
-                IrType.Named { Kind: NamedKind.Enum, Name: var e } => $"enum {e}",
-
-                IrType.Builtin b => b.Kind.ToString(),
-                _ => t.ToString() ?? "type"
-            };
 
         // ============================================================
         // Validation + buffer code mapping
@@ -623,7 +592,7 @@ namespace extgen.Emitters.Gml
         {
             // only builtins (and enum underlying which must be builtin)
             if (t is not IrType.Builtin b)
-                throw new NotSupportedException($"GML buffer code: expected builtin type, got {ToDebugString(t)}");
+                throw new NotSupportedException($"GML buffer code: expected builtin type, got {t.ToDebugString()}");
 
             return b.Kind switch
             {
