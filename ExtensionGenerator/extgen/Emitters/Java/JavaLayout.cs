@@ -5,15 +5,20 @@ namespace extgen.Emitters.Java
     internal sealed class JavaLayout
     {
         public string BaseDir { get; }
-        public string Enums => Path.Combine(BaseDir, "enums");
-        public string Records => Path.Combine(BaseDir, "records");
-        public string Codecs => Path.Combine(BaseDir, "codecs");
+        public string CodeGenDir => Path.Combine(BaseDir, "code_gen");
+
+        public string Enums => Path.Combine(CodeGenDir, "enums");
+        public string Records => Path.Combine(CodeGenDir, "records");
+        public string Codecs => Path.Combine(CodeGenDir, "codecs");
 
         public JavaLayout(string root, JavaEmitterOptions opts)
         {
-            BaseDir = Path.GetFullPath(opts.OutputJavaFolder, root);
+            BaseDir = Path.GetFullPath(Path.Combine(opts.OutputFolder, "Java"), root);
+            
+            if (Directory.Exists(CodeGenDir))  Directory.Delete(CodeGenDir, true);
 
             Directory.CreateDirectory(BaseDir);
+            Directory.CreateDirectory(CodeGenDir);
             Directory.CreateDirectory(Enums);
             Directory.CreateDirectory(Records);
             Directory.CreateDirectory(Codecs);

@@ -9,11 +9,9 @@ namespace extgen.Options
         [JsonPropertyName("outputJavaFolder")]
         public string OutputJavaFolder { get; set; } = "../AndroidSource/Java";
 
-        [JsonPropertyName("outputNativeFolder")]
-        public string OutputNativeFolder { get; set; } = "./code_gen/android";
-
         [JsonPropertyName("outputBinaryFolder")]
         public string OutputBinaryFolder { get; set; } = "../AndroidSource/libs";
 
+        public string OutputNativeFolder => "./code_gen/android";
     }
 }

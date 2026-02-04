@@ -5,7 +5,7 @@ namespace extgen.Options
     public class CmakeEmitterOptions
     {
         [JsonPropertyName("cppVersion")]
-        public string CppVersion { get; set; } = "20";
+        public int CppVersion { get; set; } = 20;
 
         [JsonPropertyName("cppExtensions")]
         public bool CppExtensions { get; set; } = false;

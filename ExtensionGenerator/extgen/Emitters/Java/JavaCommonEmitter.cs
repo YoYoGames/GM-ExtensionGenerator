@@ -29,12 +29,12 @@ namespace extgen.Emitters.Java
 
         public void EmitInternal(IrCompilation c, JavaLayout layout)
         {
-            FileEmitHelpers.WriteJava(layout.BaseDir, $"{c.Name}Internal.java", w => EmitInternalImpl(ctx, c, w));
+            FileEmitHelpers.WriteJava(layout.CodeGenDir, $"{c.Name}Internal.java", w => EmitInternalImpl(ctx, c, w));
         }
 
         public void EmitJavaInterface(IrCompilation c, JavaLayout layout)
         {
-            FileEmitHelpers.WriteJava(layout.BaseDir, $"{c.Name}Interface.java", w => EmitJavaInterfaceImpl(ctx, c, w));
+            FileEmitHelpers.WriteJava(layout.CodeGenDir, $"{c.Name}Interface.java", w => EmitJavaInterfaceImpl(ctx, c, w));
         }
 
         public void EmitJavaUserShell(IrCompilation c, JavaLayout layout)

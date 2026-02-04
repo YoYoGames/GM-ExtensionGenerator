@@ -8,5 +8,8 @@ namespace extgen.Options
 
         [JsonPropertyName("outputFolder")]
         public string OutputFolder { get; set; } = "./";
+
+        [JsonPropertyName("outputFilename")]
+        public string OutputFilename { get; set; } = "declarations";
     }
 }

@@ -10,7 +10,7 @@ namespace extgen.Emitters.Objc
         public ObjcLayout(string root, IObjcEmitterOptions options)
         {
             CodeGenDir = Path.GetFullPath(Path.Combine($"./code_gen/{options.Platform}"), root);
-            SourceDir = Path.GetFullPath(Path.Combine($"./src/{options.Platform}"), root);
+            SourceDir = Path.GetFullPath(Path.Combine($"./src/{options.SourceFolder}"), root);
 
             if (Directory.Exists(CodeGenDir)) Directory.Delete(CodeGenDir, true);
 

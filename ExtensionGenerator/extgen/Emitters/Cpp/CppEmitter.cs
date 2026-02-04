@@ -32,8 +32,8 @@ namespace extgen.Emitters.Cpp
             FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_native.h", w => EmitInternalHeader(ctx, comp, enums, w));
             FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_native.cpp", w => EmitInternalImpl(ctx, comp, enums, w));
 
-            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(options.UserImplOutputName, ext)}.h", w => EmitUserHeader(ctx, w));
-            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(options.UserImplOutputName, ext)}.cpp", w => EmitUserImpl(ctx, w));
+            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.h", w => EmitUserHeader(ctx, w));
+            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.cpp", w => EmitUserImpl(ctx, w));
         }
 
         public static void GenCommonFiles(string destinationFolder) {
@@ -185,7 +185,7 @@ namespace extgen.Emitters.Cpp
 
         private static void EmitUserImpl(CppEmitterContext ctx, CppWriter w) 
         {
-            w.Include($"{string.Format(ctx.Options.UserImplOutputName, ctx.ExtName)}.h", false).Line();
+            w.Include($"{string.Format(ctx.Options.SourceFilename, ctx.ExtName)}.h", false).Line();
 
             w.UsingNamespace(ctx.Runtime.ExtWireNamespace);
             w.UsingNamespace(ctx.Runtime.StructsNamespace);

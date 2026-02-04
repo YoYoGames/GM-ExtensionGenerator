@@ -16,8 +16,9 @@ namespace extgen.Emitters.Doc
 
         public void Emit(IrCompilation comp, string outputDir)
         {
+            var ext = comp.Name;
             var layout = new DocLayout(outputDir, _options);
-            WriteFileDoc(layout.OutputDir, "documentation.js", w => EmitAll(w, comp));
+            WriteFileDoc(layout.OutputDir, $"{string.Format(layout.OutputFile, ext)}.js", w => EmitAll(w, comp));
         }
 
         private static void WriteFileDoc(string dir, string name, Action<DocWriter> emit)

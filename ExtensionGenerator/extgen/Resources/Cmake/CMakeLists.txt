@@ -242,10 +242,10 @@ endif()
 # ============================================================
 # Outputs / post-build copies
 # ============================================================
-set(_EXT_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
+set(_EXT_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${EXTGEN_BINARY_OUTPUT}/")
 
 if(ANDROID)
-  set(_ANDROID_OUT_BASE "${CMAKE_CURRENT_SOURCE_DIR}/../AndroidSource/libs")
+  set(_ANDROID_OUT_BASE "${CMAKE_CURRENT_SOURCE_DIR}/${EXTGEN_ANDROID_OUTPUT}/libs")
   set(_ANDROID_ABI_DIR "${_ANDROID_OUT_BASE}/${CMAKE_ANDROID_ARCH_ABI}")
 
   add_custom_command(
@@ -257,7 +257,7 @@ if(ANDROID)
   )
 
   if(DEFINED EXT_TP_ANDROID_AAR AND EXISTS "${EXT_TP_ANDROID_AAR}")
-    set(_ANDROID_AAR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../AndroidSource/libs-aar")
+    set(_ANDROID_AAR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${EXTGEN_ANDROID_OUTPUT}/libs-aar")
     add_custom_command(
       TARGET ${PROJECT_NAME} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E make_directory "${_ANDROID_AAR_DIR}"

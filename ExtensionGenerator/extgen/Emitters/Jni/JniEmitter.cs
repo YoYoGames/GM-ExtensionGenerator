@@ -20,8 +20,8 @@ namespace extgen.Emitters.Jni
 
             // --------------------------- Java Side ---------------------------
 
-            FileEmitHelpers.WriteJava(layout.JavaBaseDir, $"{comp.Name}Internal.java", w => EmitInternal(ctx, comp, specs, w));
-            FileEmitHelpers.WriteJava(layout.JavaBaseDir, $"{comp.Name}Bridge.java", w => EmitBridge(ctx, comp, specs, w));
+            FileEmitHelpers.WriteJava(layout.JavaCodeGenDir, $"{comp.Name}Internal.java", w => EmitInternal(ctx, comp, specs, w));
+            FileEmitHelpers.WriteJava(layout.JavaCodeGenDir, $"{comp.Name}Bridge.java", w => EmitBridge(ctx, comp, specs, w));
 
             // If there is no implementation file generate one
             FileEmitHelpers.WriteJavaIfMissing(layout.JavaBaseDir, $"{comp.Name}.java", w => EmitImplementation(ctx, w));
@@ -29,7 +29,7 @@ namespace extgen.Emitters.Jni
 
             // --------------------------- C++ Side ----------------------------
 
-            FileEmitHelpers.WriteCpp(layout.NativeBaseDir, $"{comp.Name}Internal_jni.cpp", w => EmitNative(ctx, comp, specs, w));
+            FileEmitHelpers.WriteCpp(layout.NativeCodeGenDir, $"{comp.Name}Internal_jni.cpp", w => EmitNative(ctx, comp, specs, w));
         }
 
         private static IEnumerable<JniFunctionSpec> BuildSpecs(JniEmitterContext ctx, IrCompilation comp)

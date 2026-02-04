@@ -38,12 +38,16 @@ namespace extgen.Emitters.Cmake
                 ["EXTGEN_EXTENSION_NAME"] = ctx.ExtName,
 
                 // Cpp
-                ["EXTGEN_CPP_VERSION"] = ctx.Options.CppVersion,
+                ["EXTGEN_CPP_VERSION"] = $"{ctx.Options.CppVersion}",
                 ["EXTGEN_CPP_EXTENSIONS"] = ctx.Options.CppExtensions ? "ON" : "OFF",
 
                 // Config
                 ["EXTGEN_USE_THIRD_PARTY"] = ctx.Options.UseThirdParty ? "ON" : "OFF",
                 ["EXTGEN_STRICT_WARNINGS"] = ctx.Options.StrictWarnings ? "ON" : "OFF",
+
+                // Binaries
+                ["EXTGEN_BINARY_OUTPUT"] = ctx.Config.Cpp?.OutputBinaryFolder ?? "../",
+                ["EXTGEN_ANDROID_OUTPUT"] = ctx.Config.Java?.OutputFolder ?? "../AndroidSource/"
             });
         }
 

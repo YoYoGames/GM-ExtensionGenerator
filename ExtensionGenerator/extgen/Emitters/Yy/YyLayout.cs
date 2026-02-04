@@ -1,14 +1,15 @@
 ﻿using extgen.Options;
 
-namespace extgen.Emitters.Doc
+
+namespace extgen.Emitters.Yy
 {
-    internal sealed class DocLayout
+    internal sealed class YyLayout
     {
         public string OutputDir { get; }
 
         public string OutputFile { get; }
 
-        public DocLayout(string root, DocEmitterOptions options)
+        public YyLayout(string root, YyEmitterOptions options)
         {
             OutputDir = Path.GetFullPath(options.OutputFolder, root);
             OutputFile = Path.GetFileNameWithoutExtension(options.OutputFilename);
@@ -16,4 +17,5 @@ namespace extgen.Emitters.Doc
             Directory.CreateDirectory(OutputDir);
         }
     }
+
 }

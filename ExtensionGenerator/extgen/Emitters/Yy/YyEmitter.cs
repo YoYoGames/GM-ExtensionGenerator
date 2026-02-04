@@ -1,32 +1,47 @@
 ﻿using codegencore.Model;
+using extgen.Emitters.Doc;
 using extgen.Model;
 using extgen.Options;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 
 
 namespace extgen.Emitters.Yy
 {
+
     /// <summary>
     /// Writes the function-declaration chunk developers need to *paste*
     /// into their *.yy* extension file until direct injection is available.
     /// </summary>
     internal sealed class YyEmitter(YyEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
     {
-        public void Emit(IrCompilation comp, string dir)
+        // currently unused, but keep for future expansion (links/namespace hints etc)
+        private readonly YyEmitterOptions _options = options;
+        private readonly RuntimeNaming _runtime = runtime;
+
+        public void Emit(IrCompilation comp, string outputDir)
         {
-            YyEmitterContext ctx = new(comp.Name, options, runtime);
+            YyEmitterContext ctx = new(comp.Name, _options, runtime);
+            var layout = new YyLayout(outputDir, _options);
 
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, "declarations.yy");
+            var path = Path.Combine(layout.OutputDir, $"{string.Format(layout.OutputFile, ctx.ExtName)}.yy");
 
+            EmitAll(comp, ctx, path);
+        }
+
+        private static void EmitAll(IrCompilation comp, YyEmitterContext ctx, string path)
+        {
             // 8-bit clean; no BOM; one object per line
             using var sw = new StreamWriter(path, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-            // Re-use one reusable buffer to avoid re-allocating every loop
             using var ms = new MemoryStream();
             var jsonWriterOptions = new JsonWriterOptions { Indented = false };
+            
+            EmitFunctions(comp, ctx, sw, ms, jsonWriterOptions);
+        }
 
+        private static void EmitFunctions(IrCompilation comp, YyEmitterContext ctx, StreamWriter sw, MemoryStream ms, JsonWriterOptions jsonWriterOptions)
+        {
             var usesFunctions = comp.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
             var usesBuffer = comp.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
 

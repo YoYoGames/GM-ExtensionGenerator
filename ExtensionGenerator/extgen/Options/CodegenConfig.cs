@@ -23,6 +23,7 @@ namespace extgen.Options
         // Per-target blocks (null = don’t generate)
         [JsonPropertyName("cpp")] public CppEmitterOptions? Cpp { get; set; }
         [JsonPropertyName("gml")] public GmlEmitterOptions? Gml { get; set; }
+        [JsonPropertyName("gml_runtime")] public GmlRuntimeEmitterOptions? GmlRuntime { get; set; }
         [JsonPropertyName("yy")] public YyEmitterOptions? Yy { get; set; }
 
         [JsonPropertyName("java")] public JavaEmitterOptions? Java { get; set; }

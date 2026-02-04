@@ -6,6 +6,8 @@ using extgen.Emitters.Utils;
 using extgen.Model;
 using extgen.TypeSystem;
 using extgen.Utils;
+using Google.FlatBuffers;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace extgen.Emitters.Objc
 {
@@ -27,9 +29,12 @@ namespace extgen.Emitters.Objc
 
         public void EmitObjcUserShell(IrCompilation c, ObjcLayout layout)
         {
+            var ext = ctx.ExtName;
+            var options = ctx.Options;
             var platform = ctx.Options.Platform;
-            FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{c.Name}_{platform}.h", w => EmitUserHeader(ctx, w));
-            FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{c.Name}_{platform}.mm", w => EmitUserImpl(ctx, w));
+
+            FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.h", w => EmitUserHeader(ctx, w));
+            FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.mm", w => EmitUserImpl(ctx, w));
         }
 
         // ------------- internal bridge (shared – switchable call target)

@@ -1,5 +1,7 @@
 
-// This needs to go into the Extension Core script, so it doesn't impact with previous extensions
+// #############################################################################
+// # GMExtCore
+// #############################################################################
 
 #macro EXT_CORE_GM_TYPE_STRUCT (255)
 #macro EXT_CORE_GM_TYPE_ARRAY (254)
@@ -209,14 +211,6 @@ function __ext_core_function_map() {
 	return __internal_map;
 }
 
-/// @desc Represents a GML function reference to be used by the extension callback system.
-/// @param {Function} _callable The function to create a reference for.
-/// @ignore
-function __GMFunctionRef(_callable) constructor {
-	callable = _callable;
-	count = 1;
-}
-
 /// @desc A native function dispatcher that manages the polling and lifecycle of functions registered
 /// from GML and exposed to native (C++) code. This struct acts as an intermediary between GameMaker and 
 /// an external native library, allowing the native side to "call" GML functions asynchronously by queuing 
@@ -258,13 +252,21 @@ function __GMNativeFunctionDispatcher(_handler, _decoders) constructor {
 /// @ignore
 function __ext_core_function_register(_callable, _dispatcher) {
 	var _map = __ext_core_function_map();
-		
-	// Create internal reference (allows duplicated refs)
-	var _ref = new __GMFunctionRef(_callable);
-	var _handle = int64(ptr(_ref));
+    
+    var _handle = int64(ptr(_callable));
+    var _ref = ds_map_find_value(_map, _handle);
+    if (!is_undefined(_ref)) {
+        // Already registered increase the refcount
+        _ref[1 /* ref count */] += 1;
+    }
+    else
+    {
+        // Create a new ref
+    	_ref = [_callable /* callable */, 1 /* ref count */];
+    	ds_map_add(_map, _handle, _ref);
+    }
 
-	ds_map_add(_map, _handle, _ref);
-
+    // Make sure we kick the dispatcher (we might be in pause mode)
 	_dispatcher.dispatch();
 
 	return _handle;
@@ -277,6 +279,7 @@ function __ext_core_function_register(_callable, _dispatcher) {
 /// @ignore
 function __ext_core_function_dispatch_calls(_handler, _decoders) {
 
+    static _dummy_context = {};
 	var _buf = __ext_core_get_ret_buffer();
 	var _size = _handler(buffer_get_address(_buf), buffer_get_size(_buf));
 		
@@ -300,24 +303,26 @@ function __ext_core_function_dispatch_calls(_handler, _decoders) {
 	
 	// Read the size of callbacks to be triggered this frame
 	var _count = buffer_read(_buf, buffer_u16);
-	var _ref_map = __ext_core_function_map(); // Cache the __GMFunctionRef map
+	var _ref_map = __ext_core_function_map(); // Cache the ref map
 	repeat (_count) {
 			
-		var _ref = buffer_read(_buf, buffer_u64); // Decode the map key (ref)
+		var _handle = buffer_read(_buf, buffer_u64); // Decode the map key (ref)
 		var _command = buffer_read(_buf, buffer_u8); // Decode the command (execute|release)
 		
+        var _ref = ds_map_find_value(_ref_map, _handle); // Get the map value
+        if (is_undefined(_ref)) continue; // Continue if there is no func data
+        
 		switch (_command) {
 			case 1: // execute
-				var _func = ds_map_find_value(_ref_map, _ref); // Get the map value
-		
-				if (is_undefined(_func)) continue; // Continue if there is no func data
-		
 				var _args = __ext_core_buffer_unmarshal_value(_buf, _decoders); // Unmarshal the args
-				method_call(_func.callable, _args); // Call the method with argument array
+				with (_dummy_context) method_call(_ref[0 /* callable */], _args); // Call the method with argument array
 				break;
 			case 2: // release
-				ds_map_delete(_ref_map, _ref); // Remove the entry from the map	
-				_released++;
+                var _ref_count = --_ref[1 /* ref count */];
+                if (_ref_count <= 0) {
+    				ds_map_delete(_ref_map, _ref); // Remove the entry from the map
+                }
+                _released++;
 				break;
 			
 		}

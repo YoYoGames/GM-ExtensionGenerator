@@ -5,6 +5,7 @@ using codegencore.Writers.Lang;
 using extgen.Emitters.Doc;
 using extgen.Model;
 using extgen.Options;
+using extgen.Utils;
 using extgencore.Helpers;
 
 namespace extgen.Emitters.Gml
@@ -36,6 +37,14 @@ namespace extgen.Emitters.Gml
 
             if (!File.Exists(outputFile))
                 throw new ArgumentException($"GML Emitter: output file path doesn't exist ({outputFile}).");
+
+            // Update the extension core if requested
+            if (!string.IsNullOrEmpty(_opts.OutputCoreFile))
+            {
+                string outputCoreFile = Environment.ExpandEnvironmentVariables(_opts.OutputCoreFile);
+                outputCoreFile = Path.GetFullPath(outputCoreFile, dir);
+                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Gml.ext_core_api.gml", outputCoreFile);
+            }
 
             using TextWriter textWriter = new StreamWriter(outputFile);
             var iw = CodeWriter.From(textWriter, "    ");

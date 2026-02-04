@@ -8,5 +8,8 @@ namespace extgen.Options
 
         [JsonPropertyName("outputFile")]
         public string OutputFile { get; set; } = "./codegen.gml";
+
+        [JsonPropertyName("outputCoreFile")]
+        public string? OutputCoreFile { get; set; }
     }
 }

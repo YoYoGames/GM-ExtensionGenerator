@@ -7,6 +7,10 @@ namespace extgen.Options
         public bool Enabled { get; set; }
 
         public string Platform { get; }
+
+        public string SourceFolder { get; set; }
+
+        public string SourceFilename { get; set; }
     }
 
     public sealed class IosEmitterOptions : IObjcEmitterOptions
@@ -15,6 +19,12 @@ namespace extgen.Options
 
         // not configurable from JSON
         public string Platform => "ios";
+
+        [JsonPropertyName("sourceFolder")]
+        public string SourceFolder { get; set; } = "./ios";
+
+        [JsonPropertyName("sourceFilename")]
+        public string SourceFilename { get; set; } = "{0}_ios";
     }
 
     public sealed class TvosEmitterOptions : IObjcEmitterOptions
@@ -23,5 +33,11 @@ namespace extgen.Options
 
         // not configurable from JSON
         public string Platform => "tvos";
+
+        [JsonPropertyName("sourceFolder")]
+        public string SourceFolder { get; set; } = "./tvos";
+
+        [JsonPropertyName("sourceFilename")]
+        public string SourceFilename { get; set; } = "{0}_tvos";
     }
 }

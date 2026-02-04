@@ -9,10 +9,10 @@ namespace extgen.Options
         [JsonPropertyName("outputBinaryFolder")]
         public string OutputBinaryFolder { get; set; } = "../";
 
-        [JsonPropertyName("userImplFolder")]
-        public string UserImplOutputFolder { get; set; } = "native";
+        [JsonPropertyName("sourceFolder")]
+        public string SourceFolder { get; set; } = "native";
 
-        [JsonPropertyName("userImplNameFormat")]
-        public string UserImplOutputName { get; set; } = "{0}_native";
+        [JsonPropertyName("sourceFilename")]
+        public string SourceFilename { get; set; } = "{0}_native";
     }
 }

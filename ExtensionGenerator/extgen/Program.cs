@@ -3,6 +3,7 @@ using extgen.Emitters.Cmake;
 using extgen.Emitters.Cpp;
 using extgen.Emitters.Doc;
 using extgen.Emitters.Gml;
+using extgen.Emitters.GmlRuntime;
 using extgen.Emitters.Java;
 using extgen.Emitters.Jni;
 using extgen.Emitters.Kotlin;
@@ -190,6 +191,9 @@ namespace extgen
 
             // Generate documentation
             if (options.Docs is { Enabled: true }) emitters["docs"] = new DocEmitter(options.Docs, options.Runtime);
+
+            // Emit the ExtensionCore runtime
+            if (options.GmlRuntime is { Enabled: true }) emitters["gml_runtime"] = new GmlRuntimeEmitter(options.GmlRuntime);
 
             return emitters;
         }

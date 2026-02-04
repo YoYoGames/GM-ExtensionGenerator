@@ -12,7 +12,7 @@ namespace extgen.Emitters.Cpp
         {
             CoreDir = Path.GetFullPath(Path.Combine($"./code_gen/core"), root);
             CodeGenDir = Path.GetFullPath(Path.Combine($"./code_gen/native"), root);
-            SourceDir = Path.GetFullPath(Path.Combine($"./src/{options.UserImplOutputFolder}"), root);
+            SourceDir = Path.GetFullPath(Path.Combine($"./src/{options.SourceFolder}"), root);
 
             if (Directory.Exists(CodeGenDir)) Directory.Delete(CodeGenDir, true);
 
