@@ -40,6 +40,5 @@ namespace extgen.Options
         [JsonPropertyName("tvos_native")] public TvosEmitterOptions? TvosNative { get; set; }
 
         [JsonPropertyName("docs")] public DocEmitterOptions? Docs { get; set; }
-
     }
 }

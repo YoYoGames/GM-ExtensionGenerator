@@ -11,7 +11,8 @@ namespace extgen.Emitters.GmlRuntime
         public void Emit(IrCompilation comp, string dir)
         {
             var layout = new GmlRuntimeLayout(dir, _options);
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Gml.ExtensionCore_api.gml", layout.OutputFile);
+            var output = Path.Combine(layout.OutputFolder, $"{layout.OutputFile}.gml");
+            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Gml.ExtensionCore_api.gml", output);
         }
     }
 }

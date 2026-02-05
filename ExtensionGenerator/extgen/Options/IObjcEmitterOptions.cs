@@ -11,6 +11,8 @@ namespace extgen.Options
         public string SourceFolder { get; set; }
 
         public string SourceFilename { get; set; }
+
+        public string OutputFolder { get; set; }
     }
 
     public sealed class IosEmitterOptions : IObjcEmitterOptions
@@ -25,6 +27,9 @@ namespace extgen.Options
 
         [JsonPropertyName("sourceFilename")]
         public string SourceFilename { get; set; } = "{0}_ios";
+
+        [JsonPropertyName("outputFolder")]
+        public string OutputFolder { get; set; } = "../iOSSourceFromMac";
     }
 
     public sealed class TvosEmitterOptions : IObjcEmitterOptions
@@ -39,5 +44,8 @@ namespace extgen.Options
 
         [JsonPropertyName("sourceFilename")]
         public string SourceFilename { get; set; } = "{0}_tvos";
+
+        [JsonPropertyName("outputFolder")]
+        public string OutputFolder { get; set; } = "../tvOSSourceFromMac";
     }
 }

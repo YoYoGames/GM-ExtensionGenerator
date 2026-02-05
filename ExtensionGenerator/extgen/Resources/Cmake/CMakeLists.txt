@@ -17,6 +17,8 @@ option(EXT_APPLE_NATIVE_FRAMEWORK
        "Use Apple NATIVE flavour (ObjC wrapper + shared C++ native core)"
        OFF)
 
+option(EXTGEN_ENABLE_SWIFT "Enable Swift sources (Apple only)" ON)
+
 # Embed core wire sources into the library (usually OFF for iOS/tvOS static to avoid duplication)
 option(EXT_EMBED_CORE_SRC "Compile code_gen/core sources into lib" ON)
 
@@ -33,12 +35,20 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Xcode")
   set(CMAKE_XCODE_ATTRIBUTE_PROVISIONING_PROFILE_SPECIFIER "")
 endif()
 
+# User-supplied Nintendo Switch MSBuild props (we DO NOT SHIP Nintendo's props)
+set(EXT_SWITCH_USER_PROPS "" CACHE FILEPATH
+    "Path to a user-provided Nintendo Switch .props file to import into generated VS projects")
+
+option(EXTGEN_PLATFORM_SWITCH "Enable Switch-specific VS integration" OFF)
+
 # ============================================================
-# Platform classification (robust for Xcode + Ninja)
+# Platform classification
 # ============================================================
 set(EXTGEN_IS_IOS FALSE)
 set(EXTGEN_IS_TVOS FALSE)
 set(EXTGEN_IS_APPLE_MOBILE FALSE)
+set(EXTGEN_IS_PS4 FALSE)
+set(EXTGEN_IS_PS5 FALSE)
 
 if(APPLE)
   # CMAKE_OSX_SYSROOT may be: iphoneos, iphonesimulator, appletvos, appletvsimulator, or a full path.
@@ -51,13 +61,19 @@ if(APPLE)
   endif()
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "ORBIS")
+  set(EXTGEN_IS_PS4 TRUE)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Prospero")
+  set(EXTGEN_IS_PS5 TRUE)
+endif()
+
 # ============================================================
 # Target kind
 # ============================================================
 if(EXTGEN_IS_APPLE_MOBILE)
   add_library(${PROJECT_NAME} STATIC)
   # Avoid duplicate symbols when GameMaker app also compiles core sources
-  set(EXT_EMBED_CORE_SRC OFF)
+  set(EXT_EMBED_CORE_SRC OFF CACHE BOOL "Compile code_gen/core sources into lib" FORCE)
 else()
   add_library(${PROJECT_NAME} SHARED)
 endif()
@@ -125,6 +141,20 @@ set(SRC_TVOS_NATIVE ${SRC_NATIVE} ${SRC_TVOS})
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # ============================================================
+# Inject user properties into VS
+# ============================================================
+if(MSVC AND EXTGEN_PLATFORM_SWITCH)
+  if(NOT EXT_SWITCH_USER_PROPS)
+    message(FATAL_ERROR "EXTGEN_PLATFORM_SWITCH=ON but EXT_SWITCH_USER_PROPS is empty. Set it to your Nintendo .props.")
+  endif()
+  if(NOT EXISTS "${EXT_SWITCH_USER_PROPS}")
+    message(FATAL_ERROR "EXT_SWITCH_USER_PROPS not found: ${EXT_SWITCH_USER_PROPS}")
+  endif()
+  
+  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY VS_USER_PROPS "${EXT_SWITCH_USER_PROPS}")
+endif()
+
+# ============================================================
 # Platform selection & defines
 # ============================================================
 if(ANDROID)
@@ -145,7 +175,9 @@ elseif(WIN32)
 elseif(EXTGEN_IS_IOS)
   message(STATUS "Including iOS sources")
   enable_language(OBJCXX)
-  enable_language(Swift)
+  if(EXTGEN_ENABLE_SWIFT)
+    enable_language(Swift)
+  endif()
 
   if(EXT_APPLE_NATIVE_FRAMEWORK)
     message(STATUS "iOS flavour: NATIVE (ObjC wrapper + C++ native core)")
@@ -162,7 +194,9 @@ elseif(EXTGEN_IS_IOS)
 elseif(EXTGEN_IS_TVOS)
   message(STATUS "Including tvOS sources")
   enable_language(OBJCXX)
-  enable_language(Swift)
+  if(EXTGEN_ENABLE_SWIFT)
+    enable_language(Swift)
+  endif()
 
   if(EXT_APPLE_NATIVE_FRAMEWORK)
     message(STATUS "tvOS flavour: NATIVE (ObjC wrapper + C++ native core)")
@@ -319,4 +353,6 @@ endif()
 # ============================================================
 # Apple XCFramework packagers (kept out of the main file logic)
 # ============================================================
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/extgen_xcframework.cmake)
+if(EXTGEN_IS_APPLE_MOBILE)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/extgen_xcframework.cmake)
+endif()

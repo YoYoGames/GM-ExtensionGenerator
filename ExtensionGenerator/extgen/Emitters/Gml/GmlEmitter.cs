@@ -33,7 +33,9 @@ namespace extgen.Emitters.Gml
 
             var enums = new IrTypeEnumResolver(comp.Enums);
 
-            FileEmitHelpers.WriteGml(layout.OutputFolder, layout.OutputFile, w => EmitAll(ctx, comp, enums, w));
+
+
+            FileEmitHelpers.WriteGml(layout.OutputFolder, $"{layout.OutputFile}.gml", w => EmitAll(ctx, comp, enums, w));
         }
 
         // ============================================================
@@ -42,7 +44,7 @@ namespace extgen.Emitters.Gml
 
         private static void EmitAll(GmlEmitterContext ctx, IrCompilation c, IIrTypeEnumResolver enums, GmlWriter w)
         {
-            w.Comment("Auto-generated – do not edit\n");
+            w.Comment("Auto-generated – do not edit");
 
             EmitMacros(c.Constants, w);
             EmitEnums(c.Enums, w);

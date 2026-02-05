@@ -21,7 +21,7 @@ namespace extgen.Emitters.Cmake
 
             EmitSource(layout);
 
-            EmitScripts(layout);
+            EmitScripts(ctx, layout);
 
             EmitThirdParty(layout);
 
@@ -60,10 +60,15 @@ namespace extgen.Emitters.Cmake
             }
         }
 
-        private void EmitScripts(CmakeLayout layout)
+        private void EmitScripts(CmakeEmitterContext ctx, CmakeLayout layout)
         {
             ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_xcframework.cmake"));
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_package_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_package_xcframework.cmake"));
+            ResourceWriter.WriteTemplatedTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_package_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_package_xcframework.cmake"), new Dictionary<string, string>
+            {
+                // Frameworks
+                ["EXTGEN_IOS_OUTPUT"] = ctx.Config.Ios?.OutputFolder ?? ctx.Config.IosSwift?.OutputFolder ?? ctx.Config.IosNative?.OutputFolder ?? "../iOSSourceFromMac",
+                ["EXTGEN_TVOS_OUTPUT"] = ctx.Config.Tvos?.OutputFolder ?? ctx.Config.TvosSwift?.OutputFolder ?? ctx.Config.TvosNative?.OutputFolder ?? "../tvOSSourceFromMac",
+            });
         }
 
         private static void EmitThirdParty(CmakeLayout layout)

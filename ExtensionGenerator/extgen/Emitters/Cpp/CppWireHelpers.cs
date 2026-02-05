@@ -159,7 +159,7 @@ namespace extgen.Emitters.Cpp
             if (t is IrType.Array a)
             {
                 var el = a.Element;
-                var elCpp = _typeMap.Map(el, owned: true);
+                var elCpp = _typeMap.Map(el, owned: owned);
 
                 if (a.FixedLength is int nFixed)
                 {
