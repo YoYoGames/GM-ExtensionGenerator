@@ -51,14 +51,14 @@ namespace extgen
                 { "h|help",    "Show help.", v => showHelp = v != null }
             };
 
-            if (!string.IsNullOrWhiteSpace(initDir))
-            {
-                return InitProject(initDir);
-            }
-
             try
             {
                 var extras = options.Parse(args);
+
+                if (!string.IsNullOrWhiteSpace(initDir))
+                {
+                    return InitProject(initDir);
+                }
 
                 if (showHelp || string.IsNullOrWhiteSpace(configPath) || extras.Count > 0)
                 {
@@ -314,11 +314,13 @@ namespace extgen
                 var schemaFileName = "extgen.schema.json";
                 var configFileName = "config.json";
 
+                var encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
                 var schemaPath = Path.Combine(outDir, schemaFileName);
                 var configPath = Path.Combine(outDir, configFileName);
 
                 JsonNode schema = JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(ExtGenConfig));
-                File.WriteAllText(schemaPath, schema.ToString(), Encoding.UTF8);
+                File.WriteAllText(schemaPath, schema.ToString(), encoding);
 
                 // 2) Create default config
                 var cfg = new ExtGenConfig
@@ -328,7 +330,7 @@ namespace extgen
                 };
 
                 var json = JsonSerializer.Serialize(cfg, jsonSerializerOptions);
-                File.WriteAllText(configPath, json, Encoding.UTF8);
+                File.WriteAllText(configPath, json, encoding);
 
                 Console.WriteLine($"[extgen] Wrote: {configPath}");
                 Console.WriteLine($"[extgen] Wrote: {schemaPath}");

@@ -1,5 +1,4 @@
-﻿using extgen.Config;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace extgen.Config.Targets.Mobile
 {
