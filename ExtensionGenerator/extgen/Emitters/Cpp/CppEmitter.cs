@@ -1,9 +1,9 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
-using extgen.Config;
 using extgen.Emitters.Utils;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.TypeSystem.Cpp;
 using extgen.Utils;
 
@@ -13,7 +13,7 @@ namespace extgen.Emitters.Cpp
         IIrTypeEnumResolver Enums
     );
 
-    public sealed class CppEmitter(CppEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    public sealed class CppEmitter(CppEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly CppTypeMap typeMap = new(runtime);
 

@@ -1,4 +1,4 @@
-﻿using extgen.Model;
+﻿using extgen.Models;
 using extgen.Parsing.Validation;
 using GMIDL_FB;
 using gmidlparser;

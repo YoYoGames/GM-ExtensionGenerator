@@ -1,6 +1,6 @@
 ﻿using codegencore.Writers.Lang;
 using extgen.Emitters.AppleMobile.Objc;
-using extgen.Model;
+using extgen.Models;
 using extgen.TypeSystem;
 using extgen.TypeSystem.Cpp;
 

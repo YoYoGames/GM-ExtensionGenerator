@@ -1,5 +1,5 @@
-﻿using codegencore.Model;
-using extgen.Config;
+﻿using codegencore.Models;
+using extgen.Models.Config;
 
 namespace extgen.TypeSystem.Cpp
 {

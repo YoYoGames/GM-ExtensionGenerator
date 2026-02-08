@@ -1,4 +1,4 @@
-﻿using extgen.Model;
+﻿using extgen.Models;
 
 namespace extgen.Emitters
 {

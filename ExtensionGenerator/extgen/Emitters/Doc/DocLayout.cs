@@ -6,7 +6,7 @@
 
         public string OutputFile { get; }
 
-        public DocLayout(string root, DocEmitterOptions options)
+        public DocLayout(string root, DocEmitterSettings options)
         {
             OutputDir = Path.GetFullPath(options.OutputFolder, root);
             OutputFile = Path.GetFileNameWithoutExtension(options.OutputFilename);

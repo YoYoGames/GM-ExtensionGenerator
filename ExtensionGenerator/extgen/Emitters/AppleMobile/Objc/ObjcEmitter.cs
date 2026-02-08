@@ -1,13 +1,12 @@
 ﻿using extgen.Bridge.Objc;
-using extgen.Config;
-using extgen.Emitters.AppleMobile;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models.Utils;
+using extgen.Models;
+using extgen.Models.Config;
 using extgen.TypeSystem.Objc;
 
 namespace extgen.Emitters.AppleMobile.Objc
 {
-    public sealed class ObjcEmitter(IAppleMobileEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    public sealed class ObjcEmitter(IAppleMobileEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly ObjcTypeMap typeMap = new(runtime);
 

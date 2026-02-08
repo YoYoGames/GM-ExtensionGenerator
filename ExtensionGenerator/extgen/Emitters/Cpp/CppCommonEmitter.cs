@@ -1,7 +1,7 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Utils;
 using extgen.TypeSystem.Cpp;
 using System.Collections.Immutable;
 

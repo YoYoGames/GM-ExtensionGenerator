@@ -1,6 +1,6 @@
-﻿using extgen.Config;
-using extgen.Emitters.Utils;
-using extgen.Model;
+﻿using extgen.Emitters.Utils;
+using extgen.Models;
+using extgen.Models.Config;
 using extgen.TypeSystem;
 using System.Collections.Immutable;
 

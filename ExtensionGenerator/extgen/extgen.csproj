@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <None Remove="Resources\Cmake\.clang-format" />
     <None Remove="Resources\Cmake\CMakeLists.txt" />
@@ -97,5 +97,49 @@
       <Private>True</Private>
     </Reference>
   </ItemGroup>
+
+	<PropertyGroup>
+		<!-- Your human major version -->
+		<ExtGenMajorVersion>1</ExtGenMajorVersion>
+	</PropertyGroup>
+
+	<Target Name="InjectBuildInfo" BeforeTargets="BeforeCompile">
+		<PropertyGroup>
+			<GitCommitTrimmed>nogit</GitCommitTrimmed>
+			<BuildDate>$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd'))</BuildDate>
+		</PropertyGroup>
+
+		<Exec
+		  Condition="Exists('$(MSBuildProjectDirectory)\..\..\.git')"
+		  Command="git rev-parse --short HEAD"
+		  ConsoleToMSBuild="true"
+		  IgnoreExitCode="true">
+			<Output TaskParameter="ConsoleOutput" PropertyName="GitCommitRaw" />
+		</Exec>
+
+		<PropertyGroup>
+			<GitCommitTrimmed>$([System.String]::Copy('$(GitCommitRaw)').Trim())</GitCommitTrimmed>
+		</PropertyGroup>
+
+		<ItemGroup>
+			<BuildInfoLines Include="namespace extgen {" />
+			<BuildInfoLines Include="  internal static class BuildInfo {" />
+			<BuildInfoLines Include="    public const string Version = &quot;$(ExtGenMajorVersion)&quot;%3B" />
+			<BuildInfoLines Include="    public const string Commit = &quot;$(GitCommitTrimmed)&quot;%3B" />
+			<BuildInfoLines Include="    public const string BuildDate = &quot;$(BuildDate)&quot;%3B" />
+			<BuildInfoLines Include="    public static string FullVersion =&gt; $&quot;extgen v{Version}.{Commit}&quot;%3B" />
+			<BuildInfoLines Include="  }" />
+			<BuildInfoLines Include="}" />
+		</ItemGroup>
+
+		<WriteLinesToFile
+          File="$(IntermediateOutputPath)BuildInfo.g.cs"
+          Lines="@(BuildInfoLines)"
+          Overwrite="true" />
+	</Target>
+
+	<ItemGroup>
+		<Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
+	</ItemGroup>
 
 </Project>

@@ -1,8 +1,8 @@
-﻿using extgen.Config;
-using extgen.Config.Targets.Consoles;
-using extgen.Config.Targets.Desktop;
-using extgen.Config.Targets.Mobile;
-using extgen.Model;
+﻿using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Config.Targets.Consoles;
+using extgen.Models.Config.Targets.Desktop;
+using extgen.Models.Config.Targets.Mobile;
 using extgen.Utils;
 using Microsoft.VisualBasic.FileIO;
 

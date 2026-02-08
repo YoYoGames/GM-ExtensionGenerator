@@ -8,7 +8,7 @@
         public string RuntimeOutputFile { get; }
         public string RuntimeOutputFolder { get; }
 
-        public GmlLayout(string root, GmlEmitterOptions options)
+        public GmlLayout(string root, GmlEmitterSettings options)
         {
             var apiOutput = Path.GetFullPath(options.OutputFile, root);
 

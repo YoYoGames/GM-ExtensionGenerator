@@ -1,7 +1,7 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Utils;
-using extgen.Model;
+using extgen.Models;
 
 namespace extgen.Emitters.Android.Java
 {

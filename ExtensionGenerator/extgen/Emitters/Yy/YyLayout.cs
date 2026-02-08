@@ -6,7 +6,7 @@
 
         public string OutputFile { get; }
 
-        public YyLayout(string root, YyEmitterOptions options)
+        public YyLayout(string root, YyEmitterSettings options)
         {
             var apiOutput = Path.GetFullPath(options.OutputFile, root);
 

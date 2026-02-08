@@ -1,5 +1,5 @@
-﻿using codegencore.Model;
-using extgen.Model;
+﻿using codegencore.Models;
+using extgen.Models;
 using gmidlreader;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;

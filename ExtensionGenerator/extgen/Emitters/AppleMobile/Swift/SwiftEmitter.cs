@@ -1,12 +1,12 @@
-using codegencore.Model;
+using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Swift;
-using extgen.Config;
 using extgen.Emitters.AppleMobile;
 using extgen.Emitters.AppleMobile.Objc;
 using extgen.Emitters.Utils;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.TypeSystem.Cpp;
 using extgen.TypeSystem.Swift;
 using extgen.Utils;
@@ -18,7 +18,7 @@ namespace extgen.Emitters.AppleMobile.Swift
         IIrTypeEnumResolver Enums
     );
 
-    public sealed class SwiftEmitter(IAppleMobileEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    public sealed class SwiftEmitter(IAppleMobileEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly SwiftTypeMap typeMap = new();
 

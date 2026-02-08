@@ -1,17 +1,17 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers;
 using codegencore.Writers.Concrete;
-using extgen.Config;
-using extgen.Model;
+using extgen.Models;
+using extgen.Models.Config;
 using System.Collections.Immutable;
 using System.Text;
 
 namespace extgen.Emitters.Doc
 {
-    internal sealed class DocEmitter(DocEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class DocEmitter(DocEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         // currently unused, but keep for future expansion (links/namespace hints etc)
-        private readonly DocEmitterOptions _options = options;
+        private readonly DocEmitterSettings _options = options;
         private readonly RuntimeNaming _runtime = runtime;
 
         public void Emit(IrCompilation comp, string outputDir)

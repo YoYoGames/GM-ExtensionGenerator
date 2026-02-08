@@ -1,8 +1,8 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
-using extgen.Config;
 using extgen.Emitters.Utils;
-using extgen.Model;
+using extgen.Models;
+using extgen.Models.Config;
 using extgen.Options.Android;
 using extgen.Utils;
 using System.Security.Cryptography;
@@ -10,7 +10,7 @@ using System.Text;
 
 namespace extgen.Emitters.Android.Jni
 {
-    internal class JniEmitter(AndroidEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    internal class JniEmitter(AndroidEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         public void Emit(IrCompilation comp, string dir)
         {  

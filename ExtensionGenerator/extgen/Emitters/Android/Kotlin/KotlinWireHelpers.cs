@@ -1,4 +1,4 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge;
 

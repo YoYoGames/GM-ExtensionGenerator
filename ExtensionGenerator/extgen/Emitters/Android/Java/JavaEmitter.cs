@@ -1,7 +1,7 @@
 ﻿using extgen.Bridge.Java;
-using extgen.Config;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.Options.Android;
 using extgen.TypeSystem.Java;
 
@@ -16,7 +16,7 @@ namespace extgen.Emitters.Android.Java
     ///   - {dir}/{ExtName}Interface.java   (required interface)
     ///   - {dir}/{ExtName}.java            (user-implemented functions; stubbed)
     /// </summary>
-    internal sealed class JavaEmitter(AndroidEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class JavaEmitter(AndroidEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly JavaTypeMap typeMap = new();
 

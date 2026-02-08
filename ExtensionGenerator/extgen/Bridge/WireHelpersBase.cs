@@ -1,5 +1,4 @@
-﻿using codegencore.Model;
-using extgen.Model;
+﻿using codegencore.Models;
 
 namespace extgen.Bridge
 {

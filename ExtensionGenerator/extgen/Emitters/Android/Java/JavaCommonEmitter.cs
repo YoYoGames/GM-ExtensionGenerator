@@ -1,8 +1,8 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Java;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Utils;
 using extgen.TypeSystem.Java;
 using extgen.Utils;
 

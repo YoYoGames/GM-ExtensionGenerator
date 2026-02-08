@@ -10,7 +10,7 @@ namespace extgen.Emitters.Android.Jni
 
         public string NativeCodeGenDir { get; }
 
-        public JniLayout(string root, AndroidEmitterOptions opts)
+        public JniLayout(string root, AndroidEmitterSettings opts)
         {
             JavaBaseDir = Path.GetFullPath(Path.Combine(opts.OutputFolder, "Java"), root);
             NativeCodeGenDir = Path.GetFullPath(opts.OutputNativeFolder, root);

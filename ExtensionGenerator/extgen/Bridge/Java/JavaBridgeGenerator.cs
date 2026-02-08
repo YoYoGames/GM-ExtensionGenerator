@@ -1,11 +1,11 @@
 ﻿// Bridge/Java/JavaBridgeBase.cs
-using codegencore.Model;
+using codegencore.Models;
 using codegencore.Writers.Lang;
-using extgen.Config;
 using extgen.Emitters.Android.Java;
 using extgen.Emitters.Utils;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.Options.Android;
 using extgen.TypeSystem;
 using System.Collections.Immutable;
@@ -20,7 +20,7 @@ namespace extgen.Bridge.Java
         IIrTypeMap types,
         RuntimeNaming runtime,
         JavaWireHelpers wireHelpers
-    ) : BridgeGeneratorBase<AndroidEmitterOptions, JavaWriter>(types, runtime)
+    ) : BridgeGeneratorBase<AndroidEmitterSettings, JavaWriter>(types, runtime)
     {
         protected JavaWireHelpers Wire { get; } = wireHelpers;
 
@@ -29,13 +29,13 @@ namespace extgen.Bridge.Java
         /// <summary>
         /// The im
         /// </summary>
-        public virtual string[]? GetClassImplements(IEmitterContext<AndroidEmitterOptions> ctx)
+        public virtual string[]? GetClassImplements(IEmitterContext<AndroidEmitterSettings> ctx)
         => [$"{ctx.ExtName}Interface"];
 
         /// <summary>
         /// Optional backing field (e.g. __kotlin_instance). Default = no-op.
         /// </summary>
-        public override void EmitBackingField(IEmitterContext<AndroidEmitterOptions> ctx, JavaWriter w)
+        public override void EmitBackingField(IEmitterContext<AndroidEmitterSettings> ctx, JavaWriter w)
         {
             // default: nothing
         }
@@ -44,12 +44,12 @@ namespace extgen.Bridge.Java
         /// Expression used to call the user implementation for a given function.
         /// e.g. "fnName" (Java) or "__kotlin_instance.fnName" (Kotlin).
         /// </summary>
-        protected abstract string GetTargetExpression(IEmitterContext<AndroidEmitterOptions> ctx, IrFunction fn);
+        protected abstract string GetTargetExpression(IEmitterContext<AndroidEmitterSettings> ctx, IrFunction fn);
 
         // ---------- invocation handler & buffer queue are fully shared ----------
 
         public override void EmitInvocationHandler(
-            IEmitterContext<AndroidEmitterOptions> ctx,
+            IEmitterContext<AndroidEmitterSettings> ctx,
             ImmutableArray<IrFunction> funcs,
             JavaWriter w)
         {
@@ -79,7 +79,7 @@ namespace extgen.Bridge.Java
         }
 
         public override void EmitBufferQueueHandler(
-            IEmitterContext<AndroidEmitterOptions> ctx,
+            IEmitterContext<AndroidEmitterSettings> ctx,
             ImmutableArray<IrFunction> funcs,
             JavaWriter w)
         {
@@ -115,7 +115,7 @@ namespace extgen.Bridge.Java
         // ---------- function bridge (__EXT_NATIVE__Foo) shared, with hooks ----------
 
         public override void EmitFunctionBridge(
-            IEmitterContext<AndroidEmitterOptions> ctx,
+            IEmitterContext<AndroidEmitterSettings> ctx,
             IrFunction fn,
             JavaWriter w)
         {
@@ -159,7 +159,7 @@ namespace extgen.Bridge.Java
         /// <summary>
         /// Optional hook for code before the actual call (default: noop).
         /// </summary>
-        protected virtual void EmitBeforeCall(IEmitterContext<AndroidEmitterOptions> ctx, IrFunction fn, JavaWriter m)
+        protected virtual void EmitBeforeCall(IEmitterContext<AndroidEmitterSettings> ctx, IrFunction fn, JavaWriter m)
         {
         }
 
@@ -168,7 +168,7 @@ namespace extgen.Bridge.Java
         /// Handles return-buffer encoding by default.
         /// </summary>
         protected virtual void EmitAfterCall(
-            IEmitterContext<AndroidEmitterOptions> ctx,
+            IEmitterContext<AndroidEmitterSettings> ctx,
             IrFunction fn,
             bool needRetBuf,
             JavaWriter m)

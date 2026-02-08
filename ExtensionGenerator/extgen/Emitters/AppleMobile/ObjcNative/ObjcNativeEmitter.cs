@@ -1,12 +1,11 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Objc;
-using extgen.Config;
-using extgen.Emitters.AppleMobile;
 using extgen.Emitters.AppleMobile.Objc;
 using extgen.Emitters.Utils;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.TypeSystem.Objc;
 using extgen.Utils;
 
@@ -22,7 +21,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
     /// IMPORTANT: ObjC method name == exported C name
     ///   - (double) __EXT_NATIVE__foo:(double)arg0 ... { return __EXT_NATIVE__foo(...); }
     /// </summary>
-    internal sealed class ObjcNativeEmitter(IAppleMobileEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class ObjcNativeEmitter(IAppleMobileEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly ObjcTypeMap typeMap = new(runtime);
 

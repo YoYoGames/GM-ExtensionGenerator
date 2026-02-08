@@ -1,8 +1,8 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Objc;
 using extgen.Emitters.Utils;
-using extgen.Model;
+using extgen.Models;
 using extgen.TypeSystem;
 using extgen.Utils;
 

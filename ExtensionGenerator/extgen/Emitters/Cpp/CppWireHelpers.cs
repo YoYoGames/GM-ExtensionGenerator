@@ -1,8 +1,8 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge;
-using extgen.Config;
-using extgen.Model.Utils;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.TypeSystem.Cpp;
 
 namespace extgen.Emitters.Cpp

@@ -1,19 +1,19 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 using codegencore.Writers;
 using codegencore.Writers.JSDoc;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Doc;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Utils;
 using extgen.Utils;
 using extgencore.Helpers;
 using System.Collections.Immutable;
 
 namespace extgen.Emitters.Gml
 {
-    public sealed class GmlEmitter(GmlEmitterOptions options) : IIrEmitter
+    public sealed class GmlEmitter(GmlEmitterSettings options) : IIrEmitter
     {
-        private readonly GmlEmitterOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+        private readonly GmlEmitterSettings _options = options ?? throw new ArgumentNullException(nameof(options));
 
         private const string InternalArgBuffer = "__args_buffer";
         private const string InternalRetBuffer = "__ret_buffer";

@@ -1,7 +1,7 @@
-﻿using extgen.Config;
-using extgen.Emitters.Utils;
+﻿using extgen.Emitters.Utils;
+using extgen.Models.Config;
 
 namespace extgen.Emitters.Cpp
 {
-    internal sealed record CppEmitterContext(string ExtName, CppEmitterOptions Options, RuntimeNaming Runtime) : IEmitterContext<CppEmitterOptions>;
+    internal sealed record CppEmitterContext(string ExtName, CppEmitterSettings Options, RuntimeNaming Runtime) : IEmitterContext<CppEmitterSettings>;
 }

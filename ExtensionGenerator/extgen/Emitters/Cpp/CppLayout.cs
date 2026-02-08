@@ -8,7 +8,7 @@ namespace extgen.Emitters.Cpp
         public string CodeGenDir { get; }
         public string SourceDir { get; }
 
-        public CppLayout(string root, CppEmitterOptions options)
+        public CppLayout(string root, CppEmitterSettings options)
         {
             CoreDir = Path.GetFullPath(Path.Combine($"./code_gen/core"), root);
             CodeGenDir = Path.GetFullPath(Path.Combine($"./code_gen/native"), root);

@@ -1,6 +1,6 @@
-﻿using extgen.Config;
-using extgen.Config.Build;
-using extgen.Emitters.Utils;
+﻿using extgen.Emitters.Utils;
+using extgen.Models.Config;
+using extgen.Models.Config.Build;
 
 namespace extgen.Emitters.Cmake
 {

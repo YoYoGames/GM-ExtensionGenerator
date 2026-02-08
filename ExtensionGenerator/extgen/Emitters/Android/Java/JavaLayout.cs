@@ -11,7 +11,7 @@ namespace extgen.Emitters.Android.Java
         public string Records => Path.Combine(CodeGenDir, "records");
         public string Codecs => Path.Combine(CodeGenDir, "codecs");
 
-        public JavaLayout(string root, AndroidEmitterOptions opts)
+        public JavaLayout(string root, AndroidEmitterSettings opts)
         {
             BaseDir = Path.GetFullPath(Path.Combine(opts.OutputFolder, "Java"), root);
             

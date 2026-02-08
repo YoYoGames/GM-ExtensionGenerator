@@ -1,9 +1,9 @@
 ﻿using codegencore.Writers.Lang;
 using extgen.Bridge.Kotlin;
-using extgen.Config;
 using extgen.Emitters.Android.Java;
-using extgen.Model;
-using extgen.Model.Utils;
+using extgen.Models;
+using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.Options.Android;
 using extgen.TypeSystem.Java;
 using extgen.TypeSystem.Kotlin;
@@ -13,7 +13,7 @@ using System.Collections.Immutable;
 
 namespace extgen.Emitters.Android.Kotlin
 {
-    internal sealed class KotlinEmitter(AndroidEmitterOptions options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class KotlinEmitter(AndroidEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly KotlinTypeMap typeMap = new();
 

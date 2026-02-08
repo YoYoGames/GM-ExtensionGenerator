@@ -1,4 +1,4 @@
-﻿using codegencore.Model;
+﻿using codegencore.Models;
 
 namespace extgen.TypeSystem.Swift
 {
