@@ -4,5 +4,5 @@ using extgen.Options.Android;
 
 namespace extgen.Emitters.Android.Kotlin
 {
-    internal record KotlinEmitterContext(string ExtName, AndroidEmitterSettings Options, RuntimeNaming Runtime) : IEmitterContext<AndroidEmitterSettings>;
+    internal record KotlinEmitterContext(string ExtName, AndroidEmitterSettings Settings, RuntimeNaming Runtime) : IEmitterContext<AndroidEmitterSettings>;
 }

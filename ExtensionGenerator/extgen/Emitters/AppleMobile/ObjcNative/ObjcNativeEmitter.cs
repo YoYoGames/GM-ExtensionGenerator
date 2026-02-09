@@ -21,14 +21,14 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
     /// IMPORTANT: ObjC method name == exported C name
     ///   - (double) __EXT_NATIVE__foo:(double)arg0 ... { return __EXT_NATIVE__foo(...); }
     /// </summary>
-    internal sealed class ObjcNativeEmitter(IAppleMobileEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class ObjcNativeEmitter(IAppleMobileEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly ObjcTypeMap typeMap = new(runtime);
 
         public void Emit(IrCompilation comp, string dir)
         {
-            ObjcEmitterContext ctx = new(comp.Name, options, runtime);
-            ObjcLayout layout = new(dir, options);
+            ObjcEmitterContext ctx = new(comp.Name, settings, runtime);
+            ObjcLayout layout = new(dir, settings);
 
             EmitAll(ctx, comp, layout);
         }
@@ -36,7 +36,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
         private void EmitAll(ObjcEmitterContext ctx, IrCompilation c, ObjcLayout layout)
         {
             var ext = ctx.ExtName;
-            var platform = ctx.Options.Platform;
+            var platform = ctx.Settings.Platform;
 
             // 1) code gen files (always overwrite)
             FileEmitHelpers.WriteObjc(layout.CodeGenDir, $"{ext}Internal_{platform}.h", w => EmitInternalHeader(ctx, c, w));
@@ -93,7 +93,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
         private static void EmitInternalImpl(ObjcEmitterContext ctx, IrCompilation c, ObjcWriter w)
         {
             var ext = ctx.ExtName;
-            var platform = ctx.Options.Platform;
+            var platform = ctx.Settings.Platform;
 
             w.Import($"{ext}Internal_{platform}.h")
              .Import($"native/{ext}Internal_native.h")

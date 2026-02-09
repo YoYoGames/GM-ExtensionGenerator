@@ -8,16 +8,12 @@ using System.Text;
 
 namespace extgen.Emitters.Doc
 {
-    internal sealed class DocEmitter(DocEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class DocEmitter(DocEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
-        // currently unused, but keep for future expansion (links/namespace hints etc)
-        private readonly DocEmitterSettings _options = options;
-        private readonly RuntimeNaming _runtime = runtime;
-
         public void Emit(IrCompilation comp, string outputDir)
         {
             var ext = comp.Name;
-            var layout = new DocLayout(outputDir, _options);
+            var layout = new DocLayout(outputDir, settings);
             WriteFileDoc(layout.OutputDir, $"{string.Format(layout.OutputFile, ext)}.js", w => EmitAll(w, comp));
         }
 

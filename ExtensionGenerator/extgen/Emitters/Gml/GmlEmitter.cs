@@ -11,10 +11,8 @@ using System.Collections.Immutable;
 
 namespace extgen.Emitters.Gml
 {
-    public sealed class GmlEmitter(GmlEmitterSettings options) : IIrEmitter
+    public sealed class GmlEmitter(GmlEmitterSettings settings) : IIrEmitter
     {
-        private readonly GmlEmitterSettings _options = options ?? throw new ArgumentNullException(nameof(options));
-
         private const string InternalArgBuffer = "__args_buffer";
         private const string InternalRetBuffer = "__ret_buffer";
 
@@ -27,14 +25,14 @@ namespace extgen.Emitters.Gml
 
         public void Emit(IrCompilation comp, string dir)
         {
-            var ctx = new GmlEmitterContext(comp.Name, _options);
-            var layout = new GmlLayout(dir, _options);
+            var ctx = new GmlEmitterContext(comp.Name, settings);
+            var layout = new GmlLayout(dir, settings);
 
             var enums = new IrTypeEnumResolver(comp.Enums);
 
             FileEmitHelpers.WriteGml(layout.OutputFolder, $"{layout.OutputFile}.gml", w => EmitAll(ctx, comp, enums, w));
 
-            if (_options.EmitRuntime) 
+            if (settings.EmitRuntime) 
             {
                 var output = Path.Combine(layout.OutputFolder, $"{layout.OutputFile}.gml");
                 ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Gml.ExtensionCore_api.gml", output);

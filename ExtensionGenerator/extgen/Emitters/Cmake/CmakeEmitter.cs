@@ -4,16 +4,15 @@ using extgen.Models.Config.Targets.Consoles;
 using extgen.Models.Config.Targets.Desktop;
 using extgen.Models.Config.Targets.Mobile;
 using extgen.Utils;
-using Microsoft.VisualBasic.FileIO;
 
 namespace extgen.Emitters.Cmake
 {
-    internal class CmakeEmitter(ExtGenConfig options) : IIrEmitter
+    internal class CmakeEmitter(CmakeEmitterSettings settings, ExtGenConfig config) : IIrEmitter
     {
         public void Emit(IrCompilation comp, string outputDir)
         {
             var layout = new CmakeLayout(outputDir);
-            var ctx = new CmakeEmitterContext(comp.Name, options);
+            var ctx = new CmakeEmitterContext(comp.Name, settings, config.Runtime);
 
             EmitAll(ctx, layout);
         }
@@ -28,7 +27,7 @@ namespace extgen.Emitters.Cmake
 
             EmitThirdParty(layout);
 
-            if (ctx.Options.EmitPresets)
+            if (ctx.Settings.EmitPresets)
                 EmitCmakePresets(ctx, layout);
 
             EmitExtras(layout);
@@ -42,12 +41,12 @@ namespace extgen.Emitters.Cmake
                 ["EXTGEN_EXTENSION_NAME"] = ctx.ExtName,
 
                 // Cpp
-                ["EXTGEN_CPP_VERSION"] = $"{ctx.Options.CppStandard}",
-                ["EXTGEN_CPP_EXTENSIONS"] = ctx.Options.CppExtensions ? "ON" : "OFF",
+                ["EXTGEN_CPP_VERSION"] = $"{ctx.Settings.CppStandard}",
+                ["EXTGEN_CPP_EXTENSIONS"] = ctx.Settings.CppExtensions ? "ON" : "OFF",
 
                 // Config
-                ["EXTGEN_USE_THIRD_PARTY"] = ctx.Options.UseThirdParty ? "ON" : "OFF",
-                ["EXTGEN_STRICT_WARNINGS"] = ctx.Options.StrictWarnings ? "ON" : "OFF",
+                ["EXTGEN_USE_THIRD_PARTY"] = ctx.Settings.UseThirdParty ? "ON" : "OFF",
+                ["EXTGEN_STRICT_WARNINGS"] = ctx.Settings.StrictWarnings ? "ON" : "OFF",
             });
         }
 
@@ -63,11 +62,13 @@ namespace extgen.Emitters.Cmake
         private void EmitScripts(CmakeEmitterContext ctx, CmakeLayout layout)
         {
             ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_xcframework.cmake"));
+
+            var targets = config.Targets;
             ResourceWriter.WriteTemplatedTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_package_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_package_xcframework.cmake"), new Dictionary<string, string>
             {
                 // Frameworks
-                ["EXTGEN_IOS_OUTPUT"] = ctx.Config.Targets.Ios?.OutputFolder ?? "../iOSSourceFromMac",
-                ["EXTGEN_TVOS_OUTPUT"] = ctx.Config.Targets.Tvos?.OutputFolder ?? "../tvOSSourceFromMac",
+                ["EXTGEN_IOS_OUTPUT"] = targets.Ios?.OutputFolder ?? "../iOSSourceFromMac",
+                ["EXTGEN_TVOS_OUTPUT"] = targets.Tvos?.OutputFolder ?? "../tvOSSourceFromMac",
             });
         }
 
@@ -82,7 +83,7 @@ namespace extgen.Emitters.Cmake
 
         private void EmitCmakePresets(CmakeEmitterContext ctx, CmakeLayout layout)
         {
-            var targets = ctx.Config.Targets;
+            var targets = config.Targets;
             ResourceWriter.WriteTemplatedTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.CMakePresets.json", Path.Combine(layout.RootDir, "CMakePresets.json"), new Dictionary<string, string>
             {
                 // Desktop

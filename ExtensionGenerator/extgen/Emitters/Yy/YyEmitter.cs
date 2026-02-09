@@ -14,16 +14,12 @@ namespace extgen.Emitters.Yy
     /// Writes the function-declaration chunk developers need to *paste*
     /// into their *.yy* extension file until direct injection is available.
     /// </summary>
-    internal sealed class YyEmitter(YyEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class YyEmitter(YyEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
-        // currently unused, but keep for future expansion (links/namespace hints etc)
-        private readonly YyEmitterSettings _options = options;
-        private readonly RuntimeNaming _runtime = runtime;
-
         public void Emit(IrCompilation comp, string outputDir)
         {
-            YyEmitterContext ctx = new(comp.Name, _options, runtime);
-            var layout = new YyLayout(outputDir, _options);
+            YyEmitterContext ctx = new(comp.Name, settings, runtime);
+            var layout = new YyLayout(outputDir, settings);
 
             var path = Path.Combine(layout.OutputDir, $"{string.Format(layout.OutputFile, ctx.ExtName)}.yy");
 

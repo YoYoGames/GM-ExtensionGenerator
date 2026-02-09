@@ -3,5 +3,5 @@ using extgen.Models.Config;
 
 namespace extgen.Emitters.Cpp
 {
-    internal sealed record CppEmitterContext(string ExtName, CppEmitterSettings Options, RuntimeNaming Runtime) : IEmitterContext<CppEmitterSettings>;
+    internal sealed record CppEmitterContext(string ExtName, CppEmitterSettings Settings, RuntimeNaming Runtime) : IEmitterContext<CppEmitterSettings>;
 }

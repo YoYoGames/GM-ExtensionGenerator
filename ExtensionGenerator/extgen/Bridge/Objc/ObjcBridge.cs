@@ -49,7 +49,7 @@ namespace extgen.Bridge.Objc
         public void EmitMethodBody(ObjcEmitterContext ctx, ObjcWriter fnBody, IrFunction fn)
         {
             CppTypeMap cppTypeMap = new(ctx.Runtime);
-            CppEmitterSettings cppEmitterOptions = new() { SourceFilename = ctx.Options.SourceFilename, SourceFolder = ctx.Options.SourceFilename };
+            CppEmitterSettings cppEmitterOptions = new() { SourceFilename = ctx.Settings.SourceFilename, SourceFolder = ctx.Settings.SourceFilename };
 
             CppEmitterContext cppCtx = new(ctx.ExtName, cppEmitterOptions, ctx.Runtime);
             CppCommonEmitter<ObjcWriter> commmon = new(cppCtx, cppTypeMap, enums);
@@ -95,7 +95,7 @@ namespace extgen.Bridge.Objc
             CppCommonEmitter<ObjcWriter>.EmitCommonIncludes(w);
             w.Include("GMExtWire.h", false).Line();
 
-            CppEmitterSettings cppEmitterOptions = new() { SourceFilename = ctx.Options.SourceFilename, SourceFolder = ctx.Options.SourceFilename };
+            CppEmitterSettings cppEmitterOptions = new() { SourceFilename = ctx.Settings.SourceFilename, SourceFolder = ctx.Settings.SourceFilename };
             CppEmitterContext cppCtx = new(ctx.ExtName, cppEmitterOptions, ctx.Runtime);
             CppCommonEmitter<ObjcWriter> commmon = new(cppCtx, new CppTypeMap(ctx.Runtime), enums);
             commmon.EmitCommonCppArtifacts(w, c);

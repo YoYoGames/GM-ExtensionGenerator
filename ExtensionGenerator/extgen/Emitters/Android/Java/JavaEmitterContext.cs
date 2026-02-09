@@ -4,5 +4,5 @@ using extgen.Options.Android;
 
 namespace extgen.Emitters.Android.Java
 {
-    internal sealed record JavaEmitterContext(string ExtName, AndroidEmitterSettings Options, RuntimeNaming Runtime) : IEmitterContext<AndroidEmitterSettings>;
+    internal sealed record JavaEmitterContext(string ExtName, AndroidEmitterSettings Settings, RuntimeNaming Runtime) : IEmitterContext<AndroidEmitterSettings>;
 }

@@ -11,7 +11,7 @@ namespace extgen.Models.Config.Build
         /// <summary>If false, do not emit any CMake build files/presets.</summary>
         [JsonPropertyName("emitCmake")] public bool EmitCmake { get; set; } = true;
 
-        [JsonPropertyName("cmake")] public CmakeEmitterOptions Cmake { get; set; } = new();
+        [JsonPropertyName("cmake")] public CmakeConfig Cmake { get; set; } = new();
 
         /// <summary>Apple packaging knobs for xcframework generation.</summary>
         //[JsonPropertyName("apple")] public AppleBuildOptions Apple { get; set; } = new();

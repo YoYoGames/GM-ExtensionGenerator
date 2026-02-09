@@ -2,10 +2,10 @@
 
 namespace extgen.Emitters.Utils
 {
-    internal interface IEmitterContext<TargetOptions>
+    internal interface IEmitterContext<TargetSettings>
     {
         string ExtName { get; }
-        TargetOptions Options { get; }
+        TargetSettings Settings { get; }
         RuntimeNaming Runtime { get; }
     }
 }

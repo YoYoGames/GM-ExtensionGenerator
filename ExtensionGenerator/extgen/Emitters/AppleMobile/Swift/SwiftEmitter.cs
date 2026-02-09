@@ -18,14 +18,14 @@ namespace extgen.Emitters.AppleMobile.Swift
         IIrTypeEnumResolver Enums
     );
 
-    public sealed class SwiftEmitter(IAppleMobileEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    public sealed class SwiftEmitter(IAppleMobileEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly SwiftTypeMap typeMap = new();
 
         public void Emit(IrCompilation comp, string dir)
         {
-            ObjcEmitterContext ctx = new(comp.Name, options, runtime);
-            ObjcLayout layout = new(dir, options);
+            ObjcEmitterContext ctx = new(comp.Name, settings, runtime);
+            ObjcLayout layout = new(dir, settings);
 
             EmitAll(ctx, comp, layout);
         }

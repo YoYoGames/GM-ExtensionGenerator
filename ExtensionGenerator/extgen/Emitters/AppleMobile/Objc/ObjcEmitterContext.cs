@@ -4,5 +4,5 @@ using extgen.Models.Config;
 
 namespace extgen.Emitters.AppleMobile.Objc
 {
-    internal sealed record ObjcEmitterContext(string ExtName, IAppleMobileEmitterSettings Options, RuntimeNaming Runtime) : IEmitterContext<IAppleMobileEmitterSettings>;
+    internal sealed record ObjcEmitterContext(string ExtName, IAppleMobileEmitterSettings Settings, RuntimeNaming Runtime) : IEmitterContext<IAppleMobileEmitterSettings>;
 }

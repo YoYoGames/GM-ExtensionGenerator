@@ -1,5 +1,6 @@
 ﻿using extgen.Config;
 using extgen.Emitters.Cmake;
+using extgen.Mappers;
 using extgen.Models;
 using extgen.Models.Config;
 using extgen.Parsing.Gmidl;
@@ -89,7 +90,8 @@ namespace extgen.App
             // CMake emission is typically build-driven; you can gate it by rc.AllowBuild if you want.
             try
             {
-                var cmakeEmitter = new CmakeEmitter(rc.Raw);
+                var config = rc.Raw.Build.Cmake;
+                var cmakeEmitter = new CmakeEmitter(config.ToSettings(), rc.Raw);
                 cmakeEmitter.Emit(compilation, rc.OutputDir);
             }
             catch (Exception ex)

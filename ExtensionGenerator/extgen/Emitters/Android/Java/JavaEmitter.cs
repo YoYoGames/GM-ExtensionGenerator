@@ -16,14 +16,14 @@ namespace extgen.Emitters.Android.Java
     ///   - {dir}/{ExtName}Interface.java   (required interface)
     ///   - {dir}/{ExtName}.java            (user-implemented functions; stubbed)
     /// </summary>
-    internal sealed class JavaEmitter(AndroidEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class JavaEmitter(AndroidEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly JavaTypeMap typeMap = new();
 
         public void Emit(IrCompilation comp, string dir)
         {
-            var ctx = new JavaEmitterContext(comp.Name, options, runtime);
-            var layout = new JavaLayout(dir, options);
+            var ctx = new JavaEmitterContext(comp.Name, settings, runtime);
+            var layout = new JavaLayout(dir, settings);
 
             EmitAll(ctx, comp, layout);
         }

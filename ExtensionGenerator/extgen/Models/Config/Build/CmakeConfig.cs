@@ -2,7 +2,7 @@
 
 namespace extgen.Models.Config.Build
 {
-    public sealed class CmakeEmitterOptions
+    public sealed class CmakeConfig 
     {
         /// <summary>Default C++ standard to put into templates/presets (e.g. 17, 20).</summary>
         [JsonPropertyName("cppStandard")]

@@ -10,14 +10,14 @@ using System.Text;
 
 namespace extgen.Emitters.Android.Jni
 {
-    internal class JniEmitter(AndroidEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    internal class JniEmitter(AndroidEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         public void Emit(IrCompilation comp, string dir)
         {  
-            var ctx = new JniEmitterContext(comp.Name, options, runtime);
+            var ctx = new JniEmitterContext(comp.Name, settings, runtime);
             var specs = BuildSpecs(ctx, comp).ToArray();
 
-            JniLayout layout = new(dir, options);
+            JniLayout layout = new(dir, settings);
 
             // --------------------------- Java Side ---------------------------
 

@@ -6,14 +6,14 @@ using extgen.TypeSystem.Objc;
 
 namespace extgen.Emitters.AppleMobile.Objc
 {
-    public sealed class ObjcEmitter(IAppleMobileEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    public sealed class ObjcEmitter(IAppleMobileEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly ObjcTypeMap typeMap = new(runtime);
 
         public void Emit(IrCompilation comp, string dir)
         {
-            ObjcEmitterContext ctx = new(comp.Name, options, runtime);
-            ObjcLayout layout = new(dir, options);
+            ObjcEmitterContext ctx = new(comp.Name, settings, runtime);
+            ObjcLayout layout = new(dir, settings);
 
             EmitAll(ctx, comp, layout);
         }

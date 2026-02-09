@@ -4,7 +4,7 @@ using extgen.Options.Android;
 
 namespace extgen.Emitters.Android.Jni
 {
-    internal sealed record JniEmitterContext(string ExtName, AndroidEmitterSettings Options, RuntimeNaming Runtime) : IEmitterContext<AndroidEmitterSettings>
+    internal sealed record JniEmitterContext(string ExtName, AndroidEmitterSettings Settings, RuntimeNaming Runtime) : IEmitterContext<AndroidEmitterSettings>
     {
         public string BridgeClass => $"{ExtName}Bridge";
         public string BridgePackageUnderscore => Runtime.BridgePackage.Replace('.', '_');

@@ -9,22 +9,18 @@ using extgen.Utils;
 
 namespace extgen.Emitters.Cpp
 {
-    internal sealed record CppEmitServices(
-        IIrTypeEnumResolver Enums
-    );
-
-    public sealed class CppEmitter(CppEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    public sealed class CppEmitter(CppEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly CppTypeMap typeMap = new(runtime);
 
         public void Emit(IrCompilation comp, string dir)
         {
-            var ctx = new CppEmitterContext(comp.Name, options, runtime);
+            var ctx = new CppEmitterContext(comp.Name, settings, runtime);
             var ext = comp.Name;
 
             var enums = new IrTypeEnumResolver(comp.Enums);
 
-            var layout = new CppLayout(dir, options);
+            var layout = new CppLayout(dir, settings);
 
             // 1) code gen files (always overwrite)
             EmitWire(layout.CoreDir);
@@ -32,8 +28,8 @@ namespace extgen.Emitters.Cpp
             FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_native.h", w => EmitInternalHeader(ctx, comp, enums, w));
             FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_native.cpp", w => EmitInternalImpl(ctx, comp, enums, w));
 
-            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.h", w => EmitUserHeader(ctx, w));
-            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.cpp", w => EmitUserImpl(ctx, w));
+            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(settings.SourceFilename, ext)}.h", w => EmitUserHeader(ctx, w));
+            FileEmitHelpers.WriteCppIfMissing(layout.SourceDir, $"{string.Format(settings.SourceFilename, ext)}.cpp", w => EmitUserImpl(ctx, w));
         }
 
         public static void EmitWire(string destinationFolder) {
@@ -185,7 +181,7 @@ namespace extgen.Emitters.Cpp
 
         private static void EmitUserImpl(CppEmitterContext ctx, CppWriter w) 
         {
-            w.Include($"{string.Format(ctx.Options.SourceFilename, ctx.ExtName)}.h", false).Line();
+            w.Include($"{string.Format(ctx.Settings.SourceFilename, ctx.ExtName)}.h", false).Line();
 
             w.UsingNamespace(ctx.Runtime.ExtWireNamespace);
             w.UsingNamespace(ctx.Runtime.StructsNamespace);

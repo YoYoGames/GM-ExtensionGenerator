@@ -1,7 +1,9 @@
 ﻿using extgen.Emitters.AppleMobile;
+using extgen.Emitters.Cmake;
 using extgen.Emitters.Doc;
 using extgen.Emitters.Gml;
 using extgen.Emitters.Yy;
+using extgen.Models.Config.Build;
 using extgen.Models.Config.Extras;
 using extgen.Models.Config.Gml;
 using extgen.Models.Config.Targets.Mobile;
@@ -15,6 +17,19 @@ namespace extgen.Mappers
     /// </summary>
     public static class EmitterSettingsMappers
     {
+        // ----------------------------
+        // Cmake
+        // ----------------------------
+        public static CmakeEmitterSettings ToSettings(this CmakeConfig cfg)
+            => new()
+            {
+                CppExtensions = cfg.CppExtensions,
+                CppStandard = cfg.CppStandard,
+                EmitPresets = cfg.EmitPresets,
+                StrictWarnings = cfg.StrictWarnings,
+                UseThirdParty = cfg.UseThirdParty,
+            };
+
         // ----------------------------
         // Android
         // ----------------------------

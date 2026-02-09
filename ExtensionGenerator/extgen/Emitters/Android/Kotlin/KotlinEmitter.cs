@@ -13,14 +13,14 @@ using System.Collections.Immutable;
 
 namespace extgen.Emitters.Android.Kotlin
 {
-    internal sealed class KotlinEmitter(AndroidEmitterSettings options, RuntimeNaming runtime) : IIrEmitter
+    internal sealed class KotlinEmitter(AndroidEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly KotlinTypeMap typeMap = new();
 
         public void Emit(IrCompilation comp, string dir)
         {
-            var ctx = new KotlinEmitterContext(comp.Name, options, runtime);
-            var layout = new JavaLayout(dir, options);
+            var ctx = new KotlinEmitterContext(comp.Name, settings, runtime);
+            var layout = new JavaLayout(dir, settings);
             EmitAll(ctx, comp, layout);
         }
 
@@ -39,7 +39,7 @@ namespace extgen.Emitters.Android.Kotlin
         private static void EmitJavaLayer(KotlinEmitterContext ctx, IrCompilation c, JavaLayout layout)
         {
             var javaTypeMap = new JavaTypeMap();
-            var javaCtx = new JavaEmitterContext(ctx.ExtName, ctx.Options, ctx.Runtime);
+            var javaCtx = new JavaEmitterContext(ctx.ExtName, ctx.Settings, ctx.Runtime);
 
             var enums = new IrTypeEnumResolver(c.Enums);
             var wireHelpers = new JavaWireHelpers(javaCtx.Runtime, javaTypeMap, enums);
