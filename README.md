@@ -17,13 +17,13 @@ It is designed to be:
 
 From one GMIDL input file, extgen can generate:
 
-- 🎮 GameMaker **GML bindings**
-- 🧠 **C++ native glue code**
-- 📱 Android (Java / Kotlin / JNI)
-- 🍎 iOS & tvOS (ObjC / Swift / Native)
-- 🎮 Consoles (Xbox, PS4, PS5, Switch)
-- 🛠️ Complete **CMake projects & presets**
-- 📚 Optional documentation output
+- GameMaker **GML bindings**
+- **C++ native glue code**
+- Android (Java / Kotlin / JNI)
+- iOS & tvOS (ObjC / Swift / Native)
+- Consoles (Xbox, PS4, PS5, Switch)
+- Complete **CMake projects & presets**
+- Optional documentation output
 
 All behavior is controlled via a **JSON config file** validated by an automatically generated **JSON Schema**.
 
@@ -45,9 +45,9 @@ extgen --config ./my-extension/config.json
 
 All documentation lives in the **GitHub Wiki**:
 
-* 📖 **User Manual** — configuration, targets, workflows
-* 🛠️ **Build Guide** — how to build extgen from source
-* 🧩 **Developer Docs** — architecture, emitters, contribution guide
+* **User Manual** — configuration, targets, workflows
+* **Build Guide** — how to build extgen from source
+* **Developer Docs** — architecture, emitters, contribution guide
 
 👉 **Start here:**
 [**`Wiki → Home`**](../../wiki)
