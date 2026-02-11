@@ -16,6 +16,7 @@ namespace extgen.Emitters.AppleMobile.Objc
 
             if (Directory.Exists(CodeGenDir)) Directory.Delete(CodeGenDir, true);
 
+            Directory.CreateDirectory(CoreDir);
             Directory.CreateDirectory(CodeGenDir);
             Directory.CreateDirectory(SourceDir);
         }
