@@ -44,7 +44,7 @@ OptionParser.new do |o|
   o.banner = "Usage: integrate_subproject.rb --gm GM.xcodeproj --ext EXT.xcodeproj --ext-target NAME [--gm-target NAME]"
   o.on("--gm PATH", "Path to the GameMaker .xcodeproj") { |v| args[:gm] = v }
   o.on("--gm-target NAME", "GM target name (optional)") { |v| args[:gm_target] = v }
-  o.on("--ext PATH", "Path to the extension .xcodeproj") { |v| args[:ext] = v }
+  o.on("--ext-project PATH", "Path to the extension .xcodeproj") { |v| args[:ext] = v }
   o.on("--ext-target NAME", "Extension target name (required)") { |v| args[:ext_target] = v }
 end.parse!
 
@@ -54,7 +54,7 @@ gm_target_name  = clean_arg(args[:gm_target])
 ext_target_name = clean_arg(args[:ext_target])
 
 abort_msg("Missing --gm")         if gm_path.empty?
-abort_msg("Missing --ext")        if ext_path.empty?
+abort_msg("Missing --ext-project") if ext_path.empty?
 abort_msg("Missing --ext-target") if ext_target_name.empty?
 abort_msg("GM .xcodeproj not found: #{gm_path}") unless File.exist?(gm_path)
 abort_msg("Extension .xcodeproj not found: #{ext_path}") unless File.exist?(ext_path)

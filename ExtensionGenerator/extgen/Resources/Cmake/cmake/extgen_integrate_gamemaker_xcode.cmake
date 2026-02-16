@@ -5,7 +5,10 @@ if(NOT DEFINED EXT_REPO_ROOT OR EXT_REPO_ROOT STREQUAL "")
 endif()
 
 # --- Locate ruby (only) ---
-find_program(RUBY_EXECUTABLE ruby REQUIRED)
+find_program(RUBY_EXECUTABLE ruby HINTS /opt/homebrew/opt/ruby/bin /usr/bin)
+if(NOT RUBY_EXECUTABLE)
+  message(FATAL_ERROR "ruby not found")
+endif()
 
 # --- Where the Gemfile lives (repo) ---
 set(_GEMFILE "${EXT_REPO_ROOT}/cmake/Gemfile")
@@ -26,7 +29,6 @@ file(MAKE_DIRECTORY "${_BUNDLE_DIR}")
 # Helper: env for ALL ruby/bundler invocations
 set(_ENV_CMD ${CMAKE_COMMAND} -E env
   "BUNDLE_GEMFILE=${_GEMFILE}"
-  "BUNDLE_PATH=${_BUNDLE_DIR}"
   "GEM_HOME=${_LOCAL_GEM_HOME}"
   "GEM_PATH=${_LOCAL_GEM_HOME}"
   "PATH=${_LOCAL_GEM_BIN}:$ENV{PATH}"
@@ -58,11 +60,25 @@ if(NOT _bundler_ok EQUAL 0)
   endif()
 endif()
 
-# --- bundle install (always invoke bundle via ruby -S to avoid stub issues) ---
+# --- bundle install (Bundler 3 compatible; always invoke via ruby -S) ---
+# Set install path locally instead of using removed --path flag
+execute_process(
+  COMMAND ${_ENV_CMD} "${RUBY_EXECUTABLE}" -S bundle config set --local path "${_BUNDLE_DIR}"
+    --gemfile "${_GEMFILE}"
+    --quiet
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  RESULT_VARIABLE _bcres
+  OUTPUT_VARIABLE _bcout
+  ERROR_VARIABLE  _bcerr
+)
+
+if(NOT _bcres EQUAL 0)
+  message(FATAL_ERROR "bundle config set path failed (${_bcres}):\n${_bcout}\n${_bcerr}")
+endif()
+
 execute_process(
   COMMAND ${_ENV_CMD} "${RUBY_EXECUTABLE}" -S bundle install
     --gemfile "${_GEMFILE}"
-    --path "${_BUNDLE_DIR}"
     --quiet
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   RESULT_VARIABLE _bres
@@ -80,7 +96,7 @@ execute_process(
     "${CMAKE_CURRENT_LIST_DIR}/extgen_integrate_gamemaker_xcode.rb"
       --gm "${EXT_GM_XCODEPROJ}"
       --gm-target "${EXT_GM_APP_TARGET}"
-      --ext "${EXT_EXT_XCODEPROJ}"
+      --ext-project "${EXT_EXT_XCODEPROJ}"
       --ext-target "${EXT_EXT_TARGET}"
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   RESULT_VARIABLE _res
