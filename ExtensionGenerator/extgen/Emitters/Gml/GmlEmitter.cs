@@ -1,5 +1,4 @@
 ﻿using codegencore.Models;
-using codegencore.Writers;
 using codegencore.Writers.JSDoc;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Doc;
@@ -49,7 +48,7 @@ namespace extgen.Emitters.Gml
 
             EmitMacros(c.Constants, w);
             EmitEnums(c.Enums, w);
-            EmitConstructors(ctx, c.Structs, w);
+            EmitConstructors(ctx, c.Structs, enums, w);
             EmitCodecs(ctx, c.Structs, enums, w);
             EmitFunctions(ctx, c.Functions, enums, w);
 
@@ -82,12 +81,12 @@ namespace extgen.Emitters.Gml
             }
         }
 
-        private static void EmitConstructors(GmlEmitterContext ctx, ImmutableArray<IrStruct> structs, GmlWriter w)
+        private static void EmitConstructors(GmlEmitterContext ctx, ImmutableArray<IrStruct> structs, IIrTypeEnumResolver enums, GmlWriter w)
         {
             w.Section("Constructors").Line();
             foreach (var s in structs)
             {
-                EmitStruct(ctx, s, w);
+                EmitStruct(ctx, enums, s, w);
                 w.Line();
             }
         }
@@ -149,7 +148,7 @@ namespace extgen.Emitters.Gml
         private static void EmitEnum(IrEnum e, GmlWriter w)
             => w.Enum(e.Name, e.Members.Select(m => new EnumMember(m.Name, m.DefaultLiteral)));
 
-        private static void EmitStruct(GmlEmitterContext ctx, IrStruct s, GmlWriter w)
+        private static void EmitStruct(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrStruct s, GmlWriter w)
         {
             w.Struct(s.Name, body =>
             {
@@ -157,6 +156,26 @@ namespace extgen.Emitters.Gml
 
                 foreach (var f in s.Fields)
                     body.Assign(f.Name, f.Value ?? "undefined");
+
+                body.Line();
+                foreach (var fn in s.Functions)
+                {
+                    var patchedFunc = fn with { Parameters = [.. fn.Parameters.Select(p => p with { Name = $"_{p.Name}" })] };
+                    w.JsDoc(builder =>
+                    {
+                        foreach (var p in patchedFunc.Parameters)
+                            builder.Param(new ParamDoc(p.Name, DocEmitter.JsDocType(p.Type)));
+
+                        if (!IrTypeUtil.IsVoid(patchedFunc.ReturnType))
+                            builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
+                    });
+
+                    body.Assign(fn.Name, fnExp => fnExp.Method(patchedFunc.Parameters.Select(p => p.Name), fnBody =>
+                    {
+                        patchedFunc = IrFunctionUtil.PatchStructMethod(s, patchedFunc);
+                        EmitWrapperBody(ctx, enums, patchedFunc, fnBody);
+                    }), VariableScope.Static);
+                }
             });
         }
 
@@ -235,16 +254,7 @@ namespace extgen.Emitters.Gml
         private static void EmitWrapper(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrFunction fn, GmlWriter w)
         {
             bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
-            bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
-
-            // direct args are those passed without serialization
-            var direct = needArgsBuf ? [] : IrAnalysis.DirectArgs(fn).ToArray();
-
-            var usesDynamic = fn.Parameters.Any(p =>
-                p.Type.ContainsBuiltin(BuiltinKind.AnyArray) ||
-                p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
-
-            var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function));
+            bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);   
 
             if (!needArgsBuf && !needRetBuf)
             {
@@ -252,65 +262,79 @@ namespace extgen.Emitters.Gml
                 return;
             }
 
+            fn = fn with { Parameters = [.. fn.Parameters.Select(p => p with { Name = $"_{p.Name}" })] };
             w.JsDoc(builder =>
             {
                 foreach (var p in fn.Parameters)
-                    builder.Param(new ParamDoc($"_{p.Name}", DocEmitter.JsDocType(p.Type)));
+                    builder.Param(new ParamDoc(p.Name, DocEmitter.JsDocType(p.Type)));
 
                 if (!IrTypeUtil.IsVoid(fn.ReturnType))
                     builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
             });
 
-            w.Function(fn.Name, fn.Parameters.Select(p => $"_{p.Name}"), body =>
+            w.Function(fn.Name, fn.Parameters.Select(p => p.Name), body =>
             {
-                if (usesFunctions)
-                    body.Assign("__dispatcher", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Static).Line();
-
-                if (usesDynamic)
-                    body.Assign("__decoders", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
-
-                // --- encode params ---
-                if (needArgsBuf)
-                {
-                    body.Assign(InternalArgBuffer, expr => expr.Call(ExtCoreArgsBuffer, []), VariableScope.Local).Line();
-
-                    foreach (var p in fn.Parameters)
-                    {
-                        body.Comment($"param: _{p.Name}, type: {p.Type.ToDebugString()}");
-                        WriteValue(ctx, enums, body, $"_{p.Name}", p.Type, InternalArgBuffer, "_GMFUNCTION_");
-                        body.Line();
-                    }
-                }
-
-                // --- prepare ret buffer ---
-                if (needRetBuf)
-                    body.Assign(InternalRetBuffer, expr => expr.Call(ExtCoreRetBuffer, Array.Empty<string>()), VariableScope.Local).Line();
-
-                // --- external call ---
-                List<string> args = [];
-
-                foreach (var p in direct) args.Add($"_{p.Name}");
-
-                if (needArgsBuf)
-                    args.AddRange([$"buffer_get_address({InternalArgBuffer})", $"buffer_tell({InternalArgBuffer})"]);
-
-                if (needRetBuf)
-                    args.AddRange([$"buffer_get_address({InternalRetBuffer})", $"buffer_get_size({InternalRetBuffer})"]);
-
-                body.Assign("_return_value", expr => expr.Call($"__{fn.Name}", [.. args]), VariableScope.Local).Line();
-
-                // --- decode result ---
-                if (needRetBuf)
-                {
-                    body.Assign("_result", "undefined", VariableScope.Local);
-                    ReadValue(enums, body, "_result", fn.ReturnType, InternalRetBuffer);
-                    body.Line("return _result;");
-                }
-                else
-                {
-                    body.Line("return _return_value;");
-                }
+                EmitWrapperBody(ctx, enums, fn, body);
             });
+        }
+
+        private static void EmitWrapperBody(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrFunction fn, GmlWriter body) 
+        {
+            bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
+            bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
+
+            var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function));
+            if (usesFunctions)
+                body.Assign("__dispatcher", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Static).Line();
+
+            var usesDynamic = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.AnyArray) || p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
+            if (usesDynamic)
+                body.Assign("__decoders", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
+
+            // --- encode params ---
+            if (needArgsBuf)
+            {
+                body.Assign(InternalArgBuffer, expr => expr.Call(ExtCoreArgsBuffer, []), VariableScope.Local).Line();
+                foreach (var p in fn.Parameters)
+                {
+                    body.Comment($"param: {p.Name}, type: {p.Type.ToDebugString()}");
+                    WriteValue(ctx, enums, body, p.Name, p.Type, InternalArgBuffer, "_GMFUNCTION_");
+                    body.Line();
+                }
+            }
+
+            // --- prepare ret buffer ---
+            if (needRetBuf)
+                body.Assign(InternalRetBuffer, expr => expr.Call(ExtCoreRetBuffer, Array.Empty<string>()), VariableScope.Local).Line();
+
+            // --- external call ---
+            List<string> args = [];
+            if (needArgsBuf)
+            {
+                args.AddRange([$"buffer_get_address({InternalArgBuffer})", $"buffer_tell({InternalArgBuffer})"]);
+            }
+            else
+            {
+                // direct args are those passed without serialization
+                foreach (var p in IrAnalysis.DirectArgs(fn)) args.Add(p.Name);
+            }
+
+            if (needRetBuf)
+                args.AddRange([$"buffer_get_address({InternalRetBuffer})", $"buffer_get_size({InternalRetBuffer})"]);
+
+            body.Assign("_return_value", expr => expr.Call($"__{fn.Name}", [.. args]), VariableScope.Local).Line();
+
+            // --- decode result ---
+            if (needRetBuf)
+            {
+                body.Assign("_result", "undefined", VariableScope.Local);
+                ReadValue(enums, body, "_result", fn.ReturnType, InternalRetBuffer);
+                body.Line("return _result;");
+            }
+            else
+            {
+                body.Line("return _return_value;");
+            }
         }
 
         // ============================================================

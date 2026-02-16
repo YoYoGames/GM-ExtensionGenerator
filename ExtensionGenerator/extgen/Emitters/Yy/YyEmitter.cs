@@ -1,7 +1,11 @@
 ﻿using codegencore.Models;
 using extgen.Emitters.Doc;
+using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Config;
+using extgen.Models.Utils;
+using extgen.Parsing.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -36,12 +40,13 @@ namespace extgen.Emitters.Yy
             EmitFunctions(comp, ctx, sw, ms, jsonWriterOptions);
         }
 
-        private static void EmitFunctions(IrCompilation comp, YyEmitterContext ctx, StreamWriter sw, MemoryStream ms, JsonWriterOptions jsonWriterOptions)
+        private static void EmitFunctions(IrCompilation c, YyEmitterContext ctx, StreamWriter sw, MemoryStream ms, JsonWriterOptions jsonWriterOptions)
         {
-            var usesFunctions = comp.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffer = comp.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffer = c.HasBufferType();
 
-            foreach (var fn in comp.Functions)
+            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            foreach (var fn in allFunctions)
             {
                 ms.SetLength(0);                         // reset buffer
                 using (var jw = new Utf8JsonWriter(ms, jsonWriterOptions))
@@ -59,7 +64,7 @@ namespace extgen.Emitters.Yy
                 ms.SetLength(0);
                 using (var jw = new Utf8JsonWriter(ms, jsonWriterOptions))
                 {
-                    WriteInvocationHandlerFn(ctx, jw, comp.Name);
+                    WriteInvocationHandlerFn(ctx, jw, c.Name);
                 }
                 sw.WriteLine($"{Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length)},");
             }
@@ -69,7 +74,7 @@ namespace extgen.Emitters.Yy
                 ms.SetLength(0);
                 using (var jw = new Utf8JsonWriter(ms, jsonWriterOptions))
                 {
-                    WriteQueueBufferFn(ctx, jw, comp.Name);
+                    WriteQueueBufferFn(ctx, jw, c.Name);
                 }
                 sw.WriteLine($"{Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length)},");
             }
@@ -126,7 +131,11 @@ namespace extgen.Emitters.Yy
             jw.WriteStartObject();
 
             jw.WriteString("$GMExtensionFunction", "");
-            jw.WriteString("%Name", needArgsBuf || needRetBuf ? $"__{fn.Name}" : fn.Name);
+
+            // This is the name exposed to GML
+            var internalName = needArgsBuf || needRetBuf ? $"__{fn.Name}" : fn.Name;
+
+            jw.WriteString("%Name", internalName);
             jw.WriteNumber("argCount", args.Count);
 
             jw.WritePropertyName("args");
@@ -134,8 +143,11 @@ namespace extgen.Emitters.Yy
             foreach (var a in args) jw.WriteNumberValue(a);
             jw.WriteEndArray();
 
+            // This will be the name used on the Native implementation
+            var externalName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
+
             jw.WriteString("documentation", $"{string.Join(Environment.NewLine, docs)}");
-            jw.WriteString("externalName", $"{ctx.Runtime.NativePrefix}{fn.Name}");
+            jw.WriteString("externalName", externalName);
             jw.WriteString("help", "");
             jw.WriteBoolean("hidden", needArgsBuf || needRetBuf);
             jw.WriteNumber("kind", 4);

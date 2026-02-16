@@ -96,7 +96,7 @@ namespace extgen.Parsing.Gmidl
             _enums = [.. module.Data.Enums.Select(ParseEnum)];
             _structs = [.. module.Data.Classes.Select(ParseStruct)];
             _constants = [.. module.Data.Constants.Select(ParseConstant)];
-            _functions = [.. module.Data.Functions.Select(ParseFunction)];
+            _functions = [.. module.Data.Functions.Select(f => ParseFunction(f, null))];
 
             // Sort structs so deps come first
             var sortedStructs = TopologicallySortStructs(_structs);
@@ -146,6 +146,7 @@ namespace extgen.Parsing.Gmidl
         private IrStruct ParseStruct(GMIDLNode<GMIDLClass> cls)
         {
             var name = StripClassName(cls.Name);
+            var classType = new IrType.Named(NamedKind.Struct, name);
 
             var fields =
                 cls.Data.Properties
@@ -153,7 +154,12 @@ namespace extgen.Parsing.Gmidl
                    .Select(ParseField)
                    .ToImmutableArray();
 
-            return new IrStruct(name, fields);
+            var functions = cls.Data.Functions
+                .Where(p => p.Attributes.Enabled("method"))
+                .Select(f => ParseFunction(f, classType))
+                .ToImmutableArray();
+
+            return new IrStruct(name, fields, functions);
         }
 
         private IrField ParseField(GMIDLNode<GMIDLProperty> f)
@@ -177,12 +183,12 @@ namespace extgen.Parsing.Gmidl
                 Value: value);
         }
 
-        private IrFunction ParseFunction(GMIDLNode<GMIDLFunction> func)
+        private IrFunction ParseFunction(GMIDLNode<GMIDLFunction> func, IrType.Named? cls)
         {
             return new IrFunction(
                 func.Name,
                 ParseType(func.Data.ReturnType, func.Attributes),
-                [.. func.Data.NamedArgs.Select(ParseParam)]);
+                [.. func.Data.NamedArgs.Select(ParseParam)], cls is null ? null : IrParameter.Self(cls));
         }
 
         private IrParameter ParseParam(GMIDLNode<GMIDLFunctionArg> param)

@@ -4,6 +4,7 @@ using extgen.Bridge.Swift;
 using extgen.Emitters.AppleMobile;
 using extgen.Emitters.AppleMobile.Objc;
 using extgen.Emitters.Utils;
+using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Config;
 using extgen.Models.Utils;
@@ -167,8 +168,8 @@ namespace extgen.Emitters.AppleMobile.Swift
              .Import("CxxStdlib")
              .Line();
 
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => IrTypeUtil.ContainsBuiltin(p.Type, BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => IrTypeUtil.ContainsBuiltin(p.Type, BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             w.Class(
                 name: $"{ext}InternalSwift",
@@ -199,7 +200,7 @@ namespace extgen.Emitters.AppleMobile.Swift
                     cls.Init(parameters: [], modifiers: ["public"], body: _ => { });
                     cls.Line();
 
-                    EmitInternalSwiftFunctions(ctx, c.Functions, cls, typeMap, enums);
+                    EmitInternalSwiftFunctions(ctx, c, cls, typeMap, enums);
 
                     if (usesFunctions)
                     {
@@ -335,12 +336,13 @@ namespace extgen.Emitters.AppleMobile.Swift
                 });
         }
 
-        private void EmitInternalSwiftFunctions(ObjcEmitterContext ctx, ImmutableArray<IrFunction> fncs, SwiftWriter w, SwiftTypeMap typeMap, IIrTypeEnumResolver enums)
+        private void EmitInternalSwiftFunctions(ObjcEmitterContext ctx, IrCompilation c, SwiftWriter w, SwiftTypeMap typeMap, IIrTypeEnumResolver enums)
         {
             var rt = ctx.Runtime;
 
             // 1) Open user-overridable methods
-            foreach (var fn in fncs)
+            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            foreach (var fn in allFunctions)
             {
                 var userParams = fn.Parameters.Select(p =>
                     new SwiftParam(p.Name, p.Name, typeMap.Map(p.Type, owned: false)));
@@ -370,7 +372,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             }
 
             // 2) Wire entrypoints: __EXT_SWIFT__{fn.Name}
-            foreach (var fn in fncs)
+            foreach (var fn in allFunctions)
             {
                 var needsArgsBuffer = IrAnalysis.NeedsArgsBuffer(fn);
                 var needsRetBuffer = IrAnalysis.NeedsRetBuffer(fn);

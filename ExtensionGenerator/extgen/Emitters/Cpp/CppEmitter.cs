@@ -1,11 +1,14 @@
 ﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Utils;
+using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Config;
 using extgen.Models.Utils;
 using extgen.TypeSystem.Cpp;
 using extgen.Utils;
+using gmutils;
+using System.Linq;
 
 namespace extgen.Emitters.Cpp
 {
@@ -57,8 +60,8 @@ namespace extgen.Emitters.Cpp
             w.Include("core/GMExtWire.h", false).Line();
             common.EmitCommonCppArtifacts(w, c);
 
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             if (usesFunctions)
             {
@@ -79,7 +82,8 @@ namespace extgen.Emitters.Cpp
             }
 
             // 1. internal code gen signatures
-            foreach (var fn in c.Functions)
+            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            foreach (var fn in allFunctions)
             {
                 var exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
                 var ps = ExportTypeUtils.ParamsFor(fn, ctx.Runtime);
@@ -88,7 +92,7 @@ namespace extgen.Emitters.Cpp
             w.Line();
 
             // 2. clean user-side signatures
-            foreach (var fn in c.Functions)
+            foreach (var fn in allFunctions)
             {
                 w.FunctionDecl($"{fn.Name}", fn.Parameters.Select(p => new Param(typeMap.MapPassType(p.Type), p.Name)), typeMap.Map(fn.ReturnType, true));
             }
@@ -105,8 +109,8 @@ namespace extgen.Emitters.Cpp
             .UsingNamespace(ctx.Runtime.CodeGenNamespace)
             .Line();
 
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             if (usesFunctions)
             {
@@ -140,33 +144,38 @@ namespace extgen.Emitters.Cpp
                 w.Line();
             }
 
-            foreach (var fn in c.Functions)
+            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            foreach (var fn in allFunctions)
             {
-                var needsArgBuffer = IrAnalysis.NeedsArgsBuffer(fn);
-                var needsRetBuffer = IrAnalysis.NeedsRetBuffer(fn);
-                var exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
-
-                var ps = ExportTypeUtils.ParamsFor(fn, ctx.Runtime);
-
-                w.Function(exportName, ps.AsCpp(), funcBody =>
-                {
-                    var callArgs = common.EmitDecode(funcBody, fn, needsArgBuffer, ctx.Runtime.BufferReaderVar);
-
-                    if (fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.String })
-                    {
-                        funcBody.Line($"static std::string {ctx.Runtime.ResultVar};");
-                        funcBody.Assign(ctx.Runtime.ResultVar, e => e.Call(fn.Name, [.. callArgs]));
-                    }
-                    else if (!(fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.Void }))
-                        funcBody.Assign(ctx.Runtime.ResultVar, e => e.Call(fn.Name, [.. callArgs]), "auto&&");
-                    else
-                        funcBody.Call(fn.Name, [.. callArgs]).Line(";");
-
-                    common.EmitEncodeReturn(funcBody, fn.ReturnType, ctx.Runtime.ResultVar, needsRetBuffer, ctx.Runtime.BufferWriterVar);
-
-                }, ExportTypeUtils.ReturnFor(fn).AsCppType(), modifiers: ["GMEXPORT"])
-                .Line();
+                EmitFunctionInternalImpl(ctx, w, common, fn);
             }
+        }
+
+        private static void EmitFunctionInternalImpl(CppEmitterContext ctx, CppWriter w, CppCommonEmitter<CppWriter> common, IrFunction fn)
+        {
+            var needsArgBuffer = IrAnalysis.NeedsArgsBuffer(fn);
+            var needsRetBuffer = IrAnalysis.NeedsRetBuffer(fn);
+
+            var ps = ExportTypeUtils.ParamsFor(fn, ctx.Runtime);
+
+            w.Function($"{ctx.Runtime.NativePrefix}{fn.Name}", ps.AsCpp(), funcBody =>
+            {
+                var callArgs = common.EmitDecode(funcBody, fn, needsArgBuffer, ctx.Runtime.BufferReaderVar);
+
+                if (fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.String })
+                {
+                    funcBody.Line($"static std::string {ctx.Runtime.ResultVar};");
+                    funcBody.Assign(ctx.Runtime.ResultVar, e => e.Call(fn.Name, [.. callArgs]));
+                }
+                else if (!(fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.Void }))
+                    funcBody.Assign(ctx.Runtime.ResultVar, e => e.Call(fn.Name, [.. callArgs]), "auto&&");
+                else
+                    funcBody.Call(fn.Name, [.. callArgs]).Line(";");
+
+                common.EmitEncodeReturn(funcBody, fn.ReturnType, ctx.Runtime.ResultVar, needsRetBuffer, ctx.Runtime.BufferWriterVar);
+
+            }, ExportTypeUtils.ReturnFor(fn).AsCppType(), modifiers: ["GMEXPORT"])
+            .Line();
         }
 
         // =====================================================================

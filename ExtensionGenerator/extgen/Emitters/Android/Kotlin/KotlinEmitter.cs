@@ -30,7 +30,7 @@ namespace extgen.Emitters.Android.Kotlin
             EmitJavaLayer(ctx, c, layout);
 
             // Kotlin shares artifacts but emits .kt instead of .java
-            FileEmitHelpers.WriteKotlin(layout.BaseDir, $"{c.Name}Interface.kt", w => EmitKotlinInterface(ctx, c.Functions, w));
+            FileEmitHelpers.WriteKotlin(layout.BaseDir, $"{c.Name}Interface.kt", w => EmitKotlinInterface(ctx, c, w));
 
             FileEmitHelpers.WriteKotlinIfMissing(layout.BaseDir, $"{c.Name}Kotlin.kt", w => EmitKotlinImpl(ctx, w));
         }
@@ -53,7 +53,7 @@ namespace extgen.Emitters.Android.Kotlin
         }
 
         // ------------- interface (Kotlin)
-        private void EmitKotlinInterface(KotlinEmitterContext ctx, ImmutableArray<IrFunction> funcs, KotlinWriter w)
+        private void EmitKotlinInterface(KotlinEmitterContext ctx, IrCompilation c, KotlinWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;
             string wire = ctx.Runtime.WireClass;
@@ -67,7 +67,8 @@ namespace extgen.Emitters.Android.Kotlin
 
             w.Interface($"{ctx.ExtName}Interface", iface =>
             {
-                foreach (var fn in funcs)
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions)
                 {
                     string ret = typeMap.Map(fn.ReturnType, owned: true);
 

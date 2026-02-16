@@ -3,6 +3,7 @@ using codegencore.Writers.Lang;
 using extgen.Bridge.Objc;
 using extgen.Emitters.AppleMobile.Objc;
 using extgen.Emitters.Utils;
+using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Config;
 using extgen.Models.Utils;
@@ -62,13 +63,14 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
             w.Import("Foundation/Foundation.h", true)
              .Line();
 
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             // ObjC interface
             w.Interface($"{ext}Internal", body: iBody =>
             {
-                foreach (var fn in c.Functions)
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions)
                 {
                     string exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
 
@@ -99,12 +101,13 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
              .Import($"native/{ext}Internal_native.h")
              .Line();
 
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             w.Implementation($"{ext}Internal", implBody =>
             {
-                foreach (var fn in c.Functions) 
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions) 
                 {
                     string exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
 

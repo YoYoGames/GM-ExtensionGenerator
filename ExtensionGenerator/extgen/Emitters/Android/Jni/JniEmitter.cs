@@ -1,8 +1,10 @@
 ﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Utils;
+using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Config;
+using extgen.Models.Utils;
 using extgen.Options.Android;
 using extgen.Utils;
 using System.Security.Cryptography;
@@ -33,9 +35,10 @@ namespace extgen.Emitters.Android.Jni
             FileEmitHelpers.WriteCpp(layout.NativeCodeGenDir, $"{comp.Name}Internal_jni.cpp", w => EmitNative(ctx, comp, specs, w));
         }
 
-        private static IEnumerable<JniFunctionSpec> BuildSpecs(JniEmitterContext ctx, IrCompilation comp)
+        private static IEnumerable<JniFunctionSpec> BuildSpecs(JniEmitterContext ctx, IrCompilation c)
         {
-            foreach (var fn in comp.Functions)
+            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            foreach (var fn in allFunctions)
             {
                 yield return new JniFunctionSpec(
                     Name: fn.Name,
@@ -78,10 +81,10 @@ namespace extgen.Emitters.Android.Jni
 
             w.Class($"{ctx.ExtName}Internal", "RunnerSocial", body =>
             {
-                var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-                var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+                var usesFunctions = c.HasFunctionType();
+                var usesBuffers = c.HasBufferType();
 
-             if (usesFunctions)
+                if (usesFunctions)
                 {
                     body.Function(
                         name: $"{ctx.Runtime.NativePrefix}{ctx.ExtName}_invocation_handler",
@@ -149,8 +152,8 @@ namespace extgen.Emitters.Android.Jni
                 body.FunctionDecl("nativeRegister", [], modifiers: ["private", "static", "native"]);
                 body.Line();
 
-                var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-                var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+                var usesFunctions = c.HasFunctionType();
+                var usesBuffers = c.HasBufferType();
 
                 if (usesFunctions)
                 {
@@ -215,8 +218,8 @@ namespace extgen.Emitters.Android.Jni
 
         private static void EmitNativeInternals(JniEmitterContext ctx, IrCompilation c, CppWriter w)
         {
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             if (usesFunctions)
             {

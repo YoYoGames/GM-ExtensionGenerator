@@ -1,6 +1,7 @@
 ﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge.Java;
+using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Utils;
 using extgen.TypeSystem.Java;
@@ -180,17 +181,9 @@ namespace extgen.Emitters.Android.Java
             string wire = ctx.Runtime.WireClass;
             string cls = $"{c.Name}Interface";
 
-            bool needsOptional = 
-                c.Structs.Any(s => s.Fields.Any(f => f.Type.IsNullable())) || 
-                c.Functions.Any(f => f.Parameters.Any(p => p.IsOptional) || f.ReturnType.IsNullable());
-            bool needsList =
-                c.Structs.Any(s => s.Fields.Any(f => f.Type.IsVarArray())) ||
-                c.Functions.Any(f => f.Parameters.Any(p => p.Type.IsVarArray()) ||
-                f.ReturnType.IsVarArray());
-            bool needsArray =
-                c.Structs.Any(s => s.Fields.Any(f => f.Type.IsFixedArray())) ||
-                c.Functions.Any(f => f.Parameters.Any(p => p.Type.IsFixedArray()) ||
-                f.ReturnType.IsFixedArray());
+            bool needsOptional = c.HasOptionalTypes();
+            bool needsList = c.HasListTypes();
+            bool needsArray = c.HasArrayTypes();
 
             bool needsEnum = c.Enums.Any();
             bool needsRecords = c.Structs.Any();
@@ -210,7 +203,8 @@ namespace extgen.Emitters.Android.Java
 
             w.Interface(cls, body =>
             {
-                foreach (var fn in c.Functions)
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions)
                 {
                     var ret = typeMap.Map(fn.ReturnType, owned: true);
                     var ps = fn.Parameters.Select(p => new Param(typeMap.Map(p.Type), p.Name));
@@ -254,7 +248,8 @@ namespace extgen.Emitters.Android.Java
                 bridge.EmitInvocationHandler(ctx, c.Functions, clsBody);
                 bridge.EmitBufferQueueHandler(ctx, c.Functions, clsBody);
 
-                foreach (var fn in c.Functions)
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions)
                     bridge.EmitFunctionBridge(ctx, fn, clsBody);
 
                 foreach (var cn in c.Constants)

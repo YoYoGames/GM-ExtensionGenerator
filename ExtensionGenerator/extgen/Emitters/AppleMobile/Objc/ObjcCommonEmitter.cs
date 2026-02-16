@@ -2,7 +2,9 @@
 using codegencore.Writers.Lang;
 using extgen.Bridge.Objc;
 using extgen.Emitters.Utils;
+using extgen.Extensions;
 using extgen.Models;
+using extgen.Models.Utils;
 using extgen.TypeSystem;
 using extgen.Utils;
 
@@ -53,13 +55,14 @@ namespace extgen.Emitters.AppleMobile.Objc
             // Bridge-specific header extras (ObjC protocol, etc)
             bridge.EmitExtraHeaderDeclarations(ctx, c, w, cppTypeMap);
 
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-            var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
 
             // 1. internal code gen signatures
             w.Interface($"{ext}Internal", body: body =>
             {
-                foreach (var fn in c.Functions)
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions)
                 {
                     string methodName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
                     var ps = ExportTypeUtils.ParamsFor(fn, ctx.Runtime);
@@ -107,7 +110,8 @@ namespace extgen.Emitters.AppleMobile.Objc
                     bridge.EmitInitBody(ctx, initBody);
                 });
 
-                foreach (var fn in c.Functions)
+                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                foreach (var fn in allFunctions)
                 {
                     var ps = ExportTypeUtils.ParamsFor(fn, ctx.Runtime);
                     var ret = ExportTypeUtils.ReturnFor(fn).AsCppType();
@@ -119,8 +123,8 @@ namespace extgen.Emitters.AppleMobile.Objc
                     .Line();
                 }
 
-                var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
-                var usesBuffers = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+                var usesFunctions = c.HasFunctionType();
+                var usesBuffers = c.HasBufferType();
 
                 if (usesFunctions)
                 {
