@@ -11,7 +11,7 @@ namespace extgen.Extensions
             var allFields = c.Structs.SelectMany(s => s.Fields);
 
             // 2. Flatten all functions (from the class AND all structs)
-            var allFunctions = c.Functions.Concat(c.Structs.SelectMany(s => s.Functions));
+            var allFunctions = c.GetAllFunctions((s, f) => f);
 
             return allFields.Any(f => f.Type.ContainsBuiltin(BuiltinKind.Function)) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
         }
@@ -22,7 +22,7 @@ namespace extgen.Extensions
             var allFields = c.Structs.SelectMany(s => s.Fields);
 
             // 2. Flatten all functions (from the class AND all structs)
-            var allFunctions = c.Functions.Concat(c.Structs.SelectMany(s => s.Functions));
+            var allFunctions = c.GetAllFunctions((s, f) => f);
 
             return allFields.Any(f => f.Type.ContainsBuiltin(BuiltinKind.Buffer)) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
         }
@@ -33,7 +33,7 @@ namespace extgen.Extensions
             var allFields = c.Structs.SelectMany(s => s.Fields);
 
             // 2. Flatten all functions (from the class AND all structs)
-            var allFunctions = c.Functions.Concat(c.Structs.SelectMany(s => s.Functions));
+            var allFunctions = c.GetAllFunctions((s, f) => f);
 
             return allFields.Any(f => f.Type.IsNullable()) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.IsNullable()) || f.ReturnType.IsNullable());
         }
@@ -44,7 +44,7 @@ namespace extgen.Extensions
             var allFields = c.Structs.SelectMany(s => s.Fields);
 
             // 2. Flatten all functions (from the class AND all structs)
-            var allFunctions = c.Functions.Concat(c.Structs.SelectMany(s => s.Functions));
+            var allFunctions = c.GetAllFunctions((s, f) => f);
 
             return allFields.Any(f => f.Type.IsVarArray()) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.IsVarArray()) || f.ReturnType.IsVarArray());
         }
@@ -55,7 +55,7 @@ namespace extgen.Extensions
             var allFields = c.Structs.SelectMany(s => s.Fields);
 
             // 2. Flatten all functions (from the class AND all structs)
-            var allFunctions = c.Functions.Concat(c.Structs.SelectMany(s => s.Functions));
+            var allFunctions = c.GetAllFunctions((s, f) => f);
 
             return allFields.Any(f => f.Type.IsFixedArray()) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.IsFixedArray()) || f.ReturnType.IsFixedArray()); ;
         }

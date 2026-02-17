@@ -82,7 +82,7 @@ namespace extgen.Emitters.Cpp
             }
 
             // 1. internal code gen signatures
-            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
             foreach (var fn in allFunctions)
             {
                 var exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
@@ -144,7 +144,7 @@ namespace extgen.Emitters.Cpp
                 w.Line();
             }
 
-            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
             foreach (var fn in allFunctions)
             {
                 EmitFunctionInternalImpl(ctx, w, common, fn);

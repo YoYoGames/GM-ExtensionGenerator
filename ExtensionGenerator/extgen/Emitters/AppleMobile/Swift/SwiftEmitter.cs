@@ -341,7 +341,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             var rt = ctx.Runtime;
 
             // 1) Open user-overridable methods
-            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
             foreach (var fn in allFunctions)
             {
                 var userParams = fn.Parameters.Select(p =>

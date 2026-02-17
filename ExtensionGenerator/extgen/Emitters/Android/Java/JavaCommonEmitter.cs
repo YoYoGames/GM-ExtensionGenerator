@@ -203,7 +203,7 @@ namespace extgen.Emitters.Android.Java
 
             w.Interface(cls, body =>
             {
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions)
                 {
                     var ret = typeMap.Map(fn.ReturnType, owned: true);
@@ -248,7 +248,7 @@ namespace extgen.Emitters.Android.Java
                 bridge.EmitInvocationHandler(ctx, c.Functions, clsBody);
                 bridge.EmitBufferQueueHandler(ctx, c.Functions, clsBody);
 
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions)
                     bridge.EmitFunctionBridge(ctx, fn, clsBody);
 

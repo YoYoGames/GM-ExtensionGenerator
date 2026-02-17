@@ -61,7 +61,7 @@ namespace extgen.Emitters.AppleMobile.Objc
             // 1. internal code gen signatures
             w.Interface($"{ext}Internal", body: body =>
             {
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions)
                 {
                     string methodName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
@@ -110,7 +110,7 @@ namespace extgen.Emitters.AppleMobile.Objc
                     bridge.EmitInitBody(ctx, initBody);
                 });
 
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions)
                 {
                     var ps = ExportTypeUtils.ParamsFor(fn, ctx.Runtime);

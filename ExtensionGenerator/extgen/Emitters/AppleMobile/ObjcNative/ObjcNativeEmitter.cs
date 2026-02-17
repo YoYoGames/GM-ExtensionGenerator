@@ -69,7 +69,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
             // ObjC interface
             w.Interface($"{ext}Internal", body: iBody =>
             {
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions)
                 {
                     string exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
@@ -106,7 +106,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
 
             w.Implementation($"{ext}Internal", implBody =>
             {
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions) 
                 {
                     string exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";

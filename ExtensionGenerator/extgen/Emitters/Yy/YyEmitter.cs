@@ -45,7 +45,7 @@ namespace extgen.Emitters.Yy
             var usesFunctions = c.HasFunctionType();
             var usesBuffer = c.HasBufferType();
 
-            var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
             foreach (var fn in allFunctions)
             {
                 ms.SetLength(0);                         // reset buffer

@@ -3,6 +3,7 @@ using codegencore.Writers;
 using codegencore.Writers.Concrete;
 using extgen.Models;
 using extgen.Models.Config;
+using extgen.Models.Utils;
 using System.Collections.Immutable;
 using System.Text;
 
@@ -34,9 +35,9 @@ namespace extgen.Emitters.Doc
             EmitConstants(w, c.Constants);
         }
 
-        private static void EmitFunctions(DocWriter w, IrCompilation cmp)
+        private static void EmitFunctions(DocWriter w, IrCompilation c)
         {
-            var allFunctions = cmp.Functions.Select(f => f).Concat(cmp.Structs.SelectMany(s => s.Functions.Select(f => PatchStructMethod(s, f))));
+            var allFunctions = c.GetAllFunctions(PatchStructMethod);
 
             foreach (var f in allFunctions)
             {
@@ -65,10 +66,7 @@ namespace extgen.Emitters.Doc
 
         private static IrFunction PatchStructMethod(IrStruct s, IrFunction f)
         {
-            return f with
-            {
-                Name = $"{s.Name}::{f.Name}"
-            };
+            return f with { Name = $"{s.Name}::{f.Name}" };
         }
 
         private static void EmitStructs(DocWriter w, IImmutableList<IrStruct> structs)
@@ -122,8 +120,7 @@ namespace extgen.Emitters.Doc
 
         private static void EmitConstants(DocWriter w, ImmutableArray<IrConstant> constants)
         {
-            // You had this empty before. Keeping it empty to preserve behavior.
-            // If you want constants in docs, you can add similar JsDoc blocks here.
+            // We don't have a way to represent constants on Docs at the moment
             _ = w;
             _ = constants;
         }

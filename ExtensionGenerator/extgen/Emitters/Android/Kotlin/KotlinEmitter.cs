@@ -67,7 +67,7 @@ namespace extgen.Emitters.Android.Kotlin
 
             w.Interface($"{ctx.ExtName}Interface", iface =>
             {
-                var allFunctions = c.Functions.Select(f => f).Concat(c.Structs.SelectMany(s => s.Functions.Select(f => IrFunctionUtil.PatchStructMethod(s, f))));
+                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions)
                 {
                     string ret = typeMap.Map(fn.ReturnType, owned: true);
