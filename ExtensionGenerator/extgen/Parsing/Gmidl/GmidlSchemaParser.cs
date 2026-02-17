@@ -185,10 +185,14 @@ namespace extgen.Parsing.Gmidl
 
         private IrFunction ParseFunction(GMIDLNode<GMIDLFunction> func, IrType.Named? cls)
         {
+            var selfParam = (cls is not null && func.Data.SpecialArgs.Any(arg => arg.Name == "self"))
+                ? IrParameter.Self(cls)
+                : null;
+
             return new IrFunction(
                 func.Name,
                 ParseType(func.Data.ReturnType, func.Attributes),
-                [.. func.Data.NamedArgs.Select(ParseParam)], cls is null ? null : IrParameter.Self(cls));
+                [.. func.Data.NamedArgs.Select(ParseParam)], selfParam);
         }
 
         private IrParameter ParseParam(GMIDLNode<GMIDLFunctionArg> param)

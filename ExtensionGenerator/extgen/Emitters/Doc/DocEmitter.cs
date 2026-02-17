@@ -65,8 +65,6 @@ namespace extgen.Emitters.Doc
 
         private static IrFunction PatchStructMethod(IrStruct s, IrFunction f)
         {
-            if (f.Self is null) return f;
-
             return f with
             {
                 Name = $"{s.Name}::{f.Name}"
