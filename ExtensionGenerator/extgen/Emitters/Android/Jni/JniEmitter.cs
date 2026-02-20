@@ -267,7 +267,7 @@ namespace extgen.Emitters.Android.Jni
             .Include("cstddef")
             .Include("algorithm")
             .Include("string")
-            .Include($"native/{ctx.ExtName}Internal_native.h", false)
+            .Include($"native/{ctx.ExtName}Internal_exports.h", false)
             .Line()
             .Lines($$"""
                 // Per-library globals

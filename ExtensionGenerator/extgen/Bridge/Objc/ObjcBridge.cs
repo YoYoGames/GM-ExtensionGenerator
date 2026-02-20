@@ -15,7 +15,7 @@ namespace extgen.Bridge.Objc
     ///   - implementation is (id&lt;ExtInterface&gt;)self
     ///   - calls __impl via ObjC message send.
     /// </summary>
-    internal sealed class ObjcBridge(IIrTypeEnumResolver enums) : IAppleBridge
+    internal class ObjcBridge(IIrTypeEnumResolver enums) : IAppleBridge
     {
         public void EmitWire(ObjcLayout layout)
         {
@@ -167,6 +167,6 @@ namespace extgen.Bridge.Objc
             w.Line();
         }
 
-        public IEnumerable<string>? UserShellProtocols(ObjcEmitterContext ctx) => [$"{ctx.ExtName}Interface"];
+        virtual public IEnumerable<string>? UserShellProtocols(ObjcEmitterContext ctx) => [$"{ctx.ExtName}Interface"];
     }
 }

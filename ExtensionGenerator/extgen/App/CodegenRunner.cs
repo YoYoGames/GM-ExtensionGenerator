@@ -115,7 +115,7 @@ namespace extgen.App
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[{key}] Failed: {ex}");
+                    Console.Error.WriteLine($"[{key}] Failed: {ex.Message}, Where: {ex.Source}::{ex.TargetSite}");
                     return 30;
                 }
             }

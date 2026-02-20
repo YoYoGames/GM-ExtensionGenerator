@@ -19,9 +19,6 @@ option(EXT_APPLE_NATIVE_FRAMEWORK
 
 option(EXTGEN_ENABLE_SWIFT "Enable Swift sources (Apple only)" ON)
 
-# Embed core wire sources into the library (usually OFF for iOS/tvOS static to avoid duplication)
-option(EXT_EMBED_CORE_SRC "Compile code_gen/core sources into lib" ON)
-
 # Packaging config used by xcframework packagers
 set(EXT_APPLE_PACKAGE_CONFIG "Release" CACHE STRING "Config used by xcframework packagers (Debug/Release)")
 set_property(CACHE EXT_APPLE_PACKAGE_CONFIG PROPERTY STRINGS Debug Release)
@@ -83,8 +80,6 @@ endif()
 # ============================================================
 if(EXTGEN_IS_APPLE_MOBILE)
   add_library(${PROJECT_NAME} STATIC)
-  # Avoid duplicate symbols when GameMaker app also compiles core sources
-  set(EXT_EMBED_CORE_SRC OFF CACHE BOOL "Compile code_gen/core sources into lib" FORCE)
 else()
   add_library(${PROJECT_NAME} SHARED)
 endif()
@@ -101,10 +96,7 @@ set(SRC_CORE
   ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/GMExtUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/GMExtWire.cpp
 )
-
-if(EXT_EMBED_CORE_SRC)
-  target_sources(${PROJECT_NAME} PRIVATE ${SRC_CORE})
-endif()
+target_sources(${PROJECT_NAME} PRIVATE ${SRC_CORE})
 
 target_include_directories(
   ${PROJECT_NAME} PRIVATE
@@ -244,6 +236,7 @@ if(EXT_STRICT_WARNINGS)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unknown-pragmas)
+      target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
     endif()
   endif()
 endif()

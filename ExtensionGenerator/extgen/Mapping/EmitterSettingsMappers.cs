@@ -6,6 +6,7 @@ using extgen.Emitters.Yy;
 using extgen.Models.Config.Build;
 using extgen.Models.Config.Extras;
 using extgen.Models.Config.Gml;
+using extgen.Models.Config.Targets;
 using extgen.Models.Config.Targets.Mobile;
 using extgen.Options.Android;
 
@@ -79,10 +80,14 @@ namespace extgen.Mappers
                 EmitRuntime = cfg.EmitRuntime
             };
 
-        public static YyEmitterSettings ToYySettings(this GmlConfig cfg)
+        public static YyEmitterSettings ToYySettings(this GmlConfig cfg, bool androidEnabled, bool iosEnabled, bool tvosEnabled)
             => new()
             {
-                OutputFile = cfg.DeclarationsFile
+                OutputFile = cfg.ExtensionFile,
+                PatchFrameworks = cfg.PatchFrameworks,
+                AndroidEnabled = androidEnabled,
+                IosEnabled = iosEnabled,
+                TvosEnabled = tvosEnabled
             };
     }
 }

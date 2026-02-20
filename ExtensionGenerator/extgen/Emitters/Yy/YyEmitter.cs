@@ -1,23 +1,14 @@
 ﻿using codegencore.Models;
-using extgen.Emitters.Doc;
 using extgen.Extensions;
 using extgen.Models;
 using extgen.Models.Config;
 using extgen.Models.Utils;
-using extgen.Parsing.Validation;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
 using System.Text;
 using System.Text.Json;
-
+using System.Text.Json.Nodes;
 
 namespace extgen.Emitters.Yy
 {
-
-    /// <summary>
-    /// Writes the function-declaration chunk developers need to *paste*
-    /// into their *.yy* extension file until direct injection is available.
-    /// </summary>
     internal sealed class YyEmitter(YyEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         public void Emit(IrCompilation comp, string outputDir)
@@ -27,70 +18,273 @@ namespace extgen.Emitters.Yy
 
             var path = Path.Combine(layout.OutputDir, $"{string.Format(layout.OutputFile, ctx.ExtName)}.yy");
 
-            EmitAll(comp, ctx, path);
+            PatchYyFile(comp, ctx, path);
         }
 
-        private static void EmitAll(IrCompilation comp, YyEmitterContext ctx, string path)
+        private static void PatchYyFile(IrCompilation comp, YyEmitterContext ctx, string yyPath)
         {
-            // 8-bit clean; no BOM; one object per line
-            using var sw = new StreamWriter(path, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            using var ms = new MemoryStream();
-            var jsonWriterOptions = new JsonWriterOptions { Indented = false };
-            
-            EmitFunctions(comp, ctx, sw, ms, jsonWriterOptions);
+            if (!File.Exists(yyPath))
+                throw new FileNotFoundException("YY extension file not found. Ensure you have an extension created.", yyPath);
+
+            var text = File.ReadAllText(yyPath, Encoding.UTF8);
+
+            // .yy files commonly contain trailing commas -> allow them
+            var docOptions = new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            };
+
+            JsonNode? rootNode = JsonNode.Parse(text, documentOptions: docOptions);
+            if (rootNode is not JsonObject root)
+                throw new InvalidDataException("YY root was not an object. Invalid extension path provided.");
+
+            var extname = root["name"]?.GetValue<string>();
+            if (extname is null || string.Compare(extname, comp.Name) != 0) 
+            {
+                throw new InvalidDataException($"YY extension name should be set to - '{comp.Name}'");
+            }
+
+            if (ctx.Settings.AndroidEnabled)
+                PatchYyAndroidOptions(comp, ctx, root);
+            if (ctx.Settings.IosEnabled)
+                PatchYyIosOptions(comp, ctx, root);
+            if (ctx.Settings.TvosEnabled)
+                PatchYyTvosOptions(comp, ctx, root);
+
+            // Navigate: root["files"] -> array of GMExtensionFile entries
+            if (root["files"] is not JsonArray filesArray)
+                throw new InvalidDataException("YY did not contain a 'files' array.");
+
+
+            // Find the file entry matching "{compilation.Name}.ext"
+            var expectedFilename = $"{comp.Name}.ext";
+            JsonObject? extFileObj = FindExtensionFileObject(filesArray, expectedFilename) ?? 
+                throw new InvalidDataException($"YY extension should have a pre-created generic file - '{comp.Name}'");
+
+            PatchYyFunctions(comp, ctx, extFileObj);
+
+            // Write back (GM will normalize formatting; you said that’s fine)
+            WriteBack(yyPath, root);
         }
 
-        private static void EmitFunctions(IrCompilation c, YyEmitterContext ctx, StreamWriter sw, MemoryStream ms, JsonWriterOptions jsonWriterOptions)
+        private static void PatchYyAndroidOptions(IrCompilation comp, YyEmitterContext ctx, JsonObject root)
         {
-            var usesFunctions = c.HasFunctionType();
-            var usesBuffer = c.HasBufferType();
+            root["androidclassname"] = comp.Name;
+        }
 
-            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
+        private static void PatchYyIosOptions(IrCompilation comp, YyEmitterContext ctx, JsonObject root)
+        {
+            root["classname"] = comp.Name;
+            EnsureAppleLinkerFlags(root, "maclinkerflags", "-ObjC");
+
+            if (ctx.Settings.PatchFrameworks)
+                EnsureThirdPartyXcframeworkEntry(root, "iosThirdPartyFrameworkEntries", ctx.ExtName);
+        }
+
+        private static void PatchYyTvosOptions(IrCompilation comp, YyEmitterContext ctx, JsonObject root)
+        {
+            root["tvosclassname"] = comp.Name;
+            EnsureAppleLinkerFlags(root, "tvosmaclinkerflags", "-ObjC");
+
+            if (ctx.Settings.PatchFrameworks)
+                EnsureThirdPartyXcframeworkEntry(root, "tvosThirdPartyFrameworkEntries", ctx.ExtName);
+        }
+
+        private static void PatchYyFunctions(IrCompilation comp, YyEmitterContext ctx, JsonObject extFileObj)
+        {
+            // Build the new functions list (IrFunction -> YyExtFunction -> JsonObject)
+            var usesFunctions = comp.HasFunctionType();
+            var usesBuffer = comp.HasBufferType();
+
+            var allFunctions = comp.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
+
+            var newFunctions = new JsonArray();
+
             foreach (var fn in allFunctions)
             {
-                ms.SetLength(0);                         // reset buffer
-                using (var jw = new Utf8JsonWriter(ms, jsonWriterOptions))
-                {
-                    WriteFn(ctx, jw, fn);                     // ← your existing method
-                }
-
-                // Convert the UTF-8 bytes into a string and write one line
-                sw.WriteLine($"{Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length)},");
+                var yyFn = YyExtFunction.FromIr(ctx, fn);
+                newFunctions.Add(yyFn.ToJsonObject());
             }
 
-            // Write utility function to handle function calls from native code
             if (usesFunctions)
-            {
-                ms.SetLength(0);
-                using (var jw = new Utf8JsonWriter(ms, jsonWriterOptions))
-                {
-                    WriteInvocationHandlerFn(ctx, jw, c.Name);
-                }
-                sw.WriteLine($"{Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length)},");
-            }
+                newFunctions.Add(YyExtFunction.MakeInvocationHandler(ctx, comp.Name).ToJsonObject());
 
             if (usesBuffer)
-            {
-                ms.SetLength(0);
-                using (var jw = new Utf8JsonWriter(ms, jsonWriterOptions))
-                {
-                    WriteQueueBufferFn(ctx, jw, c.Name);
-                }
-                sw.WriteLine($"{Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length)},");
-            }
+                newFunctions.Add(YyExtFunction.MakeQueueBuffer(ctx, comp.Name).ToJsonObject());
+
+            // Replace only the "functions" array
+            extFileObj["functions"] = newFunctions;
         }
 
-        private static void WriteFn(YyEmitterContext ctx, Utf8JsonWriter jw, IrFunction fn)
+        // Helpers
+        private static void EnsureAppleLinkerFlags(JsonObject root, string key, params string[] flags)
+        {
+            if (root is null) throw new ArgumentNullException(nameof(root));
+            if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Key is required.", nameof(key));
+            if (flags is null || flags.Length == 0) return;
+
+            // Normalize input flags: trim, drop empties, de-dupe (preserve order)
+            var desired = new List<string>();
+            var seenDesired = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var f in flags)
+            {
+                var t = (f ?? "").Trim();
+                if (t.Length == 0) continue;
+                if (seenDesired.Add(t)) desired.Add(t);
+            }
+            if (desired.Count == 0) return;
+
+            string? current = root[key]?.GetValue<string>();
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(current))
+            {
+                parts = current
+                    .Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .ToList();
+            }
+
+            var existing = new HashSet<string>(parts, StringComparer.Ordinal);
+
+            bool changed = false;
+            foreach (var f in desired)
+            {
+                if (existing.Add(f))
+                {
+                    parts.Add(f);
+                    changed = true;
+                }
+            }
+
+            // If empty originally or we changed it, write back a normalized string
+            if (string.IsNullOrWhiteSpace(current) || changed)
+                root[key] = string.Join(" ", parts);
+        }
+
+        private static void EnsureThirdPartyXcframeworkEntry(JsonObject root, string key, string extName)
+        {
+            var wanted = $"{extName}.xcframework";
+
+            // Get or create array
+            JsonArray arr;
+            if (root[key] is JsonArray existing)
+            {
+                arr = existing;
+            }
+            else
+            {
+                arr = new JsonArray();
+                root[key] = arr;
+            }
+
+            // Check if already present (by "name" or "%Name")
+            bool exists = arr.OfType<JsonObject>().Any(o =>
+            {
+                var name = o["name"]?.GetValue<string>();
+                var pctName = o["%Name"]?.GetValue<string>();
+                return string.Equals(name, wanted, StringComparison.Ordinal)
+                    || string.Equals(pctName, wanted, StringComparison.Ordinal);
+            });
+
+            if (exists)
+                return;
+
+            // Append new framework entry
+            var entry = new JsonObject
+            {
+                ["$GMExtensionFrameworkEntry"] = "",
+                ["%Name"] = wanted,
+                ["embed"] = 0,
+                ["name"] = wanted,
+                ["resourceType"] = "GMExtensionFrameworkEntry",
+                ["resourceVersion"] = "2.0",
+                ["weakReference"] = false
+            };
+
+            arr.Add(entry);
+        }
+
+        private static void WriteBack(string yyPath, JsonObject root)
+        {
+            var writeOptions = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+
+            var output = root.ToJsonString(writeOptions);
+            File.WriteAllText(yyPath, output, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        }
+
+        private static JsonObject? FindExtensionFileObject(JsonArray filesArray, string expectedFilename)
+        {
+            foreach (var node in filesArray)
+            {
+                if (node is not JsonObject obj) continue;
+                var filename = obj["filename"]?.GetValue<string>();
+                if (string.Equals(filename, expectedFilename, StringComparison.Ordinal))
+                    return obj;
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Minimal model for a GM extension function entry inside a .yy "functions" array.
+    /// </summary>
+    internal sealed class YyExtFunction
+    {
+        public string InternalName { get; init; } = "";
+        public string ExternalName { get; init; } = "";
+        public int ArgCount { get; init; }
+        public List<int> Args { get; init; } = [];
+        public string Documentation { get; init; } = "";
+        public bool Hidden { get; init; }
+        public int ReturnType { get; init; } // 1=string(char*), 2=real(double)
+
+        // Constants typical for GMExtensionFunction entries
+        private const int Kind = 4;
+        private const string ResourceType = "GMExtensionFunction";
+        private const string ResourceVersion = "2.0";
+
+        public JsonObject ToJsonObject()
+        {
+            // JsonObject preserves insertion order of added properties,
+            // so we can keep the “GameMaker-ish” order you care about.
+            var o = new JsonObject();
+
+            o.Add("$GMExtensionFunction", "");
+            o.Add("%Name", InternalName);
+            o.Add("argCount", ArgCount);
+
+            var args = new JsonArray();
+            foreach (var a in Args) args.Add(a);
+            o.Add("args", args);
+
+            o.Add("documentation", Documentation);
+            o.Add("externalName", ExternalName);
+            o.Add("help", "");
+            o.Add("hidden", Hidden);
+            o.Add("kind", Kind);
+            o.Add("name", InternalName);
+            o.Add("resourceType", ResourceType);
+            o.Add("resourceVersion", ResourceVersion);
+            o.Add("returnType", ReturnType);
+
+            return o;
+        }
+
+        public static YyExtFunction FromIr(YyEmitterContext ctx, IrFunction fn)
         {
             bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
             bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
 
-            // --- build GM arg list ------------------------------------------------
             var args = new List<int>();
             var docs = new List<string>();
 
             if (needArgsBuf)
-            {                       // char* + length
+            {
+                // char* + length
                 args.AddRange([1, 2]);
                 docs.Add("@param {Pointer} _arg_buffer");
                 docs.Add("@param {Real} _arg_buffer_length");
@@ -101,117 +295,80 @@ namespace extgen.Emitters.Yy
                 {
                     if (p.Type is IrType.Builtin { Kind: BuiltinKind.String })
                     {
-                        args.Add(1); // char*
+                        args.Add(1);
                         docs.Add($"@param {{String}} {p.Name}");
                     }
                     else
                     {
-                        args.Add(2); // double
+                        args.Add(2);
                         docs.Add($"@param {{Real}} {p.Name}");
                     }
                 }
             }
 
-            int returnType = 2;                    // 2 = double
+            int returnType = 2;
             if (needRetBuf)
             {
-                args.AddRange([1, 2]);             // buf + len
+                args.AddRange(new[] { 1, 2 });
                 docs.Add("@param {Pointer} _ret_buffer");
                 docs.Add("@param {Real} _ret_buffer_length");
             }
             else if (fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.String })
             {
-                returnType = 1;                    // 1 = char*
+                returnType = 1;
             }
-
 
             docs.Add($"@returns {{{(returnType == 1 ? "String" : "Real")}}}");
 
-            // --- emit JSON object in GameMaker’s exact order ---------------------
-            jw.WriteStartObject();
-
-            jw.WriteString("$GMExtensionFunction", "");
-
-            // This is the name exposed to GML
-            var internalName = needArgsBuf || needRetBuf ? $"__{fn.Name}" : fn.Name;
-
-            jw.WriteString("%Name", internalName);
-            jw.WriteNumber("argCount", args.Count);
-
-            jw.WritePropertyName("args");
-            jw.WriteStartArray();
-            foreach (var a in args) jw.WriteNumberValue(a);
-            jw.WriteEndArray();
-
-            // This will be the name used on the Native implementation
+            var internalName = (needArgsBuf || needRetBuf) ? $"__{fn.Name}" : fn.Name;
             var externalName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
 
-            jw.WriteString("documentation", $"{string.Join(Environment.NewLine, docs)}");
-            jw.WriteString("externalName", externalName);
-            jw.WriteString("help", "");
-            jw.WriteBoolean("hidden", needArgsBuf || needRetBuf);
-            jw.WriteNumber("kind", 4);
-            jw.WriteString("name", needArgsBuf || needRetBuf ? $"__{fn.Name}" : fn.Name);
-            jw.WriteString("resourceType", "GMExtensionFunction");
-            jw.WriteString("resourceVersion", "2.0");
-            jw.WriteNumber("returnType", returnType);
-
-            jw.WriteEndObject();
+            return new YyExtFunction
+            {
+                InternalName = internalName,
+                ExternalName = externalName,
+                ArgCount = args.Count,
+                Args = args,
+                Documentation = string.Join(Environment.NewLine, docs),
+                Hidden = (needArgsBuf || needRetBuf),
+                ReturnType = returnType
+            };
         }
 
-        private static void WriteInvocationHandlerFn(YyEmitterContext ctx, Utf8JsonWriter jw, string extensionName)
+        public static YyExtFunction MakeInvocationHandler(YyEmitterContext ctx, string extensionName)
         {
-            jw.WriteStartObject();
-
-            jw.WriteString("$GMExtensionFunction", "");
-            jw.WriteString("%Name", $"__{extensionName}_invocation_handler");
-            jw.WriteNumber("argCount", 2);
-
-            jw.WritePropertyName("args");
-            jw.WriteStartArray();
-            jw.WriteNumberValue(1); // Pointer
-            jw.WriteNumberValue(2); // Length
-            jw.WriteEndArray();
-
-            jw.WriteString("documentation", $"{string.Join(Environment.NewLine, ["@param {Pointer} _buffer_ptr", "@param {Real} _buffer_size"])}");
-            jw.WriteString("externalName", $"{ctx.Runtime.NativePrefix}{extensionName}_invocation_handler");
-            jw.WriteString("help", "");
-            jw.WriteBoolean("hidden", true);
-            jw.WriteNumber("kind", 4);
-            jw.WriteString("name", $"__{extensionName}_invocation_handler");
-            jw.WriteString("resourceType", "GMExtensionFunction");
-            jw.WriteString("resourceVersion", "2.0");
-            jw.WriteNumber("returnType", 2);
-
-            jw.WriteEndObject();
+            return new YyExtFunction
+            {
+                InternalName = $"__{extensionName}_invocation_handler",
+                ExternalName = $"{ctx.Runtime.NativePrefix}{extensionName}_invocation_handler",
+                ArgCount = 2,
+                Args = [1, 2],
+                Documentation = string.Join(Environment.NewLine, new[]
+                {
+                    "@param {Pointer} _buffer_ptr",
+                    "@param {Real} _buffer_size"
+                }),
+                Hidden = true,
+                ReturnType = 2
+            };
         }
 
-        private static void WriteQueueBufferFn(YyEmitterContext ctx, Utf8JsonWriter jw, string extensionName)
+        public static YyExtFunction MakeQueueBuffer(YyEmitterContext ctx, string extensionName)
         {
-            jw.WriteStartObject();
-
-            jw.WriteString("$GMExtensionFunction", "");
-            jw.WriteString("%Name", $"__{extensionName}_queue_buffer");
-            jw.WriteNumber("argCount", 2);
-
-            jw.WritePropertyName("args");
-            jw.WriteStartArray();
-            jw.WriteNumberValue(1); // Pointer
-            jw.WriteNumberValue(2); // Length
-            jw.WriteEndArray();
-
-            jw.WriteString("documentation", $"{string.Join(Environment.NewLine, ["@param {Pointer} _buffer_ptr", "@param {Real} _buffer_size"])}");
-            jw.WriteString("externalName", $"{ctx.Runtime.NativePrefix}{extensionName}_queue_buffer");
-            jw.WriteString("help", "");
-            jw.WriteBoolean("hidden", true);
-            jw.WriteNumber("kind", 4);
-            jw.WriteString("name", $"__{extensionName}_queue_buffer");
-            jw.WriteString("resourceType", "GMExtensionFunction");
-            jw.WriteString("resourceVersion", "2.0");
-            jw.WriteNumber("returnType", 2);
-
-            jw.WriteEndObject();
+            return new YyExtFunction
+            {
+                InternalName = $"__{extensionName}_queue_buffer",
+                ExternalName = $"{ctx.Runtime.NativePrefix}{extensionName}_queue_buffer",
+                ArgCount = 2,
+                Args = new List<int> { 1, 2 },
+                Documentation = string.Join(Environment.NewLine, new[]
+                {
+                    "@param {Pointer} _buffer_ptr",
+                    "@param {Real} _buffer_size"
+                }),
+                Hidden = true,
+                ReturnType = 2
+            };
         }
     }
-
 }

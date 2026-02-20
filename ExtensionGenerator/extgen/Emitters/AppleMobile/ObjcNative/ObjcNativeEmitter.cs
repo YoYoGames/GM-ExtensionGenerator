@@ -1,6 +1,6 @@
 ﻿using codegencore.Models;
 using codegencore.Writers.Lang;
-using extgen.Bridge.Objc;
+using extgen.Bridge.ObjcNative;
 using extgen.Emitters.AppleMobile.Objc;
 using extgen.Emitters.Utils;
 using extgen.Extensions;
@@ -44,8 +44,8 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
             FileEmitHelpers.WriteObjc(layout.CodeGenDir, $"{ext}Internal_{platform}.mm", w => EmitInternalImpl(ctx, c, w));
 
             var enums = new IrTypeEnumResolver(c.Enums);
-            ObjcBridge bridge = new(enums);
 
+            ObjcNativeBridge bridge = new(enums);
             ObjcCommonEmitter common = new(ctx, typeMap, bridge);
             common.EmitObjcUserShell(c, layout);
         }
@@ -98,14 +98,106 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
             var platform = ctx.Settings.Platform;
 
             w.Import($"{ext}Internal_{platform}.h")
-             .Import($"native/{ext}Internal_native.h")
+             .Import($"native/{ext}Internal_exports.h")
+             .Import("objc/runtime.h", true)
              .Line();
+
+            // Injector helper tools
+            w.Lines("""
+
+                extern "C" const char* extOptGetString(char* _ext, char* _opt);
+
+                // Adapter: matches const signature expected by your C++ API
+                static const char* ExtOptGetString(const char* ext, const char* opt)
+                {
+                    return extOptGetString(const_cast<char*>(ext), const_cast<char*>(opt));
+                }
+
+                static BOOL GMIsSubclassOf(Class cls, Class base)
+                {
+                    for (Class c = cls; c != Nil; c = class_getSuperclass(c)) {
+                        if (c == base) return YES;
+                    }
+                    return NO;
+                }
+
+                static void GMInjectSelectorsIntoSubclass(Class subclass, Class base)
+                {
+                    // Build set of methods already defined on subclass
+                    unsigned subCount = 0;
+                    Method *subList = class_copyMethodList(subclass, &subCount);
+
+                    CFMutableSetRef owned = CFSetCreateMutable(kCFAllocatorDefault, 0, NULL);
+                    for (unsigned i = 0; i < subCount; ++i) {
+                        CFSetAddValue(owned, method_getName(subList[i]));
+                    }
+
+                    // Walk base class methods
+                    unsigned baseCount = 0;
+                    Method *baseList = class_copyMethodList(base, &baseCount);
+
+                    for (unsigned i = 0; i < baseCount; ++i) {
+                        SEL sel = method_getName(baseList[i]);
+                        const char *name = sel_getName(sel);
+
+                        // Only inject your extension selectors
+                        if (!name || strncmp(name, "__EXT_NATIVE__", 13) != 0) continue;
+
+                        // Add only if subclass doesn't already have it
+                        if (!CFSetContainsValue(owned, sel)) {
+                            IMP imp = method_getImplementation(baseList[i]);
+                            const char *types = method_getTypeEncoding(baseList[i]);
+                            if (class_addMethod(subclass, sel, imp, types)) {
+                                CFSetAddValue(owned, sel);
+                            }
+                        }
+                    }
+
+                    if (subList) free(subList);
+                    if (baseList) free(baseList);
+                    if (owned) CFRelease(owned);
+                }
+
+                """);
 
             var usesFunctions = c.HasFunctionType();
             var usesBuffers = c.HasBufferType();
 
             w.Implementation($"{ext}Internal", implBody =>
             {
+                // Inject functions into subclasses
+                implBody.Lines($$"""
+
+                    + (void)load
+                    {
+                        // Find all loaded classes
+                        int num = objc_getClassList(NULL, 0);
+                        if (num <= 0) return;
+
+                        Class *classes = (Class *)malloc(sizeof(Class) * (unsigned)num);
+                        num = objc_getClassList(classes, num);
+
+                        Class base = [{{ext}}Internal class];
+
+                        for (int i = 0; i < num; ++i) {
+                            Class cls = classes[i];
+                            if (cls == base) continue;
+
+                            // We only care about direct or indirect subclasses
+                            if (GMIsSubclassOf(cls, base)) {
+                                GMInjectSelectorsIntoSubclass(cls, base);
+                            }
+                        }
+
+                        free(classes);
+
+                        gm::details::GMRTRunnerInterface ri{};
+                        ri.ExtOptGetString = &ExtOptGetString;
+                        GMExtensionInitialise(&ri, sizeof(ri));
+                    }
+
+                    """);
+
                 var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
                 foreach (var fn in allFunctions) 
                 {

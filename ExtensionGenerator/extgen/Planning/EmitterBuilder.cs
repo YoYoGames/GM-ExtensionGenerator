@@ -29,7 +29,7 @@ namespace extgen.Planning
             if (rc.AllowBindings && rc.Raw.Gml is { Enabled: true } g)
             {
                 emitters["gml"] = new GmlEmitter(g.ToGmlSettings());
-                emitters["yy"] = new YyEmitter(g.ToYySettings(), rc.Raw.Runtime);
+                emitters["yy"] = new YyEmitter(g.ToYySettings(rc.AndroidEnabled, rc.IosEnabled, rc.TvosEnabled), rc.Raw.Runtime);
             }
 
             // Android

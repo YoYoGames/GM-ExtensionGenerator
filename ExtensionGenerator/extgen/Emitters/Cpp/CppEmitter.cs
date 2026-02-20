@@ -9,6 +9,7 @@ using extgen.TypeSystem.Cpp;
 using extgen.Utils;
 using gmutils;
 using System.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace extgen.Emitters.Cpp
 {
@@ -28,6 +29,7 @@ namespace extgen.Emitters.Cpp
             // 1) code gen files (always overwrite)
             EmitWire(layout.CoreDir);
 
+            FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_exports.h", w => EmitInternalExports(ctx, comp, w));
             FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_native.h", w => EmitInternalHeader(ctx, comp, enums, w));
             FileEmitHelpers.WriteCpp(layout.CodeGenDir, $"{ext}Internal_native.cpp", w => EmitInternalImpl(ctx, comp, enums, w));
 
@@ -56,9 +58,24 @@ namespace extgen.Emitters.Cpp
 
             w.PragmaOnce();
 
+            var ext = ctx.ExtName;
+
             CppCommonEmitter<CppWriter>.EmitCommonIncludes(w);
             w.Include("core/GMExtWire.h", false).Line();
             common.EmitCommonCppArtifacts(w, c);
+
+            // clean user-side signatures
+            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
+            foreach (var fn in allFunctions)
+            {
+                w.FunctionDecl($"{fn.Name}", fn.Parameters.Select(p => new Param(typeMap.MapPassType(p.Type), p.Name)), typeMap.Map(fn.ReturnType, true));
+            }
+        }
+        
+        private void EmitInternalExports(CppEmitterContext ctx, IrCompilation c, CppWriter w)
+        {
+            w.PragmaOnce();
+            w.Include("core/GMExtUtils.h", false).Line();
 
             var usesFunctions = c.HasFunctionType();
             var usesBuffers = c.HasBufferType();
@@ -90,12 +107,6 @@ namespace extgen.Emitters.Cpp
                 w.FunctionDecl(exportName, ps.AsCpp(), ExportTypeUtils.ReturnFor(fn).AsCppType(), modifiers: ["GMEXPORT"]);
             }
             w.Line();
-
-            // 2. clean user-side signatures
-            foreach (var fn in allFunctions)
-            {
-                w.FunctionDecl($"{fn.Name}", fn.Parameters.Select(p => new Param(typeMap.MapPassType(p.Type), p.Name)), typeMap.Map(fn.ReturnType, true));
-            }
         }
 
         private void EmitInternalImpl(CppEmitterContext ctx, IrCompilation c, IIrTypeEnumResolver enums, CppWriter w)
@@ -104,6 +115,7 @@ namespace extgen.Emitters.Cpp
 
             // Local includes
             w.Include($"{ctx.ExtName}Internal_native.h", false)
+            .Include($"{ctx.ExtName}Internal_exports.h", false)
             .Line()
             .UsingNamespace(ctx.Runtime.StructsNamespace)
             .UsingNamespace(ctx.Runtime.CodeGenNamespace)
