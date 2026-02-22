@@ -330,7 +330,7 @@ namespace extgen.Emitters.Yy
                 ArgCount = args.Count,
                 Args = args,
                 Documentation = string.Join(Environment.NewLine, docs),
-                Hidden = (needArgsBuf || needRetBuf),
+                Hidden = (needArgsBuf || needRetBuf) || fn.Hidden,
                 ReturnType = returnType
             };
         }

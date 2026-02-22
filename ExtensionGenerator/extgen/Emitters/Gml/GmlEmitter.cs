@@ -150,24 +150,40 @@ namespace extgen.Emitters.Gml
 
         private static void EmitStruct(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrStruct s, GmlWriter w)
         {
+            w.JsDoc(builder =>
+            {
+                builder.Returns(DocEmitter.JsDocType(new IrType.Named(NamedKind.Struct, s.Name)));
+
+                if (s.Hidden)
+                    builder.Tag("ignore");
+            });
             w.Struct(s.Name, body =>
             {
+
+                w.JsDoc(builder =>
+                {
+                    builder.Summary("Internally generated hash for quick validation");
+                    builder.Tag("ignore");
+                });
                 body.Assign("__uid", StringHash.ToUInt32(s.Name).ToString(), VariableScope.Static).Line();
 
                 foreach (var f in s.Fields)
-                    body.Assign($"self.{f.Name}", f.Value ?? "undefined");
+                    body.Assign(f.Name, f.Value ?? "undefined");
 
                 body.Line();
                 foreach (var fn in s.Functions)
                 {
                     var patchedFunc = fn with { Parameters = [.. fn.Parameters.Select(p => p with { Name = $"_{p.Name}" })] };
-                    w.JsDoc(builder =>
+                    body.JsDoc(builder =>
                     {
                         foreach (var p in patchedFunc.Parameters)
                             builder.Param(new ParamDoc(p.Name, DocEmitter.JsDocType(p.Type)));
 
                         if (!IrTypeUtil.IsVoid(patchedFunc.ReturnType))
                             builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
+
+                        if (fn.Hidden)
+                            builder.Tag("ignore");
                     });
 
                     body.Assign(fn.Name, fnExp => fnExp.Method(patchedFunc.Parameters.Select(p => p.Name), fnBody =>
@@ -202,7 +218,7 @@ namespace extgen.Emitters.Gml
                     foreach (var f in s.Fields)
                     {
                         fn.Comment($"field: {f.Name}, type: {f.Type.ToDebugString()}");
-                        WriteValue(ctx, enums, fn, $"self.{f.Name}", f.Type, bufferName, "_where");
+                        WriteValue(ctx, enums, fn, f.Name, f.Type, bufferName, "_where");
                         fn.Line();
                     }
                 });
@@ -241,7 +257,7 @@ namespace extgen.Emitters.Gml
                     foreach (var f in s.Fields)
                     {
                         fn.Comment($"field: {f.Name}, type: {f.Type.ToDebugString()}");
-                        ReadValue(enums, fn, $"self.{f.Name}", f.Type, bufferName);
+                        ReadValue(enums, fn, f.Name, f.Type, bufferName);
                         fn.Line();
                     }
                 });
@@ -270,6 +286,9 @@ namespace extgen.Emitters.Gml
 
                 if (!IrTypeUtil.IsVoid(fn.ReturnType))
                     builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
+
+                if (fn.Hidden)
+                    builder.Tag("ignore");
             });
 
             w.Function(fn.Name, fn.Parameters.Select(p => p.Name), body =>
