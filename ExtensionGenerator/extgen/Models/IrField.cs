@@ -8,6 +8,6 @@ namespace extgen.Models
         string? DefaultLiteral,
         bool Required,
         string? Description = null,
-        string? Value = null);
+        string? Value = null, bool Hidden = false);
 
 }

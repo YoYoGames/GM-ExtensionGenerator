@@ -148,6 +148,8 @@ namespace extgen.Parsing.Gmidl
             var name = StripClassName(cls.Name);
             var classType = new IrType.Named(NamedKind.Struct, name);
 
+            var hidden = cls.Attributes.Enabled("hidden");
+                
             var fields =
                 cls.Data.Properties
                    .Where(p => p.Attributes.Enabled("field"))
@@ -159,7 +161,7 @@ namespace extgen.Parsing.Gmidl
                 .Select(f => ParseFunction(f, classType))
                 .ToImmutableArray();
 
-            return new IrStruct(name, fields, functions);
+            return new IrStruct(name, fields, functions, Hidden: hidden);
         }
 
         private IrField ParseField(GMIDLNode<GMIDLProperty> f)
@@ -167,6 +169,8 @@ namespace extgen.Parsing.Gmidl
             var attributes = f.Attributes;
 
             var value = attributes.GetAsString("value");
+
+            var hidden = f.Attributes.Enabled("hidden");
 
             bool isOptional = bool.TryParse(attributes.GetAsString("optional") ?? "false", out var opt) && opt;
 
@@ -180,7 +184,8 @@ namespace extgen.Parsing.Gmidl
                 Type: type,
                 DefaultLiteral: value,
                 Required: !isOptional,
-                Value: value);
+                Value: value, 
+                Hidden: hidden);
         }
 
         private IrFunction ParseFunction(GMIDLNode<GMIDLFunction> func, IrType.Named? cls)
@@ -189,10 +194,12 @@ namespace extgen.Parsing.Gmidl
                 ? IrParameter.Self(cls)
                 : null;
 
+            var hidden = func.Attributes.Enabled("hidden");
+
             return new IrFunction(
                 func.Name,
                 ParseType(func.Data.ReturnType, func.Attributes),
-                [.. func.Data.NamedArgs.Select(ParseParam)], selfParam);
+                [.. func.Data.NamedArgs.Select(ParseParam)], selfParam, hidden);
         }
 
         private IrParameter ParseParam(GMIDLNode<GMIDLFunctionArg> param)
