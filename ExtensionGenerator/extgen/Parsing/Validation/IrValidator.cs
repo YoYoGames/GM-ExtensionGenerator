@@ -1,5 +1,6 @@
 ﻿using codegencore.Models;
 using extgen.Models;
+using extgen.Models.Utils;
 using System.Collections.Immutable;
 
 namespace extgen.Parsing.Validation
@@ -23,7 +24,7 @@ namespace extgen.Parsing.Validation
         private readonly IIrRule[] _rules = rules;
 
         public ImmutableArray<IrDiagnostic> Validate(IrCompilation comp) =>
-            _rules.SelectMany(r => r.Validate(comp)).ToImmutableArray();
+            [.. _rules.SelectMany(r => r.Validate(comp))];
     }
 
     internal static class IrTypeInspection
@@ -38,14 +39,9 @@ namespace extgen.Parsing.Validation
             };
     }
 
-    public sealed class NoDuplicateSymbolsRule : IIrRule
+    public sealed class NoDuplicateSymbolsRule(StringComparer? comparer = null) : IIrRule
     {
-        private readonly StringComparer _cmp;
-
-        public NoDuplicateSymbolsRule(StringComparer? comparer = null)
-        {
-            _cmp = comparer ?? StringComparer.Ordinal;
-        }
+        private readonly StringComparer _cmp = comparer ?? StringComparer.Ordinal;
 
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
@@ -183,14 +179,16 @@ namespace extgen.Parsing.Validation
     {
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
-            if (comp.Functions.Length <= 1)
+            List<IrFunction> allFunction = [.. comp.GetAllFunctions(IrFunctionUtil.PatchStructMethod)];
+
+            if (allFunction.Count <= 1)
                 yield break;
 
             static string GetPrefix(string name) => name.Split('_', 2)[0];
 
-            var expected = GetPrefix(comp.Functions[0].Name);
+            var expected = GetPrefix(allFunction[0].Name);
 
-            foreach (var fn in comp.Functions)
+            foreach (var fn in allFunction)
             {
                 var prefix = GetPrefix(fn.Name);
                 if (!StringComparer.Ordinal.Equals(prefix, expected))
@@ -205,16 +203,69 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    public sealed class StructMethodsCannotHaveModifiers : IIrRule
+    {
+        public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
+        {
+            foreach (var s in comp.Structs)
+            {
+                foreach (var fn in s.Functions)
+                {
+                    if (fn.Modifier != IrFunctionModifier.None)
+                    {
+                        yield return new IrDiagnostic(
+                            Code: "IR_METHOD_0",
+                            Message: $"Struct method '{s.Name}.{fn.Name}' cannot have modifiers ('{fn.Modifier}').",
+                            Severity: IrSeverity.Error,
+                            Path: $"Structs[{s.Name}].Functions[{fn.Name}]");
+                    }
+                }
+            }
+        }
+    }
+
+    public sealed class FunctionModifiersMustBeUnique : IIrRule
+    {
+        public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
+        {
+            var startFn = comp.Functions.Where(fn => fn.Modifier == IrFunctionModifier.Start).FirstOrDefault();
+            var finishFn = comp.Functions.Where(fn => fn.Modifier == IrFunctionModifier.Finish).FirstOrDefault();
+
+            if (startFn == null || finishFn == null) yield break;
+
+            foreach (var fn in comp.Functions)
+            {
+                if (fn.Modifier == IrFunctionModifier.Start && fn != startFn)
+                {
+                    yield return new IrDiagnostic(
+                        Code: "IR030",
+                        Message: $"Function '{fn.Name}' has a duplicated modifier '{fn.Modifier}', first seen on '{startFn.Name}'.",
+                        Severity: IrSeverity.Error,
+                        Path: $"Functions[{fn.Name}]");
+                }
+
+                if (fn.Modifier == IrFunctionModifier.Finish && fn != finishFn)
+                {
+                    yield return new IrDiagnostic(
+                        Code: "IR030",
+                        Message: $"Function '{fn.Name}' has a duplicated modifier '{fn.Modifier}', first seen on '{finishFn.Name}'.",
+                        Severity: IrSeverity.Error,
+                        Path: $"Functions[{fn.Name}]");
+                }
+            }
+        }
+    }
+
     public sealed class EnumUnderlyingMustBeIntegralScalarRule : IIrRule
     {
-        private static readonly HashSet<BuiltinKind> Allowed = new()
-    {
-        BuiltinKind.Int8, BuiltinKind.UInt8,
-        BuiltinKind.Int16, BuiltinKind.UInt16,
-        BuiltinKind.Int32, BuiltinKind.UInt32,
-        BuiltinKind.Int64, BuiltinKind.UInt64,
-        // optionally: BuiltinKind.Bool (usually no)
-    };
+        private static readonly HashSet<BuiltinKind> Allowed =
+        [
+            BuiltinKind.Int8, BuiltinKind.UInt8,
+            BuiltinKind.Int16, BuiltinKind.UInt16,
+            BuiltinKind.Int32, BuiltinKind.UInt32,
+            BuiltinKind.Int64, BuiltinKind.UInt64,
+            // optionally: BuiltinKind.Bool (usually no)
+        ];
 
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
@@ -244,14 +295,9 @@ namespace extgen.Parsing.Validation
         }
     }
 
-    public sealed class EnumMemberNamesMustBeUniqueRule : IIrRule
+    public sealed class EnumMemberNamesMustBeUniqueRule(StringComparer? comparer = null) : IIrRule
     {
-        private readonly StringComparer _comparer;
-
-        public EnumMemberNamesMustBeUniqueRule(StringComparer? comparer = null)
-        {
-            _comparer = comparer ?? StringComparer.Ordinal;
-        }
+        private readonly StringComparer _comparer = comparer ?? StringComparer.Ordinal;
 
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {

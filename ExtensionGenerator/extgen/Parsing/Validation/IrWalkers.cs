@@ -44,6 +44,7 @@ namespace extgen.Parsing.Validation
 
             // Struct fields
             foreach (var s in comp.Structs)
+            {
                 foreach (var f in s.Fields)
                     foreach (var occ in WalkType(f.Type,
                         $"Structs[{s.Name}].Fields[{f.Name}].Type",
@@ -51,6 +52,27 @@ namespace extgen.Parsing.Validation
                         ownerName: s.Name,
                         memberName: f.Name))
                         yield return occ;
+
+                // Functions: return + parameters
+                foreach (var fn in s.Functions)
+                {
+                    foreach (var occ in WalkType(fn.ReturnType,
+                        $"Structs[{s.Name}].Functions[{fn.Name}].ReturnType",
+                        IrTypeOwnerKind.FunctionReturn,
+                        ownerName: fn.Name,
+                        memberName: null))
+                        yield return occ;
+
+                    foreach (var p in fn.Parameters)
+                        foreach (var occ in WalkType(p.Type,
+                            $"Structs[{s.Name}].Functions[{fn.Name}].Parameters[{p.Name}].Type",
+                            IrTypeOwnerKind.FunctionParameter,
+                            ownerName: fn.Name,
+                            memberName: p.Name))
+                            yield return occ;
+                }
+            }
+
 
             // Functions: return + parameters
             foreach (var fn in comp.Functions)

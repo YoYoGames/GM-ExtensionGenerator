@@ -47,7 +47,11 @@ namespace extgen.Parsing.Gmidl
 
                 // Naming
                 new NoUnderscoresInCompilationNameRule(),
-                new FunctionCommonPrefixRule()
+                new FunctionCommonPrefixRule(),
+
+                // Modifiers
+                new StructMethodsCannotHaveModifiers(),
+                new FunctionModifiersMustBeUnique()
             );
 
             var diags = validator.Validate(comp);
