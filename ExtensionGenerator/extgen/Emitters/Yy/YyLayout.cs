@@ -10,7 +10,7 @@
         {
             var apiOutput = Path.GetFullPath(options.OutputFile, root);
 
-            OutputFile = Path.GetFileNameWithoutExtension(apiOutput);
+            OutputFile = apiOutput;
             OutputDir = Path.GetDirectoryName(apiOutput) ?? root;
 
             Directory.CreateDirectory(OutputDir);

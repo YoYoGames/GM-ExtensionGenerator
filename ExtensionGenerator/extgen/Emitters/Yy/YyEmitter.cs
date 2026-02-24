@@ -16,9 +16,9 @@ namespace extgen.Emitters.Yy
             YyEmitterContext ctx = new(comp.Name, settings, runtime);
             var layout = new YyLayout(outputDir, settings);
 
-            var path = Path.Combine(layout.OutputDir, $"{string.Format(layout.OutputFile, ctx.ExtName)}.yy");
+            var path = Path.Combine(layout.OutputDir, $"{string.Format(layout.OutputFile, ctx.ExtName)}");
 
-            switch (settings.Mode) 
+            switch (settings.Mode)
             {
                 case YyEmitterMode.Patch:
                     PatchYyFile(comp, ctx, path);
@@ -106,6 +106,9 @@ namespace extgen.Emitters.Yy
 
         private static void WritePlainYyDefinitions(IrCompilation comp, YyEmitterContext ctx, string yyPath) 
         {
+            if (Path.GetExtension(yyPath).Equals(".yy", StringComparison.InvariantCultureIgnoreCase))
+                throw new FileNotFoundException("YY emitter :: Plain writting mode doesn't support .yy file extension.", yyPath);
+
             var writeOptions = new JsonSerializerOptions
             {
                 WriteIndented = false
