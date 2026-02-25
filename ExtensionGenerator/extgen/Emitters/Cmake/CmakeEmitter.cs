@@ -71,8 +71,8 @@ namespace extgen.Emitters.Cmake
             ResourceWriter.WriteTemplatedTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_package_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_package_xcframework.cmake"), new Dictionary<string, string>
             {
                 // Frameworks
-                ["EXTGEN_IOS_OUTPUT"] = targets.Ios?.OutputFolder ?? "../iOSSourceFromMac",
-                ["EXTGEN_TVOS_OUTPUT"] = targets.Tvos?.OutputFolder ?? "../tvOSSourceFromMac",
+                ["EXTGEN_IOS_OUTPUT"] = targets.Ios?.Output ?? "../iOSSourceFromMac",
+                ["EXTGEN_TVOS_OUTPUT"] = targets.Tvos?.Output ?? "../tvOSSourceFromMac",
             });
         }
 
@@ -92,17 +92,17 @@ namespace extgen.Emitters.Cmake
             {
                 // Desktop
                 ["EXTGEN_WINDOWS_DISABLED"] = targets.Windows is WindowsTargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_WINDOWS_OUTPUT_FOLDER"] = targets.Windows is WindowsTargetConfig { Enabled: true } w ? w.OutputFolder : "../",
+                ["EXTGEN_WINDOWS_OUTPUT_FOLDER"] = targets.Windows is WindowsTargetConfig { Enabled: true } w ? w.Output : "../",
 
                 ["EXTGEN_MACOS_DISABLED"] = targets.MacOS is MacTargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_MACOS_OUTPUT_FOLDER"] = targets.MacOS is MacTargetConfig { Enabled: true } m ? m.OutputFolder : "../",
+                ["EXTGEN_MACOS_OUTPUT_FOLDER"] = targets.MacOS is MacTargetConfig { Enabled: true } m ? m.Output : "../",
 
                 ["EXTGEN_LINUX_DISABLED"] = targets.Linux is LinuxTargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_LINUX_OUTPUT_FOLDER"] = targets.Linux is LinuxTargetConfig { Enabled: true } l ? l.OutputFolder : "../",
+                ["EXTGEN_LINUX_OUTPUT_FOLDER"] = targets.Linux is LinuxTargetConfig { Enabled: true } l ? l.Output : "../",
 
                 // Android
                 ["EXTGEN_ANDROID_DISABLED"] = targets.Android is AndroidTargetConfig { Enabled: true, Mode: AndroidMode.Jni } ? "false" : "true",
-                ["EXTGEN_ANDROID_OUTPUT_FOLDER"] = targets.Android is AndroidTargetConfig { Enabled: true } a ? a.OutputFolder : "../AndroidSource",
+                ["EXTGEN_ANDROID_OUTPUT_FOLDER"] = targets.Android is AndroidTargetConfig { Enabled: true } a ? a.Output : "../AndroidSource",
 
                 // iOS|tvOS (pure Objc|Swift)
                 ["EXTGEN_IOS_DISABLED"] = targets.Ios is IosTargetConfig { Enabled: true, Mode: AppleMobileMode.Objc or AppleMobileMode.Swift } ? "false" : "true",
@@ -112,21 +112,21 @@ namespace extgen.Emitters.Cmake
                 ["EXTGEN_IOS_NATIVE_DISABLED"] = targets.Ios is IosTargetConfig { Enabled: true, Mode: AppleMobileMode.Native, Enabled: true } ? "false" : "true",
                 ["EXTGEN_TVOS_NATIVE_DISABLED"] = targets.Tvos is TvosTargetConfig { Enabled: true, Mode: AppleMobileMode.Native } ? "false" : "true",
 
-                ["EXTGEN_IOS_OUTPUT_FOLDER"] = targets.Ios is IosTargetConfig { Enabled: true } i ? i.OutputFolder : "../iOSSourceFromMac",
-                ["EXTGEN_TVOS_OUTPUT_FOLDER"] = targets.Tvos is TvosTargetConfig { Enabled: true } t ? t.OutputFolder : "../tvOSSourceFromMac",
+                ["EXTGEN_IOS_OUTPUT_FOLDER"] = targets.Ios is IosTargetConfig { Enabled: true } i ? i.Output : "../iOSSourceFromMac",
+                ["EXTGEN_TVOS_OUTPUT_FOLDER"] = targets.Tvos is TvosTargetConfig { Enabled: true } t ? t.Output : "../tvOSSourceFromMac",
 
                 // Console
                 ["EXTGEN_XBOX_DISABLED"] = targets.Xbox is XboxTargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_XBOX_OUTPUT_FOLDER"] = targets.Xbox is XboxTargetConfig { Enabled: true } x ? x.OutputFolder : "../",
+                ["EXTGEN_XBOX_OUTPUT_FOLDER"] = targets.Xbox is XboxTargetConfig { Enabled: true } x ? x.Output : "../",
 
                 ["EXTGEN_PS4_DISABLED"] = targets.Ps4 is Ps4TargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_PS4_OUTPUT_FOLDER"] = targets.Ps4 is Ps4TargetConfig { Enabled: true } ps4 ? ps4.OutputFolder : "../",
+                ["EXTGEN_PS4_OUTPUT_FOLDER"] = targets.Ps4 is Ps4TargetConfig { Enabled: true } ps4 ? ps4.Output : "../",
 
                 ["EXTGEN_PS5_DISABLED"] = targets.Ps5 is Ps5TargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_PS5_OUTPUT_FOLDER"] = targets.Ps5 is Ps5TargetConfig { Enabled: true } ps5 ? ps5.OutputFolder : "../",
+                ["EXTGEN_PS5_OUTPUT_FOLDER"] = targets.Ps5 is Ps5TargetConfig { Enabled: true } ps5 ? ps5.Output : "../",
 
                 ["EXTGEN_SWITCH_DISABLED"] = targets.Switch is SwitchTargetConfig { Enabled: true } ? "false" : "true",
-                ["EXTGEN_SWITCH_OUTPUT_FOLDER"] = targets.Switch is SwitchTargetConfig { Enabled: true } s ? s.OutputFolder : "../",
+                ["EXTGEN_SWITCH_OUTPUT_FOLDER"] = targets.Switch is SwitchTargetConfig { Enabled: true } s ? s.Output : "../",
             });
         }
 

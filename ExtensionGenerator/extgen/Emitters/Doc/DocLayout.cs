@@ -2,16 +2,22 @@
 {
     internal sealed class DocLayout
     {
+        public string FullPath { get; }
+
         public string OutputDir { get; }
 
         public string OutputFile { get; }
 
         public DocLayout(string root, DocEmitterSettings options)
         {
-            OutputDir = Path.GetFullPath(options.OutputFolder, root);
-            OutputFile = Path.GetFileNameWithoutExtension(options.OutputFilename);
+            FullPath = Path.GetFullPath(options.OutputFile, root);
+            OutputFile = Path.GetFileName(FullPath);
+            OutputDir = Path.GetDirectoryName(FullPath) ?? Path.GetFullPath("./", root);
 
-            Directory.CreateDirectory(OutputDir);
+            if (!Directory.Exists(OutputDir))
+            {
+                Directory.CreateDirectory(OutputDir);
+            }
         }
     }
 }

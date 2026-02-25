@@ -48,7 +48,7 @@ namespace extgen.Emitters.Yy
                 throw new InvalidDataException("YY root was not an object. Invalid extension path provided.");
 
             var extname = root["name"]?.GetValue<string>();
-            var expectedExtensionName = ctx.Settings.ExtensionFileName ?? comp.Name;
+            var expectedExtensionName = ctx.Settings.ExtensionName ?? comp.Name;
             if (extname is null || string.Compare(extname, expectedExtensionName) != 0) 
             {
                 throw new InvalidDataException($"YY extension name doesn't match settings - '{expectedExtensionName}'");

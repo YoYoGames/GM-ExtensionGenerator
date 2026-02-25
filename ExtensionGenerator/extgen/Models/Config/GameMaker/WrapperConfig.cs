@@ -13,6 +13,6 @@ namespace extgen.Models.Config.GameMaker
         public bool Enabled { get; set; } = true;
 
         [JsonPropertyName("outputFile")]
-        public string OutputFile { get; set; } = "./api.gml";
+        public string Output { get; set; } = "./api.gml";
     }
 }

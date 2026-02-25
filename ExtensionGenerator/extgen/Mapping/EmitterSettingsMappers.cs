@@ -37,7 +37,7 @@ namespace extgen.Mappers
         public static AndroidEmitterSettings ToSettings(this AndroidTargetConfig cfg)
             => new()
             {
-                OutputFolder = cfg.OutputFolder
+                OutputFolder = cfg.Output
             };
 
         // ----------------------------
@@ -46,7 +46,7 @@ namespace extgen.Mappers
         public static IosEmitterSettings ToSettings(this IosTargetConfig cfg)
             => new()
             {
-                OutputFolder = cfg.OutputFolder,
+                OutputFolder = cfg.Output,
                 SourceFolder = cfg.SourceFolder,
                 SourceFilename = cfg.SourceFilename
             };
@@ -54,7 +54,7 @@ namespace extgen.Mappers
         public static TvosEmitterSettings ToSettings(this TvosTargetConfig cfg)
             => new()
             {
-                OutputFolder = cfg.OutputFolder,
+                OutputFolder = cfg.Output,
                 SourceFolder = cfg.SourceFolder,
                 SourceFilename = cfg.SourceFilename
             };
@@ -65,8 +65,8 @@ namespace extgen.Mappers
         public static DocEmitterSettings ToSettings(this DocsConfig cfg)
             => new()
             {
-                OutputFolder = cfg.OutputFolder,
-                OutputFilename = cfg.OutputFileName
+                OutputFile = cfg.Output,
+                Overwrite = cfg.Overwrite
             };
 
         // ----------------------------
@@ -75,7 +75,7 @@ namespace extgen.Mappers
         public static GmlEmitterSettings ToSettings(this WrapperConfig cfg)
             => new()
             {
-                OutputFile = cfg.OutputFile,
+                OutputFile = cfg.Output,
                 Mode = GmlEmitterMode.Wrapper
             };
 

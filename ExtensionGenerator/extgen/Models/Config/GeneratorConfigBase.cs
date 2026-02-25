@@ -8,6 +8,6 @@ namespace extgen.Models.Config
         public bool Enabled { get; set; } = true;
 
         [JsonPropertyName("outputFolder")]
-        public abstract string OutputFolder { get; set; }
+        public abstract string Output { get; set; }
     }
 }

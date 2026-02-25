@@ -3,8 +3,8 @@ namespace extgen.Emitters.Doc
 {
     public class DocEmitterSettings
     {
-        public string OutputFolder { get; set; } = "./";
+        public string OutputFile { get; set; } = "./extget_docs.js";
 
-        public string OutputFilename { get; set; } = "documentation";
+        public bool Overwrite { get; set; } = true;
     }
 }

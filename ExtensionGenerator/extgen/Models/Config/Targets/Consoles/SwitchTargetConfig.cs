@@ -17,6 +17,6 @@ namespace extgen.Models.Config.Targets.Consoles
         public string? UserProps { get; set; }
 
         [JsonPropertyName("outputFolder")]
-        public override string OutputFolder { get; set; } = "../";
+        public override string Output { get; set; } = "../";
     }
 }

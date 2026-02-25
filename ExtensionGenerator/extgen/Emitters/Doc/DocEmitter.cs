@@ -14,7 +14,11 @@ namespace extgen.Emitters.Doc
         {
             var ext = comp.Name;
             var layout = new DocLayout(outputDir, settings);
-            WriteFileDoc(layout.OutputDir, $"{string.Format(layout.OutputFile, ext)}.js", w => EmitAll(w, comp));
+
+            if (settings.Overwrite || !File.Exists(layout.FullPath))
+            {
+                WriteFileDoc(layout.OutputDir, $"{string.Format(layout.OutputFile, ext)}", w => EmitAll(w, comp));
+            }
         }
 
         private static void WriteFileDoc(string dir, string name, Action<DocWriter> emit)

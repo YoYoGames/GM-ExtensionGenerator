@@ -12,6 +12,6 @@ namespace extgen.Models.Config.Targets.Mobile
         [JsonPropertyName("mode"), JsonRequired()]
         public AndroidMode Mode { get; set; } = AndroidMode.Java;
         [JsonPropertyName("outputFolder")]
-        public override string OutputFolder { get; set; } = "../AndroidSource";
+        public override string Output { get; set; } = "../AndroidSource";
     }
 }
