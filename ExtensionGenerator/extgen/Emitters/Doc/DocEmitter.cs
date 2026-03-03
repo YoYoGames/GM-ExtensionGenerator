@@ -103,18 +103,18 @@ namespace extgen.Emitters.Doc
                 w.JsDoc(spec =>
                 {
                     // You used const_partial/const_end before; keeping same tags.
-                    spec.Tag("const_partial", e.Name);
+                    spec.Tag("enum_partial", e.Name);
 
                     foreach (var m in e.Members)
                     {
                         spec.Member(new(
                             m.Name,
-                            JsDocType(e.Underlying),
+                            null,
                             Description: null,
                             Optional: false));
                     }
 
-                    spec.Tag("const_end");
+                    spec.Tag("enum_end");
                 });
 
                 w.Line();
@@ -123,9 +123,24 @@ namespace extgen.Emitters.Doc
 
         private static void EmitConstants(DocWriter w, ImmutableArray<IrConstant> constants)
         {
-            // We don't have a way to represent constants on Docs at the moment
-            _ = w;
-            _ = constants;
+            w.JsDoc(spec =>
+            {
+                // You used const_partial/const_end before; keeping same tags.
+                spec.Tag("const_partial", "macros");
+
+                foreach (var c in constants)
+                {
+                    spec.Member(new(
+                        c.Name,
+                        JsDocType(c.Type),
+                        Description: $"(value: '{c.Literal}')",
+                        Optional: false));
+                }
+
+                spec.Tag("const_end");
+            });
+
+            w.Line();
         }
 
         // ============================================================
@@ -191,9 +206,9 @@ namespace extgen.Emitters.Doc
                     BuiltinKind.AnyMap => "Struct",
 
                     BuiltinKind.Function => "Function",
-                    BuiltinKind.Buffer => "Id.Buffer",
+                    BuiltinKind.Buffer => "Buffer",
 
-                    BuiltinKind.Void => "void",
+                    BuiltinKind.Void => "Undefined",
 
                     _ => "Any"
                 };
