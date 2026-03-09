@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "dotnet",
+			"task": "build /Users/rwkay/source/GM-ExtensionGenerator/ExtensionGenerator/extgen/extgen.csproj",
+			"file": "/Users/rwkay/source/GM-ExtensionGenerator/ExtensionGenerator/extgen/extgen.csproj",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "build"
+		}
+	]
+}

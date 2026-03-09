@@ -1,5 +1,10 @@
 ﻿using extgen.App;
 using extgen.Config;
+using extgen.Emitters.GMCode;
+using GMIDL_FB;
+using gmidlparser;
+using gmidlreader;
+using Google.FlatBuffers;
 using NDesk.Options;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -24,10 +29,12 @@ namespace extgen
         {
             string? configPath = null;
             string? initDir = null;
+            string? gmidlFile = null;
             bool showHelp = false;
 
             var options = new OptionSet {
                 { "c|config=", "Path to JSON config file.", v => configPath = v },
+                { "gmidl=", "gmidle file", v => gmidlFile = v },
                 { "i|init=", "Initialize a new config + schema in the given folder.", v => initDir = v },
                 { "h|help",    "Show help.", v => showHelp = v != null }
             };
@@ -43,6 +50,32 @@ namespace extgen
                     var schemaSvc = new ConfigSchemaService(JsonOptions);
                     var initializer = new ProjectInitializer(schemaSvc, JsonOptions);
                     return initializer.Init(initDir);
+                }
+
+                if (!string.IsNullOrWhiteSpace(gmidlFile))
+                {
+                    GMIDLDatabase? db = null;
+                    try
+                    {
+                        byte[] bytes = GMIDLCompiler.Parse(gmidlFile);
+
+                        var bb = new ByteBuffer(bytes);
+                        var document = GMIDL_FB_Document.GetRootAsGMIDL_FB_Document(bb);
+
+                        db = new GMIDLDatabase();
+                        db.AddFlatBuffer(document);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex);
+                        Environment.Exit(1);
+                    }
+
+                    GMCodeAPI codeAPI = new GMCodeAPI(Path.GetDirectoryName(gmidlFile ));
+                    codeAPI.ProcessIDL( db );
+                    //TSEmitter ts = new TSEmitter( Path.GetDirectoryName(gmidlFile ) );
+                    //ts.EmitDatabase( db );
+                    //Console.WriteLine( db.ToString() );
                 }
 
                 if (showHelp || string.IsNullOrWhiteSpace(configPath) || extras.Count > 0)
@@ -61,11 +94,11 @@ namespace extgen
                 ShowUsage(options);
                 return 2;
             }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex.ToString());
-                return 99;
-            }
+            //catch (Exception ex)
+            //{
+            //    Console.Error.WriteLine(ex.ToString());
+            //    return 99;
+            //}
         }
 
         private static void ShowUsage(OptionSet options)

@@ -1,0 +1,7 @@
+{
+    "workbench.colorCustomizations": {
+        "statusBar.noFolderBackground": "#0C351D",
+        "statusBar.noFolderForeground": "#F3FCF7"
+    },
+    "cmake.ignoreCMakeListsMissing": true
+}
