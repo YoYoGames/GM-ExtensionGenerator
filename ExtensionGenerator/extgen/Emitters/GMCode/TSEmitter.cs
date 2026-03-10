@@ -8,7 +8,8 @@ namespace extgen.Emitters.GMCode
     public class TSEmitter
     {
         List<GMCodeMethod> Natives = new List<GMCodeMethod>();
-
+        public static string ModuleName = "Module"
+;
         public StringBuilder Indent( int _depth, StringBuilder _sb)
         {
             if (_depth == 0) return _sb;
@@ -108,7 +109,7 @@ namespace extgen.Emitters.GMCode
             string? native = _fNode.NativeName;
             if (native != null)
             {
-                sb.AppendFormat( "Module.{0}( ", native );
+                sb.AppendFormat( "{1}.{0}( ", native, ModuleName );
                 int count = 0;
                 if (_self != null)
                 {
@@ -184,7 +185,7 @@ namespace extgen.Emitters.GMCode
             string? native = _fNode.NativeName;
             if (native != null)
             {
-                sb.AppendFormat( "\tthis.{1} = Module.{0}( ", native,  GMCodeType.PeekSelf() );
+                sb.AppendFormat( "\tthis.{1} = {2}.{0}( ", native,  GMCodeType.PeekSelf(), ModuleName );
                 int count = 0;
                 if (_self != null)
                 {
@@ -310,6 +311,18 @@ namespace extgen.Emitters.GMCode
             } 
             sbFile.AppendLine();
             // add the module entries
+            sbFile.AppendFormat( "\tinterface {0}Funcs", _mNode.Name );
+            sbFile.AppendLine();
+            sbFile.AppendLine("\t{");
+            foreach( var ni in _mNode.Natives)
+            {
+                sbFile.AppendFormat( "\t\t{0} : {0};", ni.Value.Name );
+                sbFile.AppendLine();
+            } 
+            sbFile.AppendLine("\t}");
+            sbFile.AppendFormat( "\tdeclare var {1} : {0}Funcs;", _mNode.Name, ModuleName);
+            sbFile.AppendLine();
+            sbFile.AppendLine();
 
             // add the classes
             sbFile.Append( sb.ToString() );
