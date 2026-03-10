@@ -7,6 +7,8 @@ namespace extgen.Emitters.GMCode
 {
     public class TSEmitter
     {
+        List<GMCodeMethod> Natives = new List<GMCodeMethod>();
+
         public StringBuilder Indent( int _depth, StringBuilder _sb)
         {
             if (_depth == 0) return _sb;
@@ -264,11 +266,27 @@ namespace extgen.Emitters.GMCode
             return Indent( _depth, sb);
         }
 
+        private StringBuilder EmitInterface( GMCodeNativeFunction _m)
+        {
+            StringBuilder _sb = new StringBuilder();
+            _sb.AppendFormat( "interface {0} {{(", _m.Name);
+            int count = 0;
+            foreach( var a in _m.Arguments)
+            {
+                if (count != 0) _sb.Append( ", ");
+                _sb.AppendFormat( "_{0} : {1}", a.Name, a.Type.GetTSType() );
+                GMCodeType? argType =  a.Type;
+                ++count;
+            } // end foreach
+            GMCodeType retType = _m.ReturnType;
+            _sb.AppendFormat( ") : {0}", retType.GetTSType() );
+            _sb.Append( "}");
+            return _sb;
+        }
+
         public void EmitModule( GMCodeAPI _api, GMCodeModule _mNode, int _depth)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendFormat( "namespace {0} ", _mNode.Name  );
-            sb.AppendLine( "{" );
 
             // do all the classes 
             foreach( var c in _mNode.Classes )
@@ -277,12 +295,31 @@ namespace extgen.Emitters.GMCode
                 sb.AppendLine( classSB.ToString() );
             }
 
-            sb.AppendLine( "}" );
+
+            // output everything
+            StringBuilder sbFile = new StringBuilder();
+            sbFile.AppendFormat( "namespace {0} ", _mNode.Name  );
+            sbFile.AppendLine( "{" );
+
+            // add the interfaces
+            sbFile.AppendLine();
+            foreach( var ni in _mNode.Natives)
+            {
+                StringBuilder sbInterface = EmitInterface( ni.Value );
+                sbFile.Append( Indent( _depth+1, sbInterface ));
+            } 
+            sbFile.AppendLine();
+            // add the module entries
+
+            // add the classes
+            sbFile.Append( sb.ToString() );
+
+            sbFile.AppendLine( "}" );
 
 
             // write out the file
             string filename = Path.ChangeExtension( Path.Combine( _api.DestDirectory, _mNode.Name), ".ts" );
-            File.WriteAllBytes( filename, UTF8Encoding.UTF8.GetBytes(sb.ToString()));
+            File.WriteAllBytes( filename, UTF8Encoding.UTF8.GetBytes(sbFile.ToString()));
         }
 
         public void EmitDatabase( GMCodeAPI _db )

@@ -51,7 +51,7 @@ namespace extgen.Emitters.GMCode
         public static void PushSelf( string _self, string _typeSelf ) { selfStack.Push(_self); selfStackType.Push( _typeSelf );}
         public static void PopSelf() { selfStack.Pop(); selfStackType.Pop(); }
         public static string PeekSelf() { return selfStack.Peek(); }
-        public static string PeekSelfType() { return selfStackType.Peek(); }
+        public static string? PeekSelfType() { return selfStackType.Count > 0 ? selfStackType.Peek() : null; }
 
         public string GetTSType()
         {
@@ -65,7 +65,7 @@ namespace extgen.Emitters.GMCode
             case "Bool" : ret = "boolean"; break;
             case "Object" :  ret = (selfStackType.Count>0) ? string.Format( "{0}", selfStackType.Peek()) : "null"; break;
             case "Unit" : ret = "void"; break;
-            default: ret = "null"; break;
+            default: ret = IDLType; break;
             } // end switch
             return ret;            
         }
@@ -127,6 +127,20 @@ namespace extgen.Emitters.GMCode
         }
     }
 
+    public class GMCodeNativeFunction
+    {
+        public string Name { get; private set; }        
+        public GMCodeType ReturnType { get; private set; }
+        public List<GMCodeArg> Arguments { get; private set; }
+
+        public GMCodeNativeFunction( string _name, GMCodeType _returnType)
+        {
+            Name = _name;
+            ReturnType = _returnType;
+            Arguments = new List<GMCodeArg>();
+        }
+    }
+
     public class GMCodeMethod
     {
         public string Name { get; private set; }        
@@ -171,12 +185,14 @@ namespace extgen.Emitters.GMCode
     public class GMCodeModule
     {
         public string Name { get; private set; }
-        public Dictionary<string, GMCodeClass>  Classes  {get; private set;}       
+        public Dictionary<string, GMCodeClass>  Classes  {get; private set;} 
+        public Dictionary<string, GMCodeNativeFunction> Natives { get; private set; }     
 
         public GMCodeModule( string _name )
         {
             Name = _name;
             Classes = new Dictionary<string, GMCodeClass>();
+            Natives = new Dictionary<string, GMCodeNativeFunction>();
         }
     }
     public class GMCodeAPI
@@ -184,6 +200,7 @@ namespace extgen.Emitters.GMCode
         public string DestDirectory { get; private set; }
 
         public Dictionary<string, GMCodeModule> Modules { get; private set; }
+        public GMCodeModule m_currModule;
 
         public GMCodeAPI( string _destDirectory )
         {
@@ -193,7 +210,10 @@ namespace extgen.Emitters.GMCode
 
         private GMCodeMethod GatherMethod( GMIDLNode<GMIDLFunction> _fNode, string? _self )
         {
-            GMCodeMethod ret = new GMCodeMethod( _fNode.Name, GMCodeType.Get( _fNode.Data.ReturnType.ToString() ), _fNode.Attributes.GetAsString( "native" )  );
+            string? nativeName = _fNode.Attributes.GetAsString( "native" );
+            GMCodeType returnType = GMCodeType.Get( _fNode.Data.ReturnType.ToString(), _self );
+            GMCodeMethod ret = new GMCodeMethod( _fNode.Name, returnType, nativeName  );
+
             int count = 0;
             foreach( var a in _fNode.Data.NamedArgs )
             {
@@ -285,6 +305,7 @@ namespace extgen.Emitters.GMCode
         private GMCodeModule GatherModule( GMIDLDatabase _db, GMIDLNode<GMIDLModule> _mNode)
         {
             GMCodeModule module = new GMCodeModule( _mNode.Name );
+            m_currModule = module;
 
             // gather classes and functions (at global scope)
             foreach( var c in _mNode.Data.Classes )
@@ -330,6 +351,69 @@ namespace extgen.Emitters.GMCode
             }
             return ret;
         }
+        private void GatherNativeFromMethod( GMCodeModule _m, GMCodeClass _c, GMCodeMethod _method)
+        {
+            // lets get the native function setup 
+            GMCodeNativeFunction nativeFunc = null;
+            if (_method.NativeName != null)
+            {
+                string selfTypeString = GMCodeType.PeekSelfType();
+                GMCodeType selfType = GMCodeType.Get( selfTypeString );
+
+                GMCodeType returnType = (_method.Name == "constructor") ? selfType : _method.ReturnType;
+                nativeFunc = new GMCodeNativeFunction( _method.NativeName, returnType);
+                _m.Natives.Add( nativeFunc.Name, nativeFunc );
+
+                if (selfType != null) {
+                    GMCodeArg arg = new GMCodeArg( "_self", selfType, false, string.Empty);
+                    nativeFunc.Arguments.Add( arg );
+                } 
+
+                // do all the arguments as well
+                int count = 0;
+                foreach( var a in _method.Arguments )
+                {
+                    nativeFunc.Arguments.Add( a );
+                    ++count;
+                }
+            }   
+
+        } 
+
+        private void GatherNativeFromClass( GMCodeModule _m, GMCodeClass _c)
+        {
+            int nPopSelf = 0;
+            if ((_c.InheritsFrom != null) && (_c.InheritsFrom.Count > 0))
+            {
+                GMCodeClass? curr = _c.InheritsFromClass[0];
+                while( curr != null)
+                {
+                    if (curr.SelfName != null) {
+                        ++nPopSelf;
+                        GMCodeType.PushSelf( curr.SelfName, curr.Name );                        
+                    } // end if
+                    curr = ((curr.InheritsFrom != null) && (curr.InheritsFrom.Count > 0)) ? curr.InheritsFromClass[0] : null;
+                } // end while
+            }
+            if (_c.SelfName != null) { 
+                ++nPopSelf;
+                GMCodeType.PushSelf( _c.SelfName, _c.Name );
+            } // end if
+
+            foreach(  var m in _c.Methods )
+            {
+                GatherNativeFromMethod( _m, _c, m.Value );
+            }
+            if (_c.Constructor != null)
+                GatherNativeFromMethod( _m, _c, _c.Constructor );
+        }
+        private void GatherNativeFromModules( GMCodeModule _m)
+        {
+            foreach(  var c in _m.Classes )
+            {
+                GatherNativeFromClass( _m, c.Value );
+            }
+        }
 
         public void ProcessIDL( GMIDLDatabase _db )
         {
@@ -344,6 +428,7 @@ namespace extgen.Emitters.GMCode
                     Modules.Add( module.Name, module );
                 } // end if
             }  // end foreach    
+            m_currModule = null;
 
             // we need to ensure that we resolve all the names of the inherits from into actual clases
             foreach( var m in Modules)
@@ -362,9 +447,16 @@ namespace extgen.Emitters.GMCode
                 }
 
                 if (c != null)
-                    t.Value.Class = c;
-                
+                    t.Value.Class = c;                
             }
+
+            // now we have types setup properly lets gather all the native functions and ensure that they are setup with the types properly
+            foreach( var m in Modules)
+            {
+                GatherNativeFromModules( m.Value );
+            }
+
+
 
             TSEmitter ts = new TSEmitter();
             ts.EmitDatabase( this );
