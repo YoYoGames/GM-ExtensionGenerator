@@ -3,12 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace extgen.Emitters.GMCode
 {
-    public class TSEmitter
+    public class Utils
     {
-        List<GMCodeMethod> Natives = new List<GMCodeMethod>();
-        public static string ModuleName = "Module"
-;
-        public StringBuilder Indent( int _depth, StringBuilder _sb)
+        public static string ModuleName = "Module";
+        public static StringBuilder Indent( int _depth, StringBuilder _sb)
         {
             if (_depth == 0) return _sb;
             StringBuilder sb = new StringBuilder();
@@ -24,7 +22,12 @@ namespace extgen.Emitters.GMCode
             }
 
             return sb;
-        }
+        }        
+    }
+
+    public class TSEmitter
+    {
+        List<GMCodeMethod> Natives = new List<GMCodeMethod>();
 
         public StringBuilder EmitProperty( GMCodeProperty _pNode )
         {
@@ -51,7 +54,7 @@ namespace extgen.Emitters.GMCode
             if (_pNode.Setter)
             {
                 if ( _pNode.Sync )
-                    sb.AppendFormat( "set {0}( value : {1}) {{ this.__{0} = value;  {2}.{3}( this.{4}, value ); }}", name, type, ModuleName, _pNode.SyncNative.Name, GMCodeType.PeekSelf() );
+                    sb.AppendFormat( "set {0}( value : {1}) {{ this.__{0} = value;  {2}.{3}( this.{4}, value ); }}", name, type, Utils.ModuleName, _pNode.SyncNative.Name, GMCodeType.PeekSelf() );
                 else 
                     sb.AppendFormat( "set {0}( value : {1}) {{ this.__{0} = value; }}", name, type);
                 sb.AppendLine();
@@ -110,7 +113,7 @@ namespace extgen.Emitters.GMCode
             string? native = _fNode.NativeName;
             if (native != null)
             {
-                sb.AppendFormat( "{1}.{0}( ", native, ModuleName );
+                sb.AppendFormat( "{1}.{0}( ", native, Utils.ModuleName );
                 int count = 0;
                 if (_self != null)
                 {
@@ -186,7 +189,7 @@ namespace extgen.Emitters.GMCode
             string? native = _fNode.NativeName;
             if (native != null)
             {
-                sb.AppendFormat( "\tthis.{1} = {2}.{0}( ", native,  GMCodeType.PeekSelf(), ModuleName );
+                sb.AppendFormat( "\tthis.{1} = {2}.{0}( ", native,  GMCodeType.PeekSelf(), Utils.ModuleName );
                 int count = 0;
                 if (_self != null)
                 {
@@ -238,26 +241,26 @@ namespace extgen.Emitters.GMCode
             foreach( var p in _cNode.Fields )
             {
                 var functionSB = EmitField( p.Value );
-                sb.Append( Indent( 1, functionSB).ToString() );
+                sb.Append( Utils.Indent( 1, functionSB).ToString() );
             }            
             sb.AppendLine();
             foreach( var p in _cNode.Properties )
             {
                 var functionSB = EmitProperty( p.Value );
-                sb.Append( Indent( 1, functionSB).ToString() );
+                sb.Append( Utils.Indent( 1, functionSB).ToString() );
             }            
             sb.AppendLine();
             foreach( var f in _cNode.Methods )
             {
 
                 var functionSB = EmitFunction( f.Value, _cNode.SelfName );
-                sb.Append( Indent( 1, functionSB).ToString() );
+                sb.Append( Utils.Indent( 1, functionSB).ToString() );
             }            
 
             if (_cNode.Constructor != null)
             {
                 var functionSB = EmitConstructor( _cNode, _cNode.Constructor, _cNode.SelfName );
-                sb.Append( Indent( 1, functionSB).ToString() );                
+                sb.Append( Utils.Indent( 1, functionSB).ToString() );                
             }
 
             while (nPopSelf > 0) {
@@ -265,7 +268,7 @@ namespace extgen.Emitters.GMCode
                 --nPopSelf;
             } // end while
             sb.Append( "}" );
-            return Indent( _depth, sb);
+            return Utils.Indent( _depth, sb);
         }
 
         private StringBuilder EmitInterface( GMCodeNativeFunction _m)
@@ -308,7 +311,7 @@ namespace extgen.Emitters.GMCode
             foreach( var ni in _mNode.Natives)
             {
                 StringBuilder sbInterface = EmitInterface( ni.Value );
-                sbFile.Append( Indent( _depth+1, sbInterface ));
+                sbFile.Append( Utils.Indent( _depth+1, sbInterface ));
             } 
             sbFile.AppendLine();
             // add the module entries
@@ -321,7 +324,7 @@ namespace extgen.Emitters.GMCode
                 sbFile.AppendLine();
             } 
             sbFile.AppendLine("\t}");
-            sbFile.AppendFormat( "\tdeclare var {1} : {0}Funcs;", _mNode.Name, ModuleName);
+            sbFile.AppendFormat( "\tdeclare var {1} : {0}Funcs;", _mNode.Name, Utils.ModuleName);
             sbFile.AppendLine();
             sbFile.AppendLine();
 

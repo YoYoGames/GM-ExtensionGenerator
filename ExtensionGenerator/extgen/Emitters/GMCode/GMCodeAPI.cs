@@ -501,6 +501,8 @@ namespace extgen.Emitters.GMCode
             TSEmitter ts = new TSEmitter();
             ts.EmitDatabase( this );
 
+            JSEmitter js = new JSEmitter();
+            js.EmitDatabase( this );
 
         }
         
