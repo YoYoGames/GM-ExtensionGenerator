@@ -1,7 +1,5 @@
-using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Transactions;
 
 namespace extgen.Emitters.GMCode
 {
@@ -52,7 +50,10 @@ namespace extgen.Emitters.GMCode
             }
             if (_pNode.Setter)
             {
-                sb.AppendFormat( "set {0}( value : {1}) {{ this.__{0} = value;  /* we need to generate more code here */ }}", name, type);
+                if ( _pNode.Sync )
+                    sb.AppendFormat( "set {0}( value : {1}) {{ this.__{0} = value;  {2}.{3}( this.{4}, value ); }}", name, type, ModuleName, _pNode.SyncNative.Name, GMCodeType.PeekSelf() );
+                else 
+                    sb.AppendFormat( "set {0}( value : {1}) {{ this.__{0} = value; }}", name, type);
                 sb.AppendLine();
             }
             
@@ -60,7 +61,7 @@ namespace extgen.Emitters.GMCode
             return sb;            
         } 
 
-        public StringBuilder EmitField( GMCodeField _pNode )
+        public StringBuilder EmitField( GMCodeField _pNode  )
         {
             StringBuilder sb = new StringBuilder();
 

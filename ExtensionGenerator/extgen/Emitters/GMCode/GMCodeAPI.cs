@@ -1,6 +1,3 @@
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
-using System.Xml.Serialization;
 using gmidlreader;
 
 namespace extgen.Emitters.GMCode
@@ -95,8 +92,10 @@ namespace extgen.Emitters.GMCode
         public bool ReadOnly { get; private set; }
         public bool Getter { get; private set; }
         public bool Setter {get; private set; }
+        public bool Sync { get; private set; }
+        public GMCodeNativeFunction SyncNative { get; set; }
 
-        public GMCodeField( string _name, GMCodeType _type, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
+        public GMCodeField( string _name, GMCodeType _type, bool _sync, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
         {
             Name = _name;
             Type = _type;
@@ -104,6 +103,7 @@ namespace extgen.Emitters.GMCode
             ReadOnly = (_readOnly != null) ? (bool)_readOnly : false;
             Getter = (_get != null) ? (bool)_get : false;
             Setter = (_set != null) ? (bool)_set : false;
+            Sync = _sync;
         }
     }
 
@@ -115,8 +115,10 @@ namespace extgen.Emitters.GMCode
         public bool ReadOnly { get; private set; }
         public bool Getter { get; private set; }
         public bool Setter {get; private set; }
+        public bool Sync { get; private set; }
+        public GMCodeNativeFunction SyncNative { get; set; }
 
-        public GMCodeProperty( string _name, GMCodeType _type, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
+        public GMCodeProperty( string _name, GMCodeType _type, bool _sync, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
         {
             Name = _name;
             Type = _type;
@@ -124,6 +126,7 @@ namespace extgen.Emitters.GMCode
             ReadOnly = (_readOnly != null) ? (bool)_readOnly : false;
             Getter = (_get != null) ? (bool)_get : false;
             Setter = (_set != null) ? (bool)_set : false;
+            Sync = _sync;
         }
     }
 
@@ -169,6 +172,7 @@ namespace extgen.Emitters.GMCode
         public Dictionary<string, GMCodeProperty> Properties { get; set; }
         public Dictionary<string, GMCodeMethod> Methods { get; set; }
         public GMCodeMethod? Constructor { get; set; }
+        public bool Sync { get; set; }
 
         public GMCodeClass( string _name )
         {
@@ -179,6 +183,7 @@ namespace extgen.Emitters.GMCode
             Fields = new Dictionary<string, GMCodeField>();
             Properties = new Dictionary<string, GMCodeProperty>();
             Methods = new Dictionary<string, GMCodeMethod>();
+            Sync = false;
         }
     }
 
@@ -227,12 +232,13 @@ namespace extgen.Emitters.GMCode
             return ret;
         }
 
-        private GMCodeField GatherField( GMIDLNode<GMIDLProperty> _pNode )
+        private GMCodeField GatherField( GMIDLNode<GMIDLProperty> _pNode, bool _fClassSync )
         {
             string? defaultValue = _pNode.Attributes.GetAsString( "default" );
             GMCodeField ret = new GMCodeField( _pNode.Name, 
                                                 GMCodeType.Get( _pNode.Data.Type.ToString(), 
                                                 _pNode.Attributes.GetAsString( "type" ) ), 
+                                                _fClassSync || _pNode.Attributes.ContainsKey( "sync" ),
                                                 defaultValue, 
                                                 _pNode.Data.Setter == null, 
                                                 _pNode.Data.Getter != null, 
@@ -241,12 +247,13 @@ namespace extgen.Emitters.GMCode
             return ret;
         }
 
-        private GMCodeProperty GatherProperty( GMIDLNode<GMIDLProperty> _pNode )
+        private GMCodeProperty GatherProperty( GMIDLNode<GMIDLProperty> _pNode, bool _fClassSync )
         {
             string? defaultValue = _pNode.Attributes.GetAsString( "default" );
             GMCodeProperty ret = new GMCodeProperty( _pNode.Name, 
                                                     GMCodeType.Get( _pNode.Data.Type.ToString(), 
                                                     _pNode.Attributes.GetAsString( "type" ) ), 
+                                                _fClassSync || _pNode.Attributes.ContainsKey( "sync" ),
                                                     defaultValue,
                                                     _pNode.Data.Setter == null,
                                                     _pNode.Data.Getter != null, 
@@ -257,6 +264,7 @@ namespace extgen.Emitters.GMCode
         private GMCodeClass GatherClass( GMIDLNode<GMIDLClass> _cNode)
         {
             GMCodeClass ret = new GMCodeClass( _cNode.Name );
+            ret.Sync = _cNode.Attributes.ContainsKey( "sync" );
 
             // get the prototype
             if (_cNode.Data.Prototype != null)
@@ -277,12 +285,12 @@ namespace extgen.Emitters.GMCode
             {
                 if (p.Attributes.ContainsKey( "field"))
                 {
-                    GMCodeField field = GatherField( p );
+                    GMCodeField field = GatherField( p, ret.Sync );
                     ret.Fields.Add( field.Name, field);
                 }
                 else
                 {
-                    GMCodeProperty prop = GatherProperty( p );
+                    GMCodeProperty prop = GatherProperty( p, ret.Sync );
                     ret.Properties.Add( prop.Name, prop );
                 }
             } 
@@ -351,6 +359,31 @@ namespace extgen.Emitters.GMCode
             }
             return ret;
         }
+
+        private void GatherSyncNativeFromProperty( GMCodeModule _m, GMCodeClass _c, GMCodeProperty _prop)
+        {
+            GMCodeNativeFunction nativeFunc = null;
+
+            string selfTypeString = GMCodeType.PeekSelfType();
+            GMCodeType selfType = GMCodeType.Get( selfTypeString );            
+            GMCodeType propType = _prop.Type;
+
+            string nameNative = string.Format( "Sync_{0}_{1}", _c.Name, _prop.Name);
+
+            nativeFunc = new GMCodeNativeFunction( nameNative, GMCodeType.Get("void"));
+            _m.Natives.Add( nativeFunc.Name, nativeFunc );
+            _prop.SyncNative = nativeFunc;
+
+            if (selfType != null) {
+                GMCodeArg arg = new GMCodeArg( "_self", selfType, false, string.Empty);
+                nativeFunc.Arguments.Add( arg );
+            } 
+
+            GMCodeArg argV = new GMCodeArg( "value", propType, false, string.Empty);
+            nativeFunc.Arguments.Add( argV );
+
+        }
+
         private void GatherNativeFromMethod( GMCodeModule _m, GMCodeClass _c, GMCodeMethod _method)
         {
             // lets get the native function setup 
@@ -406,6 +439,13 @@ namespace extgen.Emitters.GMCode
             }
             if (_c.Constructor != null)
                 GatherNativeFromMethod( _m, _c, _c.Constructor );
+
+
+            // look for all the sync properties and we need to generate a native for them to do the Sync
+            foreach( var p in _c.Properties)
+            {
+                GatherSyncNativeFromProperty( _m, _c, p.Value );
+            }
         }
         private void GatherNativeFromModules( GMCodeModule _m)
         {
