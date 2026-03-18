@@ -104,6 +104,7 @@ namespace extgen.Emitters.GMCode
     public class GMCodeField
     {
         public string Name { get; private set; }        
+        public string NativeName { get; private set; } 
         public GMCodeType Type { get; private set; }
         public string? DefaultValue { get; private set; }
         public bool ReadOnly { get; private set; }
@@ -112,9 +113,10 @@ namespace extgen.Emitters.GMCode
         public bool Sync { get; private set; }
         public GMCodeNativeFunction SyncNative { get; set; }
 
-        public GMCodeField( string _name, GMCodeType _type, bool _sync, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
+        public GMCodeField( string _name, string _nativeName,  GMCodeType _type, bool _sync, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
         {
             Name = _name;
+            NativeName = _nativeName;
             Type = _type;
             DefaultValue = _default;
             ReadOnly = (_readOnly != null) ? (bool)_readOnly : false;
@@ -126,7 +128,8 @@ namespace extgen.Emitters.GMCode
 
      public class GMCodeProperty
     {
-        public string Name { get; private set; }        
+        public string Name { get; private set; }       
+        public string NativeName { get; private set; } 
         public GMCodeType Type { get; private set; }
         public string? DefaultValue { get; private set; }
         public bool ReadOnly { get; private set; }
@@ -135,9 +138,10 @@ namespace extgen.Emitters.GMCode
         public bool Sync { get; private set; }
         public GMCodeNativeFunction SyncNative { get; set; }
 
-        public GMCodeProperty( string _name, GMCodeType _type, bool _sync, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
+        public GMCodeProperty( string _name, string _nativeName, GMCodeType _type, bool _sync, string? _default = null, bool? _readOnly = null, bool? _get = null, bool? _set = null  )
         {
             Name = _name;
+            NativeName = _nativeName;
             Type = _type;
             DefaultValue = _default;
             ReadOnly = (_readOnly != null) ? (bool)_readOnly : false;
@@ -182,6 +186,7 @@ namespace extgen.Emitters.GMCode
     public class GMCodeClass
     {
         public string Name { get; set; }
+        public string NativeName { get; set; }
         public List<string> InheritsFrom { get; set; }
         public List<GMCodeClass> InheritsFromClass { get; set; }
 
@@ -196,6 +201,7 @@ namespace extgen.Emitters.GMCode
         public GMCodeClass( string _name )
         {
             Name = _name;
+            NativeName = _name;
             InheritsFrom = new List<string>();
             InheritsFromClass = new List<GMCodeClass>();
             SelfName = null;
@@ -255,6 +261,7 @@ namespace extgen.Emitters.GMCode
         {
             string? defaultValue = _pNode.Attributes.GetAsString( "default" );
             GMCodeField ret = new GMCodeField( _pNode.Name, 
+                                                _pNode.Attributes.GetAsString( "native" ) ?? _pNode.Name,
                                                 GMCodeType.Get( _pNode.Data.Type.ToString(), 
                                                 _pNode.Attributes.GetAsString( "type" ) ), 
                                                 _fClassSync || _pNode.Attributes.ContainsKey( "sync" ),
@@ -270,6 +277,7 @@ namespace extgen.Emitters.GMCode
         {
             string? defaultValue = _pNode.Attributes.GetAsString( "default" );
             GMCodeProperty ret = new GMCodeProperty( _pNode.Name, 
+                                                     _pNode.Attributes.GetAsString( "native" ) ?? _pNode.Name,
                                                     GMCodeType.Get( _pNode.Data.Type.ToString(), 
                                                     _pNode.Attributes.GetAsString( "type" ) ), 
                                                 _fClassSync || _pNode.Attributes.ContainsKey( "sync" ),
@@ -284,6 +292,7 @@ namespace extgen.Emitters.GMCode
         {
             GMCodeClass ret = new GMCodeClass( _cNode.Name );
             ret.Sync = _cNode.Attributes.ContainsKey( "sync" );
+            ret.NativeName = _cNode.Attributes.GetAsString( "native" ) ?? _cNode.Name;
 
             // get the prototype
             if (_cNode.Data.Prototype != null)
@@ -392,7 +401,7 @@ namespace extgen.Emitters.GMCode
             nativeFunc = new GMCodeNativeFunction( nameNative, GMCodeType.Get("void"));
             _m.Natives.Add( nativeFunc.Name, nativeFunc );
             _prop.SyncNative = nativeFunc;
-            nativeFunc.Data = String.Format( "offsetof({0}, {1})", _c.Name, _prop.Name );
+            nativeFunc.Data = String.Format( "offsetof({0}, {1})", _c.NativeName, _prop.NativeName );
 
             if (selfType != null) {
                 GMCodeArg arg = new GMCodeArg( "_self", selfType, false, string.Empty);
