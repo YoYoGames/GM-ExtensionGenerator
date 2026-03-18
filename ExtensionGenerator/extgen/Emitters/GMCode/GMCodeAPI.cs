@@ -42,9 +42,9 @@ namespace extgen.Emitters.GMCode
                 types.Add( t.IDLType, t );
             }
 
-            return t;            
-        }
-
+            return t;    
+        }        
+    
         public static void PushSelf( string _self, string _typeSelf ) { selfStack.Push(_self); selfStackType.Push( _typeSelf );}
         public static void PopSelf() { selfStack.Pop(); selfStackType.Pop(); }
         public static string PeekSelf() { return selfStack.Peek(); }
@@ -65,6 +65,23 @@ namespace extgen.Emitters.GMCode
             default: ret = IDLType; break;
             } // end switch
             return ret;            
+        }
+
+        public string GetCPPType()
+        {
+            string ret;
+            switch( IDLType ) {
+            case "String": ret = "const char*"; break;
+            case "Double": ret = "double"; break;
+            case "Array": ret = "*"; break;
+            case "Int64" : ret = "int64"; break;
+            case "Int32" : ret = "int32"; break;
+            case "Bool" : ret = "bool"; break;
+            case "Object" :  ret = (selfStackType.Count>0) ? string.Format( "{0}*", selfStackType.Peek()) : "null"; break;
+            case "Unit" : ret = "void"; break;
+            default: ret = string.Format( "{0}*", IDLType); break;
+            } // end switch
+            return ret;          
         }
     }
 
@@ -135,12 +152,14 @@ namespace extgen.Emitters.GMCode
         public string Name { get; private set; }        
         public GMCodeType ReturnType { get; private set; }
         public List<GMCodeArg> Arguments { get; private set; }
+        public string Data { get; set; }
 
         public GMCodeNativeFunction( string _name, GMCodeType _returnType)
         {
             Name = _name;
             ReturnType = _returnType;
             Arguments = new List<GMCodeArg>();
+            Data = string.Empty;
         }
     }
 
@@ -373,6 +392,7 @@ namespace extgen.Emitters.GMCode
             nativeFunc = new GMCodeNativeFunction( nameNative, GMCodeType.Get("void"));
             _m.Natives.Add( nativeFunc.Name, nativeFunc );
             _prop.SyncNative = nativeFunc;
+            nativeFunc.Data = String.Format( "offsetof({0}, {1})", _c.Name, _prop.Name );
 
             if (selfType != null) {
                 GMCodeArg arg = new GMCodeArg( "_self", selfType, false, string.Empty);
@@ -384,7 +404,7 @@ namespace extgen.Emitters.GMCode
 
         }
 
-        private void GatherNativeFromMethod( GMCodeModule _m, GMCodeClass _c, GMCodeMethod _method)
+        private void GatherNativeFromMethod( GMCodeModule _m, GMCodeClass _c, GMCodeMethod _method, bool _constructor)
         {
             // lets get the native function setup 
             GMCodeNativeFunction nativeFunc = null;
@@ -397,7 +417,7 @@ namespace extgen.Emitters.GMCode
                 nativeFunc = new GMCodeNativeFunction( _method.NativeName, returnType);
                 _m.Natives.Add( nativeFunc.Name, nativeFunc );
 
-                if (selfType != null) {
+                if (!_constructor && (selfType != null)) {
                     GMCodeArg arg = new GMCodeArg( "_self", selfType, false, string.Empty);
                     nativeFunc.Arguments.Add( arg );
                 } 
@@ -435,10 +455,10 @@ namespace extgen.Emitters.GMCode
 
             foreach(  var m in _c.Methods )
             {
-                GatherNativeFromMethod( _m, _c, m.Value );
+                GatherNativeFromMethod( _m, _c, m.Value, false );
             }
             if (_c.Constructor != null)
-                GatherNativeFromMethod( _m, _c, _c.Constructor );
+                GatherNativeFromMethod( _m, _c, _c.Constructor, true );
 
 
             // look for all the sync properties and we need to generate a native for them to do the Sync
@@ -504,6 +524,8 @@ namespace extgen.Emitters.GMCode
             JSEmitter js = new JSEmitter();
             js.EmitDatabase( this );
 
+            CPPEmitter cpp = new CPPEmitter();
+            cpp.EmitDatabase( this );
         }
         
     }

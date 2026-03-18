@@ -32,6 +32,7 @@ namespace extgen.Emitters.GMCode
                     varsForFreeing.Add( namePtr );
                     sb.AppendFormat( "\tlet {0} = {1}.stringToNewUTF8( {2} );", namePtr, Utils.ModuleName, a.Name );
                     sb.AppendLine();
+                    argNames.Add(namePtr);
                 }
                 else
                 {
@@ -51,7 +52,7 @@ namespace extgen.Emitters.GMCode
                 } 
             }
             // emit the actual function call for the C++
-            sb.AppendFormat( "{0}._{1}(", Utils.ModuleName, _func.Name );
+            sb.AppendFormat( "{0}.__{1}(", Utils.ModuleName, _func.Name );
             count = 0;
             foreach( var a in argNames)
             {
@@ -102,5 +103,6 @@ namespace extgen.Emitters.GMCode
             {
                 EmitModule( _db, m.Value, 0 );
             }  // end foreach         
-        }   }
+        }   
+    }
 }
