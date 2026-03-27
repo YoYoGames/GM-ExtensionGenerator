@@ -408,13 +408,14 @@
       "hidden": true,
       "inherits": "base-vs",
       "architecture": { "value": "NX64" },
-
+      "toolset": {
+        "value": "v143,VCTargetsPath=${EXTGEN_SWITCH_VCTARGETS_PATH}"
+      },
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "17",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
 
         "EXTGEN_PLATFORM_SWITCH": "ON",
-        "EXT_SWITCH_USER_PROPS": "${EXTGEN_SWITCH_USER_PROPS}",
         "EXT_OUTPUT_DIR": "${EXTGEN_SWITCH_OUTPUT_FOLDER}"
       }
     },

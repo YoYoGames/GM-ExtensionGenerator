@@ -127,7 +127,7 @@ namespace extgen.Emitters.Cmake
 
                 ["EXTGEN_SWITCH_DISABLED"] = targets.Switch is SwitchTargetConfig { Enabled: true } ? "false" : "true",
                 ["EXTGEN_SWITCH_OUTPUT_FOLDER"] = targets.Switch is SwitchTargetConfig { Enabled: true } s ? s.Output : "../",
-                ["EXTGEN_SWITCH_USER_PROPS"] = targets.Switch is SwitchTargetConfig { Enabled: true, UserProps: not null } s1 ? PathUtils.ResolvePath(s1.UserProps, layout.RootDir) : "$env{EXT_SWITCH_USER_PROPS}",
+                ["EXTGEN_SWITCH_VCTARGETS_PATH"] = targets.Switch is SwitchTargetConfig { Enabled: true, VCTargetsPath: not null } s1 ? PathUtils.ResolvePath(s1.VCTargetsPath, layout.RootDir) : "$env{EXT_SWITCH_VCTARGETS_PATH}",
             });
         }
 

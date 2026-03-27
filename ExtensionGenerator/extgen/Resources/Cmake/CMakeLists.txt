@@ -145,20 +145,6 @@ set(SRC_TVOS_NATIVE ${SRC_NATIVE} ${SRC_TVOS})
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # ============================================================
-# Inject user properties into VS
-# ============================================================
-if(MSVC AND EXTGEN_PLATFORM_SWITCH)
-  if(NOT EXT_SWITCH_USER_PROPS)
-    message(FATAL_ERROR "EXTGEN_PLATFORM_SWITCH=ON but EXT_SWITCH_USER_PROPS is empty. Set it to your Nintendo .props.")
-  endif()
-  if(NOT EXISTS "${EXT_SWITCH_USER_PROPS}")
-    message(FATAL_ERROR "EXT_SWITCH_USER_PROPS not found: ${EXT_SWITCH_USER_PROPS}")
-  endif()
-  
-  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY VS_USER_PROPS "${EXT_SWITCH_USER_PROPS}")
-endif()
-
-# ============================================================
 # Platform selection & defines
 # ============================================================
 if(ANDROID)

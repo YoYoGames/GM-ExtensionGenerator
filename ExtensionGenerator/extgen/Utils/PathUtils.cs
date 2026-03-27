@@ -11,7 +11,7 @@
 
             return Path.IsPathRooted(expanded)
                 ? expanded
-                : Path.GetFullPath(Path.Combine(baseDir, expanded));
+                : Path.GetFullPath(expanded, baseDir);
         }
     }
 }
