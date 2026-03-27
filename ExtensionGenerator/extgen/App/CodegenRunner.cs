@@ -5,6 +5,7 @@ using extgen.Models;
 using extgen.Models.Config;
 using extgen.Parsing.Gmidl;
 using extgen.Planning;
+using extgen.Utils;
 using System.Text;
 using System.Text.Json;
 
@@ -64,7 +65,7 @@ namespace extgen.App
             ResolvedConfig rc;
             try
             {
-                rc = ConfigResolver.Resolve(cfg, fullConfigPath, ResolvePath);
+                rc = ConfigResolver.Resolve(cfg, fullConfigPath, PathUtils.ResolvePath);
             }
             catch (Exception ex)
             {
@@ -122,18 +123,6 @@ namespace extgen.App
 
             Console.WriteLine("[extgen] Success [x]");
             return 0;
-        }
-
-        private static string ResolvePath(string? path, string baseDir)
-        {
-            if (string.IsNullOrWhiteSpace(path)) return string.Empty;
-
-            var expanded = Environment.ExpandEnvironmentVariables(
-                path.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
-
-            return Path.IsPathRooted(expanded)
-                ? expanded
-                : Path.GetFullPath(Path.Combine(baseDir, expanded));
         }
     }
 }
