@@ -25,6 +25,8 @@ namespace extgen.Emitters.Cmake
 
             EmitScripts(ctx, layout);
 
+            EmitTemplates(ctx, layout);
+
             EmitThirdParty(layout);
 
             if (ctx.Settings.EmitPresets)
@@ -74,6 +76,18 @@ namespace extgen.Emitters.Cmake
                 ["EXTGEN_IOS_OUTPUT"] = targets.Ios?.Output ?? "../iOSSourceFromMac",
                 ["EXTGEN_TVOS_OUTPUT"] = targets.Tvos?.Output ?? "../tvOSSourceFromMac",
             });
+
+            if (targets.Switch is SwitchTargetConfig { Enabled: true }) 
+            {
+                var switchScripts = Path.Combine(layout.ScriptsDir, "switch");
+                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.switch.extgen_target_setup.cmake", Path.Combine(switchScripts, "extgen_target_setup.cmake"));
+                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.switch.Directory.Build.props.in", Path.Combine(switchScripts, "Directory.Build.props.in"));
+            }
+        }
+
+        private static void EmitTemplates(CmakeEmitterContext ctx, CmakeLayout layout)
+        {
+            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.templates.CMakeUserPresets.json.template", Path.Combine(layout.TemplateDir, "CMakeUserPresets.json.template"));
         }
 
         private static void EmitThirdParty(CmakeLayout layout)
@@ -127,13 +141,20 @@ namespace extgen.Emitters.Cmake
 
                 ["EXTGEN_SWITCH_DISABLED"] = targets.Switch is SwitchTargetConfig { Enabled: true } ? "false" : "true",
                 ["EXTGEN_SWITCH_OUTPUT_FOLDER"] = targets.Switch is SwitchTargetConfig { Enabled: true } s ? s.Output : "../",
-                ["EXTGEN_SWITCH_USER_PROPS"] = targets.Switch is SwitchTargetConfig { Enabled: true, UserProps: not null } s1 ? PathUtils.ResolvePath(s1.UserProps, layout.RootDir) : "$env{EXT_SWITCH_USER_PROPS}",
             });
         }
 
         private static void EmitExtras(CmakeLayout layout)
         {
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake..clang-format", Path.Combine(layout.RootDir, ".clang-format"));
+            if (!File.Exists(Path.Combine(layout.RootDir, ".clang-format")))
+            {
+                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake..clang-format", Path.Combine(layout.RootDir, ".clang-format"));
+            }
+
+            if (!File.Exists(Path.Combine(layout.RootDir, ".gitignore")))
+            {
+                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake..gitignore", Path.Combine(layout.RootDir, ".gitignore"));
+            }
         }
     }
 }

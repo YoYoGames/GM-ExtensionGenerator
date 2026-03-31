@@ -1,4 +1,19 @@
 cmake_minimum_required(VERSION 3.18)
+
+# ============================================================
+# Nintendo CMake setup
+# ============================================================
+option(EXTGEN_PLATFORM_SWITCH "Enable Switch-specific VS integration" OFF)
+set(NINTENDO_SDK_PROPS_PATH "" CACHE STRING
+    "Path to Nintendo SDK props file (relative to NINTENDO_SDK_ROOT) - REQUIRED for Switch builds")
+
+if(EXTGEN_PLATFORM_SWITCH)
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/switch/extgen_target_setup.cmake")
+endif()
+
+# ============================================================
+# Make project
+# ============================================================
 project(${EXTGEN_EXTENSION_NAME} LANGUAGES CXX)
 
 # ============================================================
@@ -57,6 +72,11 @@ set(EXTGEN_IS_TVOS FALSE)
 set(EXTGEN_IS_APPLE_MOBILE FALSE)
 set(EXTGEN_IS_PS4 FALSE)
 set(EXTGEN_IS_PS5 FALSE)
+set(EXTGEN_IS_SWITCH FALSE)
+
+if(EXTGEN_PLATFORM_SWITCH)
+  set(EXTGEN_IS_SWITCH TRUE)
+endif()
 
 if(APPLE)
   # CMAKE_OSX_SYSROOT may be: iphoneos, iphonesimulator, appletvos, appletvsimulator, or a full path.
@@ -94,8 +114,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # ============================================================
 file(GLOB SRC_CORE CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/*.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/*.mm
-  ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/*.swift
+  $<$<EXTGEN_IS_APPLE_MOBILE:TRUE>:${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/*.mm>
+  $<$<EXTGEN_IS_APPLE_MOBILE:TRUE>:${CMAKE_CURRENT_SOURCE_DIR}/code_gen/core/*.swift>
 )
 target_sources(${PROJECT_NAME} PRIVATE ${SRC_CORE})
 
@@ -170,6 +190,18 @@ if(ANDROID)
   find_library(_android_lib android)
   target_link_libraries(${PROJECT_NAME} PRIVATE ${_log_lib} ${_android_lib})
   message(STATUS "Android ABI=${CMAKE_ANDROID_ARCH_ABI}, STL=c++_static")
+
+elseif(EXTGEN_IS_SWITCH)
+  message(STATUS "Including Nintendo Switch sources")
+  target_sources(${PROJECT_NAME} PRIVATE ${SRC_NATIVE})
+  target_compile_definitions(${PROJECT_NAME} PRIVATE OS_SWITCH EXTGEN_HAS_JNI=0)
+
+  # Set output extension to .nro for Nintendo Switch shared libraries
+  if(BUILD_SHARED_LIBS)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+      SUFFIX ".nro"
+    )
+  endif()
 
 elseif(WIN32)
   message(STATUS "Including Windows sources")
@@ -358,6 +390,23 @@ if(ANDROID)
 
 elseif(EXTGEN_IS_APPLE_MOBILE)
   message(STATUS "Apple mobile build: use package_ios_xcframework / package_tvos_xcframework targets.")
+
+elseif(EXTGEN_IS_SWITCH)
+  # Nintendo Switch generates three files: .nro, .nrr, and .nrs
+  # Copy all three to the output directory
+  add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.nro"
+            "${_EXT_OUT_DIR}/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.nro"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.nrr"
+            "${_EXT_OUT_DIR}/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.nrr"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.nrs"
+            "${_EXT_OUT_DIR}/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.nrs"
+    COMMENT "Copying Nintendo Switch files (.nro, .nrr, .nrs) to ${_EXT_OUT_DIR}"
+  )
 
 else()
   add_custom_command(

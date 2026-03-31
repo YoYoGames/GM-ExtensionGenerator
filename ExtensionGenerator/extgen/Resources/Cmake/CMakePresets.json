@@ -407,33 +407,15 @@
       "name": "base-vs-switch",
       "hidden": true,
       "inherits": "base-vs",
-      "architecture": { "value": "NX64" },
+      "architecture": {
+        "value": "NX64",
+        "strategy": "set"
+      },
 
       "cacheVariables": {
-        "CMAKE_CXX_STANDARD": "17",
-        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-
+        "BUILD_SHARED_LIBS": "ON",
         "EXTGEN_PLATFORM_SWITCH": "ON",
-        "EXT_SWITCH_USER_PROPS": "${EXTGEN_SWITCH_USER_PROPS}",
         "EXT_OUTPUT_DIR": "${EXTGEN_SWITCH_OUTPUT_FOLDER}"
-      }
-    },
-    {
-      "name": "switch-nx64-debug",
-      "displayName": "Nintendo Switch (NX64) Debug",
-      "hidden": ${EXTGEN_SWITCH_DISABLED},
-      "inherits": "base-vs-switch",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "switch-nx64-release",
-      "displayName": "Nintendo Switch (NX64) Release",
-      "hidden": ${EXTGEN_SWITCH_DISABLED},
-      "inherits": "base-vs-switch",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
@@ -467,18 +449,6 @@
 
     { "name": "ps5-debug",   "configurePreset": "ps5-debug",   "configuration": "Debug" },
     { "name": "ps5-release", "configurePreset": "ps5-release", "configuration": "Release" },
-
-    {
-      "name": "switch-nx64-debug",
-      "configurePreset": "switch-nx64-debug",
-      "configuration": "Debug"
-    },
-    {
-      "name": "switch-nx64-release",
-      "configurePreset": "switch-nx64-release",
-      "configuration": "Release"
-    },
-
 
     {
       "name": "ios-xcframework-release",

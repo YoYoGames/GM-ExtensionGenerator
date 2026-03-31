@@ -9,13 +9,17 @@
   
   <ItemGroup>
     <None Remove="Resources\Cmake\.clang-format" />
+    <None Remove="Resources\Cmake\.gitignore" />
     <None Remove="Resources\Cmake\CMakeLists.txt" />
     <None Remove="Resources\Cmake\CMakePresets.json" />
+    <None Remove="Resources\Cmake\CMakeUserPresets.json.template" />
     <None Remove="Resources\Cmake\cmake\extgen_integrate_gamemaker_xcode.cmake" />
     <None Remove="Resources\Cmake\cmake\extgen_integrate_gamemaker_xcode.rb" />
     <None Remove="Resources\Cmake\cmake\extgen_package_xcframework.cmake" />
     <None Remove="Resources\Cmake\cmake\extgen_xcframework.cmake" />
     <None Remove="Resources\Cmake\cmake\Gemfile" />
+    <None Remove="Resources\Cmake\cmake\switch\Directory.Build.props.in" />
+    <None Remove="Resources\Cmake\cmake\switch\extgen_target_setup.cmake" />
     <None Remove="Resources\Cmake\src\CMakeLists.txt" />
     <None Remove="Resources\Cmake\third_party\CMakeLists.txt" />
     <None Remove="Resources\Cpp\GMExtUtils.cpp" />
@@ -39,6 +43,9 @@
     <EmbeddedResource Include="Resources\Cmake\CMakePresets.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Cmake\cmake\switch\Directory.Build.props.in" />
+    <EmbeddedResource Include="Resources\Cmake\cmake\switch\extgen_target_setup.cmake" />
+    <EmbeddedResource Include="Resources\Cmake\templates\CMakeUserPresets.json.template" />
     <EmbeddedResource Include="Resources\Cmake\cmake\extgen_integrate_gamemaker_xcode.cmake" />
     <EmbeddedResource Include="Resources\Cmake\cmake\extgen_integrate_gamemaker_xcode.rb" />
     <EmbeddedResource Include="Resources\Cmake\cmake\extgen_package_xcframework.cmake" />
@@ -146,6 +153,7 @@
 
 	<ItemGroup>
 		<Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
+		<EmbeddedResource Include="Resources\Cmake\.gitignore" />
 		<EmbeddedResource Include="Resources\Swift\GMExtUtilsBridge.mm" />
 	</ItemGroup>
 
