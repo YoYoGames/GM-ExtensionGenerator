@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 namespace extgencore.Helpers
 {
     /// <summary>
-    /// Non-cryptographic 32-bit hash helper (FNV-1a).
-    /// Use when you need a deterministic int key for a string
-    /// (e.g., switch tables, generated IDs, etc.).
+    /// Non-cryptographic 32-bit hash helper (FNV-1a) for generating
+    /// deterministic int keys from strings (e.g., switch tables, generated IDs).
     /// </summary>
     public static class StringHash
     {

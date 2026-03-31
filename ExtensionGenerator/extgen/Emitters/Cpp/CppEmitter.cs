@@ -43,12 +43,6 @@ namespace extgen.Emitters.Cpp
             ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cpp.GMExtUtils.h", Path.Combine(destinationFolder, "GMExtUtils.h"));
         }
 
-        // =====================================================================
-        // 1. INTERNAL BASE: code_gen/{Ext}Internal.h / .cpp
-        //    - holds the *current* implementation
-        //    - exposes C entry points __EXT_NATIVE__...
-        // =====================================================================
-
         private void EmitInternalHeader(CppEmitterContext ctx, IrCompilation c, IIrTypeEnumResolver enums, CppWriter w)
         {
             CppCommonEmitter<CppWriter> common = new(ctx, typeMap, enums);
@@ -189,11 +183,6 @@ namespace extgen.Emitters.Cpp
             }, ExportTypeUtils.ReturnFor(fn).AsCppType(), modifiers: ["GMEXPORT"])
             .Line();
         }
-
-        // =====================================================================
-        // 2. USER IMPLEMENTATION: src/{Ext}.h / src/{Ext}.cpp
-        //    - file where implementation lies
-        // =====================================================================
 
         private static void EmitUserHeader(CppEmitterContext ctx, CppWriter w)
         {

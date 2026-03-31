@@ -1,14 +1,18 @@
 ﻿namespace codegencore.Models
 {
+    /// <summary>
+    /// Represents a type in the intermediate representation (IR) system.
+    /// Supports builtin types, user-defined types (structs/enums), arrays, and nullable types.
+    /// </summary>
     public abstract record IrType
     {
-        // ---- Shapes ----
+        // Type shapes
         public sealed record Builtin(BuiltinKind Kind) : IrType;
-        public sealed record Named(NamedKind Kind, string Name) : IrType; // consider SymbolId later
+        public sealed record Named(NamedKind Kind, string Name) : IrType;
         public sealed record Array(IrType Element, int? FixedLength = null) : IrType;
         public sealed record Nullable(IrType Underlying) : IrType;
 
-        // ---- Builtin singletons (avoid repeated allocations) ----
+        // Builtin singletons (avoid repeated allocations)
         public static readonly IrType Bool = new Builtin(BuiltinKind.Bool);
 
         public static readonly IrType Int8 = new Builtin(BuiltinKind.Int8);
@@ -36,21 +40,31 @@
         public static readonly IrType AnyArray = new Builtin(BuiltinKind.AnyArray);
         public static readonly IrType AnyMap = new Builtin(BuiltinKind.AnyMap);
 
-
+        /// <summary>
+        /// Wraps a type in a nullable container if not already nullable.
+        /// </summary>
         public static IrType MakeNullable(IrType t) =>
             t is Nullable ? t : new Nullable(t);
 
+        /// <summary>
+        /// Removes the nullable wrapper from a type if present.
+        /// </summary>
         public static IrType StripNullable(IrType t) =>
             t is Nullable n ? n.Underlying : t;
 
+        /// <summary>
+        /// Determines whether a type is nullable.
+        /// </summary>
         public static bool IsNullable(IrType t) => t is Nullable;
 
+        /// <summary>
+        /// Creates an array type with the specified element type and optional fixed length.
+        /// </summary>
         public static IrType MakeArray(IrType element, int? fixedLength = null) =>
             new Array(element, fixedLength);
 
         /// <summary>
-        /// Optional: create a stable "shape key" if you need structural caching in a generator.
-        /// Keep it here because it's still about type identity.
+        /// Creates a stable hash code for structural caching in generators.
         /// </summary>
         public virtual int GetStableHashCode() => GetHashCode();
     }

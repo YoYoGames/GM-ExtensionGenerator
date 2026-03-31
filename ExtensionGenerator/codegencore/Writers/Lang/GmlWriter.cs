@@ -1,11 +1,24 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
+    /// <summary>
+    /// Specifies the scope of a GML variable declaration.
+    /// </summary>
     public enum VariableScope { None, Local, Static }
+
+    /// <summary>
+    /// Specifies the type of accessor for GML data structures.
+    /// </summary>
     public enum AccessorKind { Array, Map, List, Struct }
 
+    /// <summary>
+    /// Provides a fluent API for generating GameMaker Language (GML) source code with support for enums, functions, structs, and data structure accessors.
+    /// </summary>
     public class GmlWriter(ICodeWriter io) : CStyleWriter<GmlWriter>(io)
     {
+        /// <summary>
+        /// Writes an enum declaration.
+        /// </summary>
         public GmlWriter Enum(string name, IEnumerable<EnumMember> members)
         {
             var list = members.ToList();
@@ -24,14 +37,25 @@ namespace codegencore.Writers.Lang
               .Line();
             return this;
         }
-        
+
+        /// <summary>
+        /// Writes a repeat loop.
+        /// </summary>
         public GmlWriter Repeat(string timesExpr, Action<GmlWriter> body) => Keyword("repeat", timesExpr, body);
 
+        /// <summary>
+        /// Writes a with context statement.
+        /// </summary>
         public GmlWriter With(string contextExpr, Action<GmlWriter> body) => Keyword("with", contextExpr, body);
 
+        /// <summary>
+        /// Writes a do-until loop.
+        /// </summary>
         public GmlWriter DoUntil(Action<GmlWriter> body, string condition) => Line("do").Block(body).Line($" until ({condition});");
 
-        // Assigns
+        /// <summary>
+        /// Writes an assignment statement with optional variable scope.
+        /// </summary>
         public GmlWriter Assign(string identifier, string rhs, VariableScope scope = VariableScope.None) => Assign(lhs: w => w.Append(identifier), rhs: w => w.Append(rhs), scope);
 
         public GmlWriter Assign(string identifier, Action<GmlWriter> lhs, VariableScope scope = VariableScope.None) => Assign(w => w.Append(identifier), lhs, scope);
@@ -48,18 +72,30 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
-        // Functions/structs
+        /// <summary>
+        /// Writes an anonymous function (method) with parameters.
+        /// </summary>
         public GmlWriter Method(IEnumerable<string> paramNames, Action<GmlWriter> body) => Append("function(").AppendJoin(paramNames).Line(")").Block(body);
 
+        /// <summary>
+        /// Writes an anonymous function (method) without parameters.
+        /// </summary>
         public GmlWriter Method(Action<GmlWriter> body) => Method([], body);
 
+        /// <summary>
+        /// Writes a named function declaration.
+        /// </summary>
         public GmlWriter Function(string name, IEnumerable<string> parameters, Action<GmlWriter> body) => Append($"function {name}(").AppendJoin(parameters).Line(")").Block(body, trailingNewLine: true);
 
+        /// <summary>
+        /// Writes a struct constructor function.
+        /// </summary>
         public GmlWriter Struct(string name, IEnumerable<string> ctorParams, Action<GmlWriter> body) => Append($"function {name}(").AppendJoin(ctorParams).Line(") constructor").Block(body, trailingNewLine: true);
 
+        /// <summary>
+        /// Writes a struct constructor function without parameters.
+        /// </summary>
         public GmlWriter Struct(string name, Action<GmlWriter> body) => Struct(name, [], body);
-
-        // Accessors
         private static string Sig(AccessorKind k) => k switch
         {
             AccessorKind.Map => "?",
@@ -79,7 +115,9 @@ namespace codegencore.Writers.Lang
 
         public GmlWriter Access(string identifier, AccessorKind kind, string exprLiteral) => Access(identifier, kind, w => w.Append(exprLiteral));
 
-        // Array literals
+        /// <summary>
+        /// Writes an array literal.
+        /// </summary>
         public GmlWriter ArrayLiteral(IEnumerable<string> elements, bool multiline = false, bool trailingNewLine = false)
         {
             var list = elements?.ToList() ?? [];
@@ -93,7 +131,6 @@ namespace codegencore.Writers.Lang
                 return this;
             }
 
-            // Multiline
             Line("[");
             Indent();
             for (int i = 0; i < list.Count; i++)
@@ -114,9 +151,14 @@ namespace codegencore.Writers.Lang
         public GmlWriter ArrayLiteral<T>(IEnumerable<T> items, Func<T, string> toExpr, bool multiline = false, bool trailingNewLine = false)
             => ArrayLiteral(items?.Select(toExpr) ?? [], multiline, trailingNewLine);
 
-        // Struct literals
+        /// <summary>
+        /// Represents a field in a GML struct literal.
+        /// </summary>
         public readonly record struct StructField(string Name, string Expr);
 
+        /// <summary>
+        /// Writes a struct literal.
+        /// </summary>
         public GmlWriter StructLiteral(IEnumerable<StructField> fields, bool multiline = false, bool trailingNewLine = false)
         {
             var list = fields?.ToList() ?? [];
@@ -135,7 +177,6 @@ namespace codegencore.Writers.Lang
                 return this;
             }
 
-            // Multiline
             Line("{");
             Indent();
             for (int i = 0; i < list.Count; i++)

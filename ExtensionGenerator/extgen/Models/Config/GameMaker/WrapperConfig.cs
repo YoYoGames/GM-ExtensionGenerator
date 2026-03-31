@@ -2,10 +2,6 @@
 
 namespace extgen.Models.Config.GameMaker
 {
-    // ============================================================
-    // Runtime (gml code generation always active)
-    // ============================================================
-
     public sealed class WrapperConfig : IGeneratorConfig
     {
 

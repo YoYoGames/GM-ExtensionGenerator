@@ -6,8 +6,14 @@ using extgen.Utils;
 
 namespace extgen.Emitters.CppInjectors
 {
+    /// <summary>
+    /// Emits C++ injector files for runtime integration with GameMaker.
+    /// </summary>
     public sealed class CppInjectorsEmitter(CppInjectorsEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
+        /// <summary>
+        /// Emits the C++ injector implementation for the given compilation.
+        /// </summary>
         public void Emit(IrCompilation comp, string outputDir)
         {
             var destDir = Path.GetFullPath(Path.Combine(outputDir, settings.OutputFolder));

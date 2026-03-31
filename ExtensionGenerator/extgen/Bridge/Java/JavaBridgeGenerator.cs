@@ -24,10 +24,8 @@ namespace extgen.Bridge.Java
     {
         protected JavaWireHelpers Wire { get; } = wireHelpers;
 
-        // ---------- flavor hooks ----------
-
         /// <summary>
-        /// The im
+        /// Returns the interfaces implemented by the generated bridge class.
         /// </summary>
         public virtual string[]? GetClassImplements(IEmitterContext<AndroidEmitterSettings> ctx)
         => [$"{ctx.ExtName}Interface"];
@@ -46,8 +44,9 @@ namespace extgen.Bridge.Java
         /// </summary>
         protected abstract string GetTargetExpression(IEmitterContext<AndroidEmitterSettings> ctx, IrFunction fn);
 
-        // ---------- invocation handler & buffer queue are fully shared ----------
-
+        /// <summary>
+        /// Emits the invocation handler for managing callback functions from GML.
+        /// </summary>
         public override void EmitInvocationHandler(
             IEmitterContext<AndroidEmitterSettings> ctx,
             ImmutableArray<IrFunction> funcs,
@@ -78,6 +77,9 @@ namespace extgen.Bridge.Java
             w.Line();
         }
 
+        /// <summary>
+        /// Emits the buffer queue handler for managing buffer parameters from GML.
+        /// </summary>
         public override void EmitBufferQueueHandler(
             IEmitterContext<AndroidEmitterSettings> ctx,
             ImmutableArray<IrFunction> funcs,
@@ -112,8 +114,9 @@ namespace extgen.Bridge.Java
             w.Line();
         }
 
-        // ---------- function bridge (__EXT_NATIVE__Foo) shared, with hooks ----------
-
+        /// <summary>
+        /// Emits the native bridge method for a specific extension function.
+        /// </summary>
         public override void EmitFunctionBridge(
             IEmitterContext<AndroidEmitterSettings> ctx,
             IrFunction fn,
@@ -183,16 +186,21 @@ namespace extgen.Bridge.Java
             m.Line();
         }
 
-        // ---------- shared arg decoding ----------
-
         private List<string> BuildCallArguments(JavaWriter m, IrFunction fn, bool needArgsBuf)
         {
+            // Two distinct paths for building call arguments:
+            // 1. Buffer mode: deserialize all args from ByteBuffer (complex signatures)
+            // 2. Direct mode: convert export types to Java types (simple signatures)
+
             var callArgs = new List<string>();
 
             if (needArgsBuf)
             {
+                // Set ByteBuffer byte order to match native (usually little-endian on modern platforms)
                 m.Call($"{Runtime.WireClass}.order", [Runtime.ArgBufferParam]).Line(";").Line();
 
+                // Deserialize each param from buffer. DecodeLines handles complex types
+                // (arrays, structs, nullables) by reading their wire format representation.
                 foreach (var p in fn.Parameters)
                 {
                     m.Comment($"field: {p.Name}, type: {p.Type.ToDebugString()}");
@@ -203,6 +211,8 @@ namespace extgen.Bridge.Java
             }
             else
             {
+                // Direct args: convert export types (double, String) to Java types.
+                // GameMaker passes bool as 0.0/1.0, so we convert to boolean with != 0 check.
                 foreach (var p in IrAnalysis.DirectArgs(fn))
                 {
                     var t = p.Type;
@@ -215,6 +225,7 @@ namespace extgen.Bridge.Java
 
                         if (t.IsBool())
                         {
+                            // GML represents bool as double (0.0 or 1.0)
                             expr = $"{name} != 0";
                         }
                         else
@@ -224,13 +235,10 @@ namespace extgen.Bridge.Java
                     }
                     else if (t.IsStringScalar())
                     {
-                        // Bridge type is String, and user type is String too.
                         expr = name;
                     }
                     else
                     {
-                        // If you ever mark more cases as "direct", handle them here.
-                        // For now, just pass directly (you can refine later).
                         expr = name;
                     }
 

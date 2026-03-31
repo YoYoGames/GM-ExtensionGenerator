@@ -1,12 +1,20 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
+    /// <summary>
+    /// Provides a fluent API for generating C-style source code with support for control flow, functions, switch statements, and comments.
+    /// </summary>
     public class CStyleWriter<TSelf>(ICodeWriter io) : BaseWriter<TSelf>(io) where TSelf : CStyleWriter<TSelf>
     {
-        // keyword (expr) { … }
+        /// <summary>
+        /// Writes a keyword statement with parenthesized expression and block body.
+        /// </summary>
         public TSelf Keyword(string keyword, string parenExpr, Action<TSelf> body)
             => Line($"{keyword} ({parenExpr})").Block(body).Line();
 
+        /// <summary>
+        /// Writes an if statement with optional else block.
+        /// </summary>
         public TSelf If(string condition, Action<TSelf> thenBody, Action<TSelf>? elseBody = null)
         {
             Keyword("if", condition, thenBody);
@@ -14,16 +22,27 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
+        /// <summary>
+        /// Writes a for loop.
+        /// </summary>
         public TSelf For(string init, string cond, string step, Action<TSelf> body)
             => Keyword("for", $"{init}; {cond}; {step}", body);
 
+        /// <summary>
+        /// Writes a while loop.
+        /// </summary>
         public TSelf While(string cond, Action<TSelf> body)
             => Keyword("while", cond, body);
 
+        /// <summary>
+        /// Writes a do-while loop.
+        /// </summary>
         public TSelf DoWhile(Action<TSelf> body, string cond)
             => Line("do").Block(body).Line($" while ({cond});");
 
-        // functions
+        /// <summary>
+        /// Writes a function definition with optional return type, qualifiers, and modifiers.
+        /// </summary>
         public TSelf Function(string name, IEnumerable<Param> parameters, Action<TSelf> body, string? returnType = null, IEnumerable<string>? qualifiers = null, IEnumerable<string>? modifiers = null)
         {
             var prefix = modifiers is null ? "" : $"{string.Join(" ", modifiers)} ";
@@ -34,6 +53,9 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
+        /// <summary>
+        /// Writes a function declaration without body.
+        /// </summary>
         public TSelf FunctionDecl(string name, IEnumerable<Param> parameters, string? returnType = null, IEnumerable<string>? qualifiers = null, IEnumerable<string>? modifiers = null)
         {
             var prefix = modifiers is null ? "" : $"{string.Join(" ", modifiers)} ";
@@ -43,7 +65,9 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
-        // switch/case
+        /// <summary>
+        /// Writes a switch statement.
+        /// </summary>
         public TSelf Switch(string expr, Action<SwitchBuilder> build)
         {
             Line($"switch ({expr})");
@@ -86,7 +110,9 @@ namespace codegencore.Writers.Lang
             }
         }
 
-        // assigns
+        /// <summary>
+        /// Writes an assignment statement with optional type declaration.
+        /// </summary>
         public TSelf Assign(string ident, string rhs, string? type = null)
         {
             if (!string.IsNullOrEmpty(type)) Append($"{type} ");
@@ -103,10 +129,14 @@ namespace codegencore.Writers.Lang
 
         public TSelf Assign(string identifier, Action<TSelf> lhs, string? type = null) => Assign(w => w.Append(identifier), lhs, type);
 
-        // calls
+        /// <summary>
+        /// Writes a function call expression.
+        /// </summary>
         public TSelf Call(string fn, params string[] args) => Append(fn).Append("(").AppendJoin(args).Append(")");
 
-        // return
+        /// <summary>
+        /// Writes a return statement with optional expression.
+        /// </summary>
         public TSelf Return(string? expr = null) => Line(expr is null ? "return;" : $"return {expr};");
 
         public TSelf Return(Action<TSelf> expr) {
@@ -116,7 +146,9 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
-        // comments
+        /// <summary>
+        /// Writes single or multi-line comments.
+        /// </summary>
         public TSelf Comment(string comment)
         {
             if (string.IsNullOrEmpty(comment)) return Line("//");
@@ -125,6 +157,9 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
+        /// <summary>
+        /// Writes a section header comment.
+        /// </summary>
         public TSelf Section(string name)
         {
             if (string.IsNullOrEmpty(name)) return Line("//");

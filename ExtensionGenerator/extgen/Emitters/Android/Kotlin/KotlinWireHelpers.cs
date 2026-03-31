@@ -5,9 +5,8 @@ using extgen.Bridge;
 namespace extgen.Emitters.Android.Kotlin
 {
     /// <summary>
-    /// Kotlin does not perform direct binary decode/encode.
-    /// These methods intentionally throw, and KotlinEmitter never calls them.
-    /// Exists only for architecture symmetry.
+    /// Placeholder for Kotlin wire serialization. Methods intentionally throw as Kotlin does not perform direct binary encoding/decoding.
+    /// Exists for architecture symmetry.
     /// </summary>
     internal sealed class KotlinWireHelpers : WireHelpersBase<KotlinWriter>
     {

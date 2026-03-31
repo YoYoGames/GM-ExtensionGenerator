@@ -1,17 +1,29 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
-    /// A tiny DSL for Objective-C selectors.
+    /// <summary>
+    /// Represents a parameter in an Objective-C method selector.
+    /// </summary>
     public readonly record struct ObjcParam(string Label, string Type, string Name);
 
+    /// <summary>
+    /// Provides a fluent API for generating Objective-C source code with support for protocols, interfaces, implementations, and message sends.
+    /// </summary>
     public class ObjcWriter(ICodeWriter io) : CxxWriter<ObjcWriter>(io)
     {
-        // imports / pragmas
+        /// <summary>
+        /// Writes an import directive for a header file.
+        /// </summary>
         public ObjcWriter Import(string header, bool system = false) => Line(system ? $"#import <{header}>" : $"#import \"{header}\"");
 
-        // @protocol/@interface/@implementation/@end
+        /// <summary>
+        /// Writes a forward protocol declaration.
+        /// </summary>
         public ObjcWriter ForwardProtocol(string name) => Line($"@protocol {name};");
 
+        /// <summary>
+        /// Writes a protocol declaration with optional inheritance and body.
+        /// </summary>
         public ObjcWriter Protocol(string name, IEnumerable<string>? inherits = null, Action<ObjcWriter>? body = null)
         {
             var inh = inherits is null ? "" : $" <{string.Join(", ", inherits)}>";
@@ -21,6 +33,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes an interface declaration with optional base class, protocols, and body.
+        /// </summary>
         public ObjcWriter Interface(string name, string? baseClass = "NSObject", IEnumerable<string>? protocols = null, Action<ObjcWriter>? body = null)
         {
             var proto = protocols is null ? "" : $" <{string.Join(", ", protocols)}>";
@@ -38,6 +53,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes an implementation block.
+        /// </summary>
         public ObjcWriter Implementation(string name, Action<ObjcWriter> body)
         {
             Line($"@implementation {name}");
@@ -59,14 +77,19 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
-        // @property
+        /// <summary>
+        /// Writes a property declaration.
+        /// </summary>
         public ObjcWriter Property(string attributes, string type, string name) => Line($"@property ({attributes}) {type} {name};");
 
-        // ivar (inside @implementation { ... } is rare now; usually synthesize)
+        /// <summary>
+        /// Writes an instance variable declaration.
+        /// </summary>
         public ObjcWriter IVar(string type, string name) => Line($"{type} {name};");
 
-        // Methods
-
+        /// <summary>
+        /// Writes a standard init method with self assignment and check.
+        /// </summary>
         public ObjcWriter InitMethod(Action<ObjcWriter> insideIfSelf)
         {
             Line("- (instancetype)init");
@@ -82,7 +105,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
-        //  - / +, returnType, name+params
+        /// <summary>
+        /// Writes a method definition with instance or class scope.
+        /// </summary>
         public ObjcWriter Method(bool isClass, string returnType, string baseName, IReadOnlyList<ObjcParam> parts, Action<ObjcWriter> body)
         {
             var sig = BuildMethodSignature(isClass, returnType, baseName, parts);
@@ -91,6 +116,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes a method declaration without body.
+        /// </summary>
         public ObjcWriter MethodDecl(bool isClass, string returnType, string baseName, IReadOnlyList<ObjcParam> parts) => Line(BuildMethodSignature(isClass, returnType, baseName, parts) + ";");
 
         private static string BuildMethodSignature(bool isClass, string ret, string baseName, IReadOnlyList<ObjcParam> parts)
@@ -109,7 +137,9 @@ namespace codegencore.Writers.Lang
             return sig;
         }
 
-        // Message send: [recv sel:arg ...]
+        /// <summary>
+        /// Writes a message send expression.
+        /// </summary>
         public ObjcWriter MsgSend(string receiver, string baseName, IReadOnlyList<(string, string)> args)
         {
             if (args is null || args.Count == 0)
@@ -140,7 +170,9 @@ namespace codegencore.Writers.Lang
             return Append("]");
         }
 
-        // C/ObjC++ helpers (for your .mm files)
+        /// <summary>
+        /// Writes an extern C block for use in Objective-C++ files.
+        /// </summary>
         public ObjcWriter ExternC(Action<ObjcWriter> body)
         {
             Line("extern \"C\"");

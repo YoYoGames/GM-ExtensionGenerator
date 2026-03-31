@@ -12,13 +12,18 @@ namespace extgen.Emitters.AppleMobile.Objc
 {
     internal enum AppleOSTargetKind { Objc, Swift }
 
+    /// <summary>
+    /// Emits Objective-C code for Apple mobile platforms (iOS, tvOS).
+    /// Generates internal bridge files and user shell code.
+    /// </summary>
     internal class ObjcCommonEmitter(ObjcEmitterContext ctx, IIrTypeMap cppTypeMap, IAppleBridge bridge)
     {
-        // =====================================================================
-        // INTERNAL BASE — {Ext}Internal.h / .mm
-        //    - holds the *current* implementation
-        //    - exposes Objc class entry points __EXT_NATIVE__...
-        // =====================================================================
+        // INTERNAL BASE - {Ext}Internal.h / .mm
+        // Holds the current implementation and exposes Objc class entry points __EXT_NATIVE__
+
+        /// <summary>
+        /// Emits the internal bridge header and implementation files for the extension.
+        /// </summary>
         public void EmitInternal(IrCompilation c, ObjcLayout layout) 
         {
             var platform = ctx.Settings.Platform;
@@ -29,6 +34,9 @@ namespace extgen.Emitters.AppleMobile.Objc
             FileEmitHelpers.WriteObjc(layout.CodeGenDir, $"{c.Name}Internal_{platform}.mm", w => EmitInternalImpl(ctx, c, w));
         }
 
+        /// <summary>
+        /// Emits user-editable shell header and implementation files if they don't already exist.
+        /// </summary>
         public void EmitObjcUserShell(IrCompilation c, ObjcLayout layout)
         {
             var ext = ctx.ExtName;
@@ -39,7 +47,7 @@ namespace extgen.Emitters.AppleMobile.Objc
             FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.mm", w => EmitUserImpl(ctx, w));
         }
 
-        // ------------- internal bridge (shared – switchable call target)
+        // Internal bridge (shared - switchable call target)
 
         private void EmitInternalHeader(ObjcEmitterContext ctx, IrCompilation c, ObjcWriter w)
         {
@@ -236,7 +244,7 @@ namespace extgen.Emitters.AppleMobile.Objc
             });
         }
 
-        // ------------- public user shell
+        // Public user shell
         private void EmitUserHeader(ObjcEmitterContext ctx, ObjcWriter w)
         {
             var ext = ctx.ExtName;

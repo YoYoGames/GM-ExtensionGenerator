@@ -7,6 +7,10 @@ using extgen.TypeSystem.Swift;
 
 namespace extgen.Emitters.AppleMobile.Swift
 {
+    /// <summary>
+    /// Provides Swift-specific wire protocol helpers for encoding and decoding types.
+    /// Handles atomic reads/writes, nullable types, arrays, enums, and special types like Any, Buffer, and Function.
+    /// </summary>
     internal sealed class SwiftWireHelpers : WireHelpersBase<SwiftWriter>
     {
         private readonly RuntimeNaming _runtime;
@@ -20,9 +24,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             _enums = enums;
         }
 
-        // ----------------------------------------------------
-        // 1) Low-level read / write expressions (atomic only)
-        // ----------------------------------------------------
+        // Low-level read / write expressions (atomic only)
 
         private IrType GetEnumUnderlyingOrThrow(string enumName)
         {
@@ -33,14 +35,14 @@ namespace extgen.Emitters.AppleMobile.Swift
 
         private string ReadEnumExpr(string enumName, string readerVar)
         {
-            // Swift enum type name (per your SwiftTypeMap: typically just the name)
+            // Swift enum type name (typically just the name from SwiftTypeMap)
             var swiftEnumType = enumName;
 
-            // Underlying scalar type – e.g. Int32, UInt8...
+            // Underlying scalar type - e.g. Int32, UInt8
             var underlying = GetEnumUnderlyingOrThrow(enumName);
 
-            // We expect enum underlying to be a builtin scalar (int/uint/bool).
-            // If you allow string enums, you must handle BuiltinKind.String here too.
+            // Enum underlying is expected to be a builtin scalar (int/uint/bool).
+            // If string enums are allowed, BuiltinKind.String must be handled here as well.
             var rawSwiftType = _typeMap.Map(underlying, owned: true);
 
             // Read raw scalar, then wrap into enum with rawValue:
@@ -98,7 +100,6 @@ namespace extgen.Emitters.AppleMobile.Swift
                 IrType.Builtin { Kind: BuiltinKind.AnyMap } =>
                     $"try {writerVar}.writeGMValue({valueExpr})",
 
-                // Buffer / Function currently not supported in struct codecs (your existing policy)
                 IrType.Builtin { Kind: BuiltinKind.Buffer } =>
                     throw new NotSupportedException("Swift wire: Buffer fields not yet supported in struct codecs."),
                 IrType.Builtin { Kind: BuiltinKind.Function } =>
@@ -109,9 +110,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             };
         }
 
-        // ----------------------------------------------------
-        // 2) WireHelpersBase API
-        // ----------------------------------------------------
+        // WireHelpersBase API
 
         public override string ReadExpr(IrType t, string bufferVar) => ReadExprInternal(t, bufferVar);
 
@@ -152,10 +151,11 @@ namespace extgen.Emitters.AppleMobile.Swift
             w.Line(WriteExprInternal(t, bufferVar, accessor));
         }
 
-        // ============================================================
         // High-level DecodeLines (supports Nullable/Array/AnyArray/AnyMap)
-        // ============================================================
 
+        /// <summary>
+        /// Emits multi-line decoding logic for complex types including nullable types, arrays, and dynamic types.
+        /// </summary>
         public void DecodeLines(SwiftWriter w, IrType t, string accessor, bool declare, string bufferVar, bool owned)
         {
             string? swiftTypeForDecl = declare ? _typeMap.Map(t, owned: owned) : null;
@@ -173,7 +173,6 @@ namespace extgen.Emitters.AppleMobile.Swift
             {
                 var inner = IrType.StripNullable(t);
 
-                // Any cannot be read via readRawOptional<T> in your design
                 if (inner is IrType.Builtin { Kind: BuiltinKind.Any })
                 {
                     w.If($"try {bufferVar}.readRaw(Bool.self)", thenBody =>

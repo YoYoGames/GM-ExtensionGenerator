@@ -13,10 +13,16 @@ using System.Collections.Immutable;
 
 namespace extgen.Emitters.Android.Kotlin
 {
+    /// <summary>
+    /// Emits Kotlin code for Android extensions with a shared Java backend layer.
+    /// </summary>
     internal sealed class KotlinEmitter(AndroidEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly KotlinTypeMap typeMap = new();
 
+        /// <summary>
+        /// Emits the Kotlin implementation for the given compilation.
+        /// </summary>
         public void Emit(IrCompilation comp, string dir)
         {
             var ctx = new KotlinEmitterContext(comp.Name, settings, runtime);
@@ -35,7 +41,6 @@ namespace extgen.Emitters.Android.Kotlin
             FileEmitHelpers.WriteKotlinIfMissing(layout.BaseDir, $"{c.Name}Kotlin.kt", w => EmitKotlinImpl(ctx, w));
         }
 
-        // ------------- artifacts & entry points (Java)
         private static void EmitJavaLayer(KotlinEmitterContext ctx, IrCompilation c, JavaLayout layout)
         {
             var javaTypeMap = new JavaTypeMap();
@@ -52,7 +57,6 @@ namespace extgen.Emitters.Android.Kotlin
             common.EmitJavaUserShell(c, layout);
         }
 
-        // ------------- interface (Kotlin)
         private void EmitKotlinInterface(KotlinEmitterContext ctx, IrCompilation c, KotlinWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;
@@ -81,7 +85,6 @@ namespace extgen.Emitters.Android.Kotlin
             });
         }
 
-        // ------------- implementation shell (Kotlin)
         private void EmitKotlinImpl(KotlinEmitterContext ctx, KotlinWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;

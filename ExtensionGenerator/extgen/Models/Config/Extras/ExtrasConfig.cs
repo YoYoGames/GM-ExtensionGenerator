@@ -2,12 +2,13 @@
 
 namespace extgen.Models.Config.Extras
 {
-    // ============================================================
-    // Extras (never required; purely optional)
-    // ============================================================
-
+    /// <summary>
+    /// Optional extra features configuration (documentation, etc.).
+    /// </summary>
     public sealed class ExtrasConfig
     {
-        [JsonPropertyName("docs")] public DocsConfig? Docs { get; set; }
+        /// <summary>Documentation generation configuration.</summary>
+        [JsonPropertyName("docs")]
+        public DocsConfig? Docs { get; set; }
     }
 }

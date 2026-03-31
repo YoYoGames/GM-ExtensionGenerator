@@ -9,6 +9,10 @@ using System.Text.Json.Nodes;
 
 namespace extgen.Emitters.Yy
 {
+    /// <summary>
+    /// Emits GameMaker .yy extension definition files.
+    /// Supports both patching existing .yy files and generating plain function definitions.
+    /// </summary>
     internal sealed class YyEmitter(YyEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         public void Emit(IrCompilation comp, string outputDir)
@@ -61,10 +65,9 @@ namespace extgen.Emitters.Yy
             if (ctx.Settings.TvosEnabled)
                 PatchYyTvosOptions(comp, ctx, root);
 
-            // Navigate: root["files"] -> array of GMExtensionFile entries
+            // Navigate: root["files"] - array of GMExtensionFile entries
             if (root["files"] is not JsonArray filesArray)
                 throw new InvalidDataException("YY did not contain a 'files' array.");
-
 
             // Find the file entry matching "{compilation.Name}.ext"
             var expectedFilename = ctx.Settings.ExtensionFileName ?? $"{comp.Name}.ext";
@@ -152,9 +155,16 @@ namespace extgen.Emitters.Yy
             yield break;
         }
 
-        // Helpers
+        // Helper: patch GameMaker .yy file to add required Apple linker flags
         private static void EnsureAppleLinkerFlags(JsonObject root, string key, params string[] flags)
         {
+            // GameMaker .yy extension files store platform-specific linker flags as space-separated strings.
+            // For iOS/tvOS Objective-C++, we need "-ObjC" flag to force linker to load all Objective-C
+            // categories from static libraries. Without this, methods added via categories won't be linked,
+            // causing runtime crashes when GML tries to call them.
+            //
+            // This function idempotently adds flags to the existing string (no duplicates, preserves order).
+
             if (root is null) throw new ArgumentNullException(nameof(root));
             if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Key is required.", nameof(key));
             if (flags is null || flags.Length == 0) return;
@@ -170,6 +180,7 @@ namespace extgen.Emitters.Yy
             }
             if (desired.Count == 0) return;
 
+            // Parse existing flags (may contain whitespace separators like spaces, tabs, newlines)
             string? current = root[key]?.GetValue<string>();
             var parts = new List<string>();
 
@@ -182,6 +193,7 @@ namespace extgen.Emitters.Yy
 
             var existing = new HashSet<string>(parts, StringComparer.Ordinal);
 
+            // Add missing flags
             bool changed = false;
             foreach (var f in desired)
             {
@@ -192,7 +204,7 @@ namespace extgen.Emitters.Yy
                 }
             }
 
-            // If empty originally or we changed it, write back a normalized string
+            // Write back normalized (space-separated, no duplicates)
             if (string.IsNullOrWhiteSpace(current) || changed)
                 root[key] = string.Join(" ", parts);
         }

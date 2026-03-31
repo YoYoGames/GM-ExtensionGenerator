@@ -1,15 +1,8 @@
-﻿// -----------------------------------------------------------------------------
-//  Code‑Generation Intermediate Representation (IR)
-//  Full reference implementation with emitters that optimise buffer usage:
-//   • If a function has *no* parameters, the wrappers omit the args buffer.
-//   • If **all** parameters are doubles or strings, they’re passed directly
-//     (each as a <c>double</c> or <c>char*</c>) – no packing/unpacking cost.
-//   • If the return value maps to a double, no return buffer is used;
-//     otherwise a return‑buffer pair is appended to the call.
-// -----------------------------------------------------------------------------
-
-namespace extgencore.Helpers
+﻿namespace extgencore.Helpers
 {
+    /// <summary>
+    /// Provides utilities for identifying and categorizing scalar types in the IR system.
+    /// </summary>
     public static class ScalarTypes
     {
         private static readonly HashSet<string> _numeric = new(StringComparer.OrdinalIgnoreCase)
@@ -17,7 +10,14 @@ namespace extgencore.Helpers
         private static readonly HashSet<string> _all = new(_numeric, StringComparer.OrdinalIgnoreCase)
         { "string" };
 
+        /// <summary>
+        /// Determines whether a type name is a recognized scalar type.
+        /// </summary>
         public static bool IsKnown(string name) => _all.Contains(name);
+
+        /// <summary>
+        /// Determines whether a type name is a numeric scalar type.
+        /// </summary>
         public static bool IsNumeric(string name) => _numeric.Contains(name);
     }
 }

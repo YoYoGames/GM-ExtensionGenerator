@@ -2,15 +2,22 @@
 
 namespace extgen.Models.Config.Targets.Mobile
 {
-    // ============================================================
-    // Enums
-    // ============================================================
-
+    /// <summary>
+    /// Apple mobile platform code generation mode (iOS/tvOS).
+    /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum AppleMobileMode
     {
-        [JsonStringEnumMemberName("objc")] Objc,
-        [JsonStringEnumMemberName("swift")] Swift,
-        [JsonStringEnumMemberName("native")] Native
+        /// <summary>Generate Objective-C bindings.</summary>
+        [JsonStringEnumMemberName("objc")]
+        Objc,
+
+        /// <summary>Generate Swift bindings.</summary>
+        [JsonStringEnumMemberName("swift")]
+        Swift,
+
+        /// <summary>Generate native C/C++ bindings.</summary>
+        [JsonStringEnumMemberName("native")]
+        Native
     }
 }

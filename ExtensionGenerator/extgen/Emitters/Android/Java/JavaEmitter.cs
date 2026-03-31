@@ -8,18 +8,15 @@ using extgen.TypeSystem.Java;
 namespace extgen.Emitters.Android.Java
 {
     /// <summary>
-    /// Emits:
-    ///   - {dir}/enums/{Enum}.java
-    ///   - {dir}/records/{Struct}.java
-    ///   - {dir}/codecs/{Struct}Codec.java
-    ///   - {dir}/{ExtName}Internal.java    (auto-generated wrappers)
-    ///   - {dir}/{ExtName}Interface.java   (required interface)
-    ///   - {dir}/{ExtName}.java            (user-implemented functions; stubbed)
+    /// Emits Java code for Android extensions, including enums, records, codecs, internal wrappers, interfaces, and user implementation stubs.
     /// </summary>
     internal sealed class JavaEmitter(AndroidEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly JavaTypeMap typeMap = new();
 
+        /// <summary>
+        /// Emits the Java implementation for the given compilation.
+        /// </summary>
         public void Emit(IrCompilation comp, string dir)
         {
             var ctx = new JavaEmitterContext(comp.Name, settings, runtime);

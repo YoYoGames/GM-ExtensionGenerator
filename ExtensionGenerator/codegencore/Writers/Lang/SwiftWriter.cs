@@ -10,10 +10,6 @@ namespace codegencore.Writers.Lang
 
     public class SwiftWriter(ICodeWriter io) : BaseWriter<SwiftWriter>(io)
     {
-        // ========================
-        // Imports
-        // ========================
-
         public SwiftWriter Import(string module) => Line($"import {module}");
 
         // Handy overload for @_implementationOnly import if you ever need it.
@@ -23,10 +19,6 @@ namespace codegencore.Writers.Lang
                 return Line($"@_implementationOnly import {module}");
             return Import(module);
         }
-
-        // ========================
-        // Types: struct / class / protocol / extension
-        // ========================
 
         public SwiftWriter Struct(string name, IEnumerable<string>? modifiers = null, IEnumerable<string>? inher = null, Action<SwiftWriter>? body = null)
         {
@@ -92,10 +84,6 @@ namespace codegencore.Writers.Lang
         }
 
         public SwiftWriter Extension(string type, Action<SwiftWriter> body) => Extension(type, whereClause: null, body: body);
-
-        // ========================
-        // Members
-        // ========================
 
         public SwiftWriter Let(string name, string? type, string? init = null, IEnumerable<string>? modifiers = null)
         {
@@ -175,7 +163,6 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
-        // Handy overload when you don’t care about modifiers
         public SwiftWriter Func(string name, IEnumerable<SwiftParam> parameters, string? returnType, Action<SwiftWriter> body) => Func(name, parameters, returnType, modifiers: null, body);
 
         public SwiftWriter Init(IEnumerable<SwiftParam> parameters, IEnumerable<string>? modifiers, Action<SwiftWriter> body)
@@ -198,10 +185,6 @@ namespace codegencore.Writers.Lang
         }
 
         public SwiftWriter Init(IEnumerable<SwiftParam> parameters, Action<SwiftWriter> body) => Init(parameters, modifiers: null, body);
-
-        // ========================
-        // Control flow
-        // ========================
 
         public SwiftWriter If(string cond, Action<SwiftWriter> thenBody, Action<SwiftWriter>? elseBody = null)
         {
@@ -271,10 +254,6 @@ namespace codegencore.Writers.Lang
 
         public SwiftWriter Return(string? expr = null) => Line(expr is null ? "return" : $"return {expr}");
 
-        // ========================
-        // Enums (using EnumMember)
-        // ========================
-
         public SwiftWriter Enum(string name, IEnumerable<EnumMember> members, string? rawType = null, IEnumerable<string>? modifiers = null)
         {
             var mods = modifiers is null || !modifiers.Any()
@@ -308,10 +287,6 @@ namespace codegencore.Writers.Lang
         public SwiftWriter Enum(string name, string rawType, params EnumMember[] members) => Enum(name, members, rawType, modifiers: null);
 
         public SwiftWriter Enum(string name, params EnumMember[] members) => Enum(name, members, rawType: null, modifiers: null);
-
-        // ========================
-        // Comments / sections
-        // ========================
 
         public SwiftWriter Comment(string comment)
         {

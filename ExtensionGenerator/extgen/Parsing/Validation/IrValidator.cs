@@ -5,6 +5,9 @@ using System.Collections.Immutable;
 
 namespace extgen.Parsing.Validation
 {
+    /// <summary>
+    /// Represents a diagnostic message from IR validation.
+    /// </summary>
     public sealed record IrDiagnostic(
         string Code,
         string Message,
@@ -12,23 +15,54 @@ namespace extgen.Parsing.Validation
         string? Path = null
     );
 
-    public enum IrSeverity { Info, Warning, Error }
+    /// <summary>
+    /// Diagnostic severity levels.
+    /// </summary>
+    public enum IrSeverity
+    {
+        /// <summary>Informational message.</summary>
+        Info,
 
+        /// <summary>Warning message.</summary>
+        Warning,
+
+        /// <summary>Error message.</summary>
+        Error
+    }
+
+    /// <summary>
+    /// Interface for IR validation rules.
+    /// </summary>
     public interface IIrRule
     {
+        /// <summary>
+        /// Validates an IR compilation and returns diagnostics.
+        /// </summary>
         IEnumerable<IrDiagnostic> Validate(IrCompilation comp);
     }
 
+    /// <summary>
+    /// Validates IR compilations using a set of rules.
+    /// </summary>
     public sealed class IrValidator(params IIrRule[] rules)
     {
         private readonly IIrRule[] _rules = rules;
 
+        /// <summary>
+        /// Validates a compilation and returns all diagnostics.
+        /// </summary>
         public ImmutableArray<IrDiagnostic> Validate(IrCompilation comp) =>
             [.. _rules.SelectMany(r => r.Validate(comp))];
     }
 
+    /// <summary>
+    /// Utilities for inspecting IR type structures.
+    /// </summary>
     internal static class IrTypeInspection
     {
+        /// <summary>
+        /// Checks if a type contains a specific builtin kind (recursively).
+        /// </summary>
         public static bool ContainsBuiltin(IrType t, BuiltinKind kind) =>
             t switch
             {
@@ -39,10 +73,14 @@ namespace extgen.Parsing.Validation
             };
     }
 
+    /// <summary>
+    /// Validates that no duplicate symbol names exist in the compilation.
+    /// </summary>
     public sealed class NoDuplicateSymbolsRule(StringComparer? comparer = null) : IIrRule
     {
         private readonly StringComparer _cmp = comparer ?? StringComparer.Ordinal;
 
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             // name -> list of (kind, path)
@@ -107,8 +145,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that all named types reference existing enum or struct definitions.
+    /// </summary>
     public sealed class NoUnknownTypeAllowedRule : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             var enums = new HashSet<string>(comp.Enums.Select(e => e.Name), StringComparer.Ordinal);
@@ -138,8 +180,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that struct fields do not contain buffer or function types.
+    /// </summary>
     public sealed class NoBufferOrFunctionInStructFieldsRule : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             foreach (var occ in IrWalkers.WalkIrTypes(comp))
@@ -160,8 +206,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that the compilation name does not contain underscores.
+    /// </summary>
     public sealed class NoUnderscoresInCompilationNameRule : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             if (comp.Name.Contains('_'))
@@ -175,8 +225,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that all functions share a common prefix (warning only).
+    /// </summary>
     public sealed class FunctionCommonPrefixRule : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             List<IrFunction> allFunction = [.. comp.GetAllFunctions(IrFunctionUtil.PatchStructMethod)];
@@ -203,8 +257,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that struct methods do not have function modifiers.
+    /// </summary>
     public sealed class StructMethodsCannotHaveModifiers : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             foreach (var s in comp.Structs)
@@ -224,8 +282,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that function modifiers (Start, Finish) are only used once.
+    /// </summary>
     public sealed class FunctionModifiersMustBeUnique : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             var startFn = comp.Functions.Where(fn => fn.Modifier == IrFunctionModifier.Start).FirstOrDefault();
@@ -256,6 +318,9 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that enum underlying types are integral scalar types.
+    /// </summary>
     public sealed class EnumUnderlyingMustBeIntegralScalarRule : IIrRule
     {
         private static readonly HashSet<BuiltinKind> Allowed =
@@ -264,9 +329,9 @@ namespace extgen.Parsing.Validation
             BuiltinKind.Int16, BuiltinKind.UInt16,
             BuiltinKind.Int32, BuiltinKind.UInt32,
             BuiltinKind.Int64, BuiltinKind.UInt64,
-            // optionally: BuiltinKind.Bool (usually no)
         ];
 
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             foreach (var e in comp.Enums)
@@ -295,10 +360,14 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that enum member names are unique within each enum.
+    /// </summary>
     public sealed class EnumMemberNamesMustBeUniqueRule(StringComparer? comparer = null) : IIrRule
     {
         private readonly StringComparer _comparer = comparer ?? StringComparer.Ordinal;
 
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             foreach (var enm in comp.Enums)
@@ -320,8 +389,12 @@ namespace extgen.Parsing.Validation
         }
     }
 
+    /// <summary>
+    /// Validates that function return types do not contain buffer or function types.
+    /// </summary>
     public sealed class NoBufferOrFunctionReturnTypesRule : IIrRule
     {
+        /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
             foreach (var occ in IrWalkers.WalkIrTypes(comp))

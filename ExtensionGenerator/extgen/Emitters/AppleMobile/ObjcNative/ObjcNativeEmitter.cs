@@ -12,20 +12,17 @@ using extgen.Utils;
 
 namespace extgen.Emitters.AppleMobile.ObjcNative
 {
-
     /// <summary>
-    /// Minimal iOS/tvOS “framework” emitter.
-    /// Generates:
-    ///   ios/{Ext}.h  – C exports + @interface {Ext}
-    ///   ios/{Ext}.mm – @implementation {Ext} that forwards 1:1
-    ///
-    /// IMPORTANT: ObjC method name == exported C name
-    ///   - (double) __EXT_NATIVE__foo:(double)arg0 ... { return __EXT_NATIVE__foo(...); }
+    /// Emits minimal iOS/tvOS native framework code with Objective-C wrappers that forward to C exports.
+    /// ObjC method names match exported C function names for 1:1 forwarding.
     /// </summary>
     internal sealed class ObjcNativeEmitter(IAppleMobileEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly ObjcTypeMap typeMap = new(runtime);
 
+        /// <summary>
+        /// Emits the Objective-C native implementation for the given compilation.
+        /// </summary>
         public void Emit(IrCompilation comp, string dir)
         {
             ObjcEmitterContext ctx = new(comp.Name, settings, runtime);
@@ -50,12 +47,6 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
             common.EmitObjcUserShell(c, layout);
         }
 
-        // =====================================================================
-        // 1. INTERNAL BASE: code_gen/ios/{Ext}Internal_ios.h / .mm
-        //    - holds the *current* implementation
-        //    - exposes C entry points __EXT_NATIVE__...
-        // =====================================================================
-
         private static void EmitInternalHeader(ObjcEmitterContext ctx, IrCompilation c, ObjcWriter w)
         {
             var ext = ctx.ExtName;
@@ -67,7 +58,6 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
             var usesFunctions = c.HasFunctionType();
             var usesBuffers = c.HasBufferType();
 
-            // ObjC interface
             w.Interface($"{ext}Internal", body: iBody =>
             {
                 var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
@@ -104,7 +94,6 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
              .Import("objc/runtime.h", true)
              .Line();
 
-            // Injector helper tools
             w.Lines("""
 
                 extern "C" const char* extOptGetString(char* _ext, char* _opt);
@@ -167,7 +156,6 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
 
             w.Implementation($"{ext}Internal", implBody =>
             {
-                // Inject functions into subclasses
                 implBody.Lines($$"""
 
                     + (void)load

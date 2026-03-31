@@ -19,10 +19,18 @@ namespace extgen.Emitters.AppleMobile.Swift
         IIrTypeEnumResolver Enums
     );
 
+    /// <summary>
+    /// Generates Swift code for iOS/tvOS platform integration.
+    /// </summary>
     public sealed class SwiftEmitter(IAppleMobileEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
         private readonly SwiftTypeMap typeMap = new();
 
+        /// <summary>
+        /// Emits Swift code artifacts for the specified compilation to the target directory.
+        /// </summary>
+        /// <param name="comp">The IR compilation to emit.</param>
+        /// <param name="dir">The output directory for generated files.</param>
         public void Emit(IrCompilation comp, string dir)
         {
             ObjcEmitterContext ctx = new(comp.Name, settings, runtime);
@@ -54,9 +62,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             FileEmitHelpers.WriteSwiftIfMissing(layout.SourceDir, $"{ctx.ExtName}Swift.swift", w => EmitUserSwift(ctx, c, w));
         }
 
-        // =====================================================================
-        // 1. SWIFT ARTIFACTS
-        // =====================================================================
+        // Swift artifacts emission
 
         private void EmitArtifacts(SwiftWriter w, IrCompilation c, IIrTypeEnumResolver enums)
         {
@@ -66,7 +72,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             EmitStructCodecs(w, c.Structs, enums);
         }
 
-        // ------------------- Constants -------------------
+        // Constants
 
         private void EmitConsts(SwiftWriter w, ImmutableArray<IrConstant> constants)
         {
@@ -76,7 +82,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             }
         }
 
-        // --------------------- Enums ---------------------
+        // Enums
 
         private void EmitEnums(SwiftWriter w, IImmutableList<IrEnum> enums)
         {
@@ -97,7 +103,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             }
         }
 
-        // --------------------- Structs ---------------------
+        // Structs
 
         private void EmitStructs(SwiftWriter w, IImmutableList<IrStruct> structs)
         {
@@ -116,7 +122,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             }
         }
 
-        // --------------------- Struct codecs ---------------------
+        // Struct codecs
 
         private void EmitStructCodecs(SwiftWriter w, IImmutableList<IrStruct> structs, IIrTypeEnumResolver enums)
         {
@@ -156,9 +162,7 @@ namespace extgen.Emitters.AppleMobile.Swift
             }
         }
 
-        // =====================================================================
-        // 2. INTERNAL SWIFT
-        // =====================================================================
+        // Internal Swift emission
 
         private void EmitInternalSwift(ObjcEmitterContext ctx, IrCompilation c, SwiftWriter w, IIrTypeEnumResolver enums)
         {
@@ -219,9 +223,7 @@ namespace extgen.Emitters.AppleMobile.Swift
                 });
         }
 
-        // =====================================================================
-        // 3. USER SWIFT STUB
-        // =====================================================================
+        // User Swift stub
 
         private void EmitUserSwift(ObjcEmitterContext ctx, IrCompilation c, SwiftWriter w)
         {
@@ -273,12 +275,16 @@ namespace extgen.Emitters.AppleMobile.Swift
                 });
         }
 
-        // =====================================================================
-        // ---------- helpers ----------
-        // =====================================================================
+        // Helper methods
 
         private static void EmitSwiftInvocationHandler(ObjcEmitterContext ctx, SwiftWriter w)
         {
+            // Invocation handler for async callbacks: when native code invokes GML functions,
+            // those calls are queued in DispatchQueue. GML periodically calls this handler
+            // to drain the queue and execute pending callbacks. Each callback writes its
+            // return value into the provided buffer, and we return status (1.0 = success).
+            // This decouples native async work from GML's single-threaded execution model.
+
             var rt = ctx.Runtime;
             var ext = ctx.ExtName;
 

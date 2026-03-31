@@ -2,6 +2,9 @@
 
 namespace extgen.Models
 {
+    /// <summary>
+    /// Represents a field in a struct, including its type, default value, and metadata.
+    /// </summary>
     public sealed record IrField(
         string Name,
         IrType Type,

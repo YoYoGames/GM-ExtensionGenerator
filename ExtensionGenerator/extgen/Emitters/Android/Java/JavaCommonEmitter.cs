@@ -9,8 +9,14 @@ using extgen.Utils;
 
 namespace extgen.Emitters.Android.Java
 {
+    /// <summary>
+    /// Emits common Java artifacts including enums, records, codecs, interfaces, and implementation shells.
+    /// </summary>
     internal sealed class JavaCommonEmitter(JavaEmitterContext ctx, JavaTypeMap typeMap, JavaBridgeGenerator bridge)
     {
+        /// <summary>
+        /// Emits Java enums, records, and codecs for the compilation.
+        /// </summary>
         public void EmitJavaArtifacts(IrCompilation c, JavaLayout layout)
         {
             // Enums
@@ -28,22 +34,30 @@ namespace extgen.Emitters.Android.Java
                 FileEmitHelpers.WriteJava(layout.Codecs, $"{s.Name}Codec.java", w => EmitCodec(ctx, s, w, wireHelpers));
         }
 
+        /// <summary>
+        /// Emits the internal implementation class with native bridge methods.
+        /// </summary>
         public void EmitInternal(IrCompilation c, JavaLayout layout)
         {
             FileEmitHelpers.WriteJava(layout.CodeGenDir, $"{c.Name}Internal.java", w => EmitInternalImpl(ctx, c, w));
         }
 
+        /// <summary>
+        /// Emits the Java interface defining extension function signatures.
+        /// </summary>
         public void EmitJavaInterface(IrCompilation c, JavaLayout layout)
         {
             FileEmitHelpers.WriteJava(layout.CodeGenDir, $"{c.Name}Interface.java", w => EmitJavaInterfaceImpl(ctx, c, w));
         }
 
+        /// <summary>
+        /// Emits the user implementation shell class if it doesn't already exist.
+        /// </summary>
         public void EmitJavaUserShell(IrCompilation c, JavaLayout layout)
         {
             FileEmitHelpers.WriteJavaIfMissing(layout.BaseDir, $"{c.Name}.java", w => EmitImplementation(ctx, c, w));
         }
 
-        // ------------- enums / records / codecs (unchanged, but using helpers)
         private void EmitEnum(JavaEmitterContext ctx, IrEnum e, JavaWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;
@@ -52,7 +66,6 @@ namespace extgen.Emitters.Android.Java
             w.Comment("##### extgen :: Auto-generated file do not edit!! #####").Line();
             w.Package($"{pkg}.enums").Line();
 
-            // Build JavaEnumMembers with the underlying numeric literal as ctor argument
             var members = e.Members.Select(m => new JavaEnumMember(m.Name, m.DefaultLiteral, null, u));
 
             w.Enum(name: e.Name, members: members, body: body =>
@@ -177,7 +190,6 @@ namespace extgen.Emitters.Android.Java
             }, ["public", "final"]);
         }
 
-        // ------------- interface (Java)
         private void EmitJavaInterfaceImpl(JavaEmitterContext ctx, IrCompilation c, JavaWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;
@@ -217,7 +229,6 @@ namespace extgen.Emitters.Android.Java
             }, ["public"]);
         }
 
-        // ------------- internal bridge (shared – switchable call target)
         private void EmitInternalImpl(JavaEmitterContext ctx, IrCompilation c, JavaWriter w)
         {
             string ext = ctx.ExtName;
@@ -241,14 +252,12 @@ namespace extgen.Emitters.Android.Java
 
             w.Line();
 
-            // Ask the bridge what this class should implement
             var implements = bridge.GetClassImplements(ctx);
 
             w.Class(cls, "RunnerSocial", clsBody =>
             {
                 clsBody.Line();
 
-                // flavor-specific bits handled by the bridge
                 bridge.EmitBackingField(ctx, clsBody);
                 bridge.EmitInvocationHandler(ctx, c.Functions, clsBody);
                 bridge.EmitBufferQueueHandler(ctx, c.Functions, clsBody);
@@ -265,7 +274,6 @@ namespace extgen.Emitters.Android.Java
             implements: implements);
         }
 
-        // ------------- public user shell
         private void EmitImplementation(JavaEmitterContext ctx, IrCompilation c, JavaWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;

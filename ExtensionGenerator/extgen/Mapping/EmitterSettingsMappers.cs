@@ -18,9 +18,6 @@ namespace extgen.Mappers
     /// </summary>
     public static class EmitterSettingsMappers
     {
-        // ----------------------------
-        // Cmake
-        // ----------------------------
         public static CmakeEmitterSettings ToSettings(this CmakeConfig cfg)
             => new()
             {
@@ -31,18 +28,12 @@ namespace extgen.Mappers
                 UseThirdParty = cfg.UseThirdParty,
             };
 
-        // ----------------------------
-        // Android
-        // ----------------------------
         public static AndroidEmitterSettings ToSettings(this AndroidTargetConfig cfg)
             => new()
             {
                 OutputFolder = cfg.Output
             };
 
-        // ----------------------------
-        // Apple Mobile
-        // ----------------------------
         public static IosEmitterSettings ToSettings(this IosTargetConfig cfg)
             => new()
             {
@@ -61,9 +52,6 @@ namespace extgen.Mappers
                 OutputSourceFolder = cfg.OutputSource
             };
 
-        // ----------------------------
-        // Docs
-        // ----------------------------
         public static DocEmitterSettings ToSettings(this DocsConfig cfg)
             => new()
             {
@@ -71,9 +59,6 @@ namespace extgen.Mappers
                 Overwrite = cfg.Overwrite
             };
 
-        // ----------------------------
-        // GameMaker
-        // ----------------------------
         public static GmlEmitterSettings ToSettings(this WrapperConfig cfg)
             => new()
             {

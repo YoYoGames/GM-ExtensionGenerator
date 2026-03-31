@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace extgen.Parsing.Gmidl
 {
-    internal enum IrSymbolKind { Enum, Struct /* later: Alias, Interface, etc */ }
+    internal enum IrSymbolKind { Enum, Struct }
 
     internal sealed record IrSymbol(IrSymbolKind Kind, string Name);
 
@@ -298,8 +298,6 @@ namespace extgen.Parsing.Gmidl
 
             return core;
 
-            // ---------------- local helper ----------------
-
             IrType ResolveFromHintOrNamed(string? hint)
             {
                 if (string.IsNullOrWhiteSpace(hint))
@@ -334,30 +332,45 @@ namespace extgen.Parsing.Gmidl
 
         private static ImmutableArray<IrStruct> TopologicallySortStructs(ImmutableArray<IrStruct> structs)
         {
+            // Topological sort structs by dependency order using Kahn's algorithm.
+            // Why? Code generators need structs defined before they're used as field types.
+            // Example: if struct B has a field of type A, then A must be emitted before B.
+            //
+            // Algorithm:
+            // 1. Build dependency graph: edge from A->B means "B depends on A"
+            // 2. Calculate in-degree for each node (how many dependencies it has)
+            // 3. Start with all 0-indegree nodes (no dependencies)
+            // 4. Process queue: emit node, decrement neighbors' in-degree, add newly-0 nodes
+            // 5. If we don't process all nodes, there's a cycle (error)
+
             var byName = structs.ToDictionary(s => s.Name, StringComparer.Ordinal);
 
+            // Adjacency list: dep -> [dependents]
             var adj = structs.ToDictionary(
                 s => s.Name,
                 _ => new HashSet<string>(StringComparer.Ordinal),
                 StringComparer.Ordinal);
 
+            // In-degree: how many dependencies each struct has
             var indeg = structs.ToDictionary(s => s.Name, _ => 0, StringComparer.Ordinal);
 
-            // Edge: dep -> s
+            // Build graph: for each struct, find its dependencies, add edges dep->struct
             foreach (var s in structs)
             {
                 var deps = CollectStructDeps(s);
                 foreach (var d in deps)
                 {
-                    if (!adj.ContainsKey(d)) continue;
+                    if (!adj.ContainsKey(d)) continue;  // Dependency not in this compilation (external type)
                     if (adj[d].Add(s.Name))
                         indeg[s.Name]++;
                 }
             }
 
+            // Preserve original order as a tiebreaker (stable sort)
             var pos = structs.Select((s, i) => (s.Name, i))
                              .ToDictionary(t => t.Name, t => t.i, StringComparer.Ordinal);
 
+            // Start with structs that have no dependencies
             var q = new Queue<string>(
                 indeg.Where(kv => kv.Value == 0)
                      .OrderBy(kv => pos[kv.Key])
@@ -365,6 +378,7 @@ namespace extgen.Parsing.Gmidl
 
             var ordered = new List<IrStruct>(structs.Length);
 
+            // Process queue: emit struct, decrement dependents' in-degree
             while (q.Count > 0)
             {
                 var u = q.Dequeue();
@@ -377,6 +391,7 @@ namespace extgen.Parsing.Gmidl
                 }
             }
 
+            // If we didn't process all structs, there must be a cycle
             if (ordered.Count != structs.Length)
                 throw new InvalidOperationException("Struct dependency cycle detected.");
 

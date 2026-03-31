@@ -7,6 +7,10 @@ using extgen.TypeSystem.Cpp;
 
 namespace extgen.Emitters.Cpp
 {
+    /// <summary>
+    /// Provides wire protocol encoding/decoding helpers for C++ code generation,
+    /// handling scalars, enums, structs, arrays, and optionals.
+    /// </summary>
     internal sealed class CppWireHelpers<TWriter>(
         RuntimeNaming runtime,
         CppTypeMap typeMap,
@@ -20,15 +24,10 @@ namespace extgen.Emitters.Cpp
         private readonly IIrTypeEnumResolver _enums = enums;
         private readonly bool _typedEnums = typedEnums;
 
-        // ============================================================
-        //  Low-level read / write expression helpers (non-nullable, non-array)
-        // ============================================================
-
         private string ReadNonWrapped(IrType t, string bufferVar, bool owned)
         {
             var ns = _runtime.CodeGenNamespace;
 
-            // Enum
             if (t is IrType.Named { Kind: NamedKind.Enum, Name: var enumName })
             {
                 if (_typedEnums)
@@ -44,19 +43,16 @@ namespace extgen.Emitters.Cpp
                 }
             }
 
-            // Buffer (special queue)
             if (t is IrType.Builtin { Kind: BuiltinKind.Buffer })
             {
                 return $"{_runtime.BufferQueueField}.front()";
             }
 
-            // Function (special read helper)
             if (t is IrType.Builtin { Kind: BuiltinKind.Function })
             {
                 return $"{ns}::readFunction({bufferVar}, &{_runtime.DispatchQueueField})";
             }
 
-            // Everything else
             var cpp = _typeMap.Map(t, owned: owned);
             return $"{ns}::readValue<{cpp}>({bufferVar})";
         }
@@ -71,15 +67,12 @@ namespace extgen.Emitters.Cpp
             if (t is IrType.Builtin { Kind: BuiltinKind.Function })
                 throw new NotSupportedException("code emitter: functions as return values are not supported.");
 
-            // NOTE: if typedEnums=false and caller passes enum type, you must cast/extract underlying
-            // somewhere else. In practice, typedEnums=false is usually a *decode* policy (Swift).
             return $"{ns}::writeValue({bufferVar}, {valueExpr})";
         }
 
-        // ============================================================
-        //  WireHelpersBase overrides (expression helpers)
-        // ============================================================
-
+        /// <summary>
+        /// Generates a read expression for a non-nullable, non-array type from the buffer.
+        /// </summary>
         public override string ReadExpr(IrType t, string bufferVar)
         {
             if (t is IrType.Nullable or IrType.Array)
@@ -87,6 +80,9 @@ namespace extgen.Emitters.Cpp
             return ReadNonWrapped(t, bufferVar, owned: true);
         }
 
+        /// <summary>
+        /// Generates a write expression for a non-nullable, non-array type into the buffer.
+        /// </summary>
         public override string WriteExpr(IrType t, string bufferVar, string valueExpr)
         {
             if (t is IrType.Nullable or IrType.Array)
@@ -94,28 +90,31 @@ namespace extgen.Emitters.Cpp
             return WriteNonWrapped(t, bufferVar, valueExpr);
         }
 
+        /// <summary>
+        /// Emits C++ code to decode a value from the buffer.
+        /// </summary>
         public override void DecodeLines(TWriter w, IrType t, string accessor, bool declare, string bufferVar)
             => DecodeLines(w, t, accessor, declare, bufferVar, owned: true);
 
+        /// <summary>
+        /// Emits C++ code to encode a value into the buffer.
+        /// </summary>
         public override void EncodeLines(TWriter w, IrType t, string accessor, string bufferVar)
         {
             var ns = _runtime.CodeGenNamespace;
 
-            // Policy: don’t allow Buffer/Function nested under wrappers if you consider them illegal.
             if (ContainsBuiltin(t, BuiltinKind.Buffer))
                 throw new NotSupportedException("code emitter: buffers in return values are not supported.");
 
             if (ContainsBuiltin(t, BuiltinKind.Function))
                 throw new NotSupportedException("code emitter: functions in return values are not supported.");
 
-            // Your runtime already supports writeValue for optional/vector/array etc.
             w.Call($"{ns}::writeValue", bufferVar, accessor).Line(";");
         }
 
-        // ============================================================
-        //  DecodeLines with ownership control
-        // ============================================================
-
+        /// <summary>
+        /// Emits C++ code to decode a value from the buffer with ownership control.
+        /// </summary>
         public void DecodeLines(
             TWriter w,
             IrType t,
@@ -127,13 +126,10 @@ namespace extgen.Emitters.Cpp
             var ns = _runtime.CodeGenNamespace;
             string? declType = declare ? _typeMap.Map(t, owned: owned) : null;
 
-            // Nullable -> std::optional<T>
             if (t is IrType.Nullable n)
             {
                 var inner = n.Underlying;
 
-                // If you have a special-case optional layout for function, keep it.
-                // Otherwise just readOptional<T>.
                 if (ContainsBuiltin(inner, BuiltinKind.Function))
                 {
                     if (declare)
@@ -155,7 +151,6 @@ namespace extgen.Emitters.Cpp
                 return;
             }
 
-            // Array -> std::array / std::vector
             if (t is IrType.Array a)
             {
                 var el = a.Element;
@@ -179,7 +174,6 @@ namespace extgen.Emitters.Cpp
                 return;
             }
 
-            // Buffer: consume queue
             if (t is IrType.Builtin { Kind: BuiltinKind.Buffer })
             {
                 w.Assign(accessor, ReadNonWrapped(t, bufferVar, owned), declType);
@@ -187,7 +181,6 @@ namespace extgen.Emitters.Cpp
                 return;
             }
 
-            // Enum
             if (t is IrType.Named { Kind: NamedKind.Enum, Name: var enumName })
             {
                 if (_typedEnums)
@@ -203,7 +196,6 @@ namespace extgen.Emitters.Cpp
                 return;
             }
 
-            // Default
             w.Assign(accessor, ReadNonWrapped(t, bufferVar, owned), declType);
         }
 

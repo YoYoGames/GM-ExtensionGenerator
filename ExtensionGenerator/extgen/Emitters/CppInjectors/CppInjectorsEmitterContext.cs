@@ -11,7 +11,6 @@ namespace extgen.Emitters.CppInjectors
         RuntimeNaming Runtime,
         IReadOnlyList<IrFunction> StartFunctions,
         IReadOnlyList<IrFunction> FinishFunctions
-    // add more later: Groups, NativeNames, Runtime symbols, etc
     ) : IEmitterContext<CppInjectorsEmitterSettings>
     {
         public string ExtName => Compilation.Name;

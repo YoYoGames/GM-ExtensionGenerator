@@ -3,12 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace extgen.Models.Config.Targets.Desktop
 {
-    // ============================================================
-    // Desktop targets
-    // ============================================================
-
+    /// <summary>
+    /// Windows desktop platform configuration.
+    /// </summary>
     public sealed class WindowsTargetConfig : GeneratorConfigBase
     {
+        /// <inheritdoc />
         [JsonPropertyName("outputFolder")]
         public override string Output { get; set; } = "../";
     }

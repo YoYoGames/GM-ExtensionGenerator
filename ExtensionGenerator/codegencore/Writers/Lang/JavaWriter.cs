@@ -1,6 +1,9 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
+    /// <summary>
+    /// Represents a member of a Java enum with optional constructor arguments and comments.
+    /// </summary>
     public readonly record struct JavaEnumMember(string Name, string? CtorArg = null, string? Comment = null, string? Type = null)
     {
         public string ToMemberString()
@@ -13,16 +16,32 @@ namespace codegencore.Writers.Lang
         }
     }
 
+    /// <summary>
+    /// Represents a Java annotation with optional arguments.
+    /// </summary>
     public readonly record struct JavaAnnotation(string Name, string? Args = null)
     {
         public override string ToString() => Args is null ? $"@{Name}" : $"@{Name}({Args})";
     }
 
+    /// <summary>
+    /// Provides a fluent API for generating Java source code with support for classes, interfaces, enums, records, and annotations.
+    /// </summary>
     public class JavaWriter(ICodeWriter io) : CStyleWriter<JavaWriter>(io)
     {
+        /// <summary>
+        /// Writes a package declaration.
+        /// </summary>
         public JavaWriter Package(string packageName) => Line($"package {packageName};");
+
+        /// <summary>
+        /// Writes an import statement.
+        /// </summary>
         public JavaWriter Import(string import) => Line($"import {import};");
 
+        /// <summary>
+        /// Writes a class declaration with optional modifiers.
+        /// </summary>
         public JavaWriter Class(string name, Action<JavaWriter> body, IEnumerable<string>? modifiers = null)
         {
             var mods = modifiers is null ? "" : $"{string.Join(" ", modifiers)} ";
@@ -44,6 +63,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes an interface declaration with optional modifiers.
+        /// </summary>
         public JavaWriter Interface(string name, Action<JavaWriter> body, IEnumerable<string>? modifiers = null)
         {
             var mods = modifiers is null ? "" : $"{string.Join(" ", modifiers)} ";
@@ -59,6 +81,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes a field declaration with optional initializer and modifiers.
+        /// </summary>
         public JavaWriter Field(
             string type,
             string name,
@@ -71,6 +96,9 @@ namespace codegencore.Writers.Lang
             return Line($"{mods}{type} {name} = {initializer};");
         }
 
+        /// <summary>
+        /// Writes a constructor declaration with parameters and body.
+        /// </summary>
         public JavaWriter Constructor(
             string name,
             IEnumerable<Param> parameters,
@@ -84,6 +112,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes an enum declaration with members and optional body.
+        /// </summary>
         public JavaWriter Enum(
             string name,
             IEnumerable<JavaEnumMember> members,
@@ -96,7 +127,6 @@ namespace codegencore.Writers.Lang
             Line($"{mods}enum {name}")
                 .Block(b =>
                 {
-                    // constants
                     for (int i = 0; i < list.Count; i++)
                     {
                         var line = list[i].ToMemberString();
@@ -119,14 +149,14 @@ namespace codegencore.Writers.Lang
         }
 
         /// <summary>
-        /// Writes a Java record header + optional body.
+        /// Writes a Java record declaration with optional body and implements clause.
         /// Example: <c>public record Point(int x, int y) implements Serializable { ... }</c>
         /// </summary>
-        /// <param name="name">Record name (optionally with type params, e.g. "Pair<T,U>").</param>
-        /// <param name="components">Record components (type + name).</param>
+        /// <param name="name">Record name (optionally with type params, e.g. "Pair&lt;T,U&gt;").</param>
+        /// <param name="components">Record components (type and name).</param>
         /// <param name="body">Optional body block writer; if null, writes empty braces.</param>
-        /// <param name="modifiers">e.g., ["public", "sealed"].</param>
-        /// <param name="implements">Interfaces to implement, e.g., ["Serializable","Comparable<Point>"].</param>
+        /// <param name="modifiers">Modifiers such as "public" or "sealed".</param>
+        /// <param name="implements">Interfaces to implement, e.g., "Serializable" or "Comparable&lt;Point&gt;".</param>
         public JavaWriter Record(
             string name,
             IEnumerable<Param> components,
@@ -138,14 +168,11 @@ namespace codegencore.Writers.Lang
             var compList = string.Join(", ", components.Select(c => $"{c.Type} {c.Name}"));
             var impl = implements is null ? "" : $" implements {string.Join(", ", implements)}";
 
-            // Header: "public record Name(T a, U b) implements IFoo, IBar"
             Line($"{mods}record {name}({compList}){impl}")
                 .Block(b => body?.Invoke(b), trailingNewLine: true);
 
             return this;
         }
-
-        // Convenience overloads (mirror your other writers)
 
         public JavaWriter Record(
             string name,
@@ -164,9 +191,9 @@ namespace codegencore.Writers.Lang
             IEnumerable<Param> components)
             => Record(name, components, body: null, modifiers: null, implements: null);
 
-        // Optional helper for the compact constructor inside record body
-        // Usage inside body:
-        //   b.RecordCompactCtor("Point", new[]{ new Param("int","x"), new Param("int","y") }, ctor => { ... });
+        /// <summary>
+        /// Writes a compact constructor inside a record body.
+        /// </summary>
         public JavaWriter RecordCompactCtor(
             string recordName,
             IEnumerable<Param> components,
@@ -180,7 +207,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
-        // Emits one annotation per line (above the declaration).
+        /// <summary>
+        /// Writes annotations one per line above the declaration.
+        /// </summary>
         public JavaWriter Annotations(IEnumerable<string>? annotations)
         {
             if (annotations is null) return this;

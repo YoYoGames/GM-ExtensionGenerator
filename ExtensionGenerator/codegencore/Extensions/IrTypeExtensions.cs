@@ -21,7 +21,9 @@ namespace codegencore.Models
         {
             t = t.StripNullable();
 
-            // NOTE: arrays are not numeric scalars at surface
+            // Explicit check: arrays are NOT scalars even if their element type is numeric.
+            // This matters for parameter passing logic; int[] must use buffer protocol,
+            // but int can be passed as a direct double argument.
             if (t is IrType.Array) return false;
 
             return t is IrType.Builtin

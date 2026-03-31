@@ -7,10 +7,16 @@ using System.Collections.Immutable;
 
 namespace extgen.Emitters.Cpp
 {
+    /// <summary>
+    /// Emits common C++ artifacts including constants, enums, structs, codecs, and struct traits.
+    /// </summary>
     internal class CppCommonEmitter<T>(CppEmitterContext ctx, CppTypeMap typeMap, IIrTypeEnumResolver enums) where T : CxxWriter<T>
     {
         private readonly CppWireHelpers<T> cppWireHelpers = new CppWireHelpers<T>(ctx.Runtime, typeMap, enums, true);
 
+        /// <summary>
+        /// Emits common C++ includes required for generated code.
+        /// </summary>
         public static void EmitCommonIncludes(T w) =>
             w.Include("cstdint", true)
              .Include("string_view", true)
@@ -18,6 +24,9 @@ namespace extgen.Emitters.Cpp
              .Include("array", true)
              .Include("optional", true);
 
+        /// <summary>
+        /// Emits all C++ artifacts for a compilation.
+        /// </summary>
         public void EmitCommonCppArtifacts(T w, IrCompilation c)
         {
             EmitConstants(w, c.Constants);
@@ -26,10 +35,6 @@ namespace extgen.Emitters.Cpp
             EmitCodecs(w, c.Structs);
             EmitStructTraits(w, c.Structs);
         }
-
-        // ============================================================
-        // Constants / Enums / Structs
-        // ============================================================
 
         private void EmitConstants(T w, ImmutableArray<IrConstant> constants)
         {
@@ -85,10 +90,6 @@ namespace extgen.Emitters.Cpp
             });
         }
 
-        // ============================================================
-        // Codecs (template specializations)
-        // ============================================================
-
         private void EmitCodecs(T w, IImmutableList<IrStruct> structs)
         {
             var codegenNs = ctx.Runtime.CodeGenNamespace;
@@ -129,10 +130,6 @@ namespace extgen.Emitters.Cpp
             });
         }
 
-        // ============================================================
-        // gm_struct_traits
-        // ============================================================
-
         private void EmitStructTraits(T w, ImmutableArray<IrStruct> structs)
         {
             w.Namespace(ctx.Runtime.ExtWireDetailsNamespace, nsBody =>
@@ -150,10 +147,9 @@ namespace extgen.Emitters.Cpp
             });
         }
 
-        // ============================================================
-        // Call decode (args) for function wrapper
-        // ============================================================
-
+        /// <summary>
+        /// Emits argument decoding code and returns the list of call arguments.
+        /// </summary>
         public List<string> EmitDecode(T w, IrFunction fn, bool needArgs, string br)
         {
             var callArgs = new List<string>();
@@ -176,7 +172,6 @@ namespace extgen.Emitters.Cpp
                 return callArgs;
             }
 
-            // direct args: numeric scalars must be cast from double
             foreach (var p in IrAnalysis.DirectArgs(fn))
             {
                 if (IsNumericScalar(p.Type))
@@ -188,10 +183,9 @@ namespace extgen.Emitters.Cpp
             return callArgs;
         }
 
-        // ============================================================
-        // Return encode (wire) or direct return to GML
-        // ============================================================
-
+        /// <summary>
+        /// Emits return encoding code or direct return to GML.
+        /// </summary>
         public void EmitEncodeReturn(T w, IrType ret, string result, bool needRet, string bw)
         {
             if (IsVoid(ret))
@@ -214,8 +208,6 @@ namespace extgen.Emitters.Cpp
                 return;
             }
 
-            // direct return:
-            // IMPORTANT: nullable must not be directly returned as double/char*
             if (ContainsNullable(ret))
             {
                 w.Line("return 0;");
@@ -237,10 +229,6 @@ namespace extgen.Emitters.Cpp
             w.Line("return 0;");
         }
 
-        // ============================================================
-        // Type helpers (new IrType)
-        // ============================================================
-
         private static bool IsVoid(IrType t) =>
             t is IrType.Builtin { Kind: BuiltinKind.Void };
 
@@ -254,8 +242,6 @@ namespace extgen.Emitters.Cpp
 
         private static bool IsNumericScalar(IrType t)
         {
-            // unwrap nullable/array should NOT be considered numeric scalar at surface
-            // (caller can decide if it wants to treat element type specially)
             return t is IrType.Builtin
             {
                 Kind: BuiltinKind.Bool

@@ -7,6 +7,10 @@ using extgen.TypeSystem.Java;
 
 namespace extgen.Emitters.Android.Java
 {
+    /// <summary>
+    /// Provides wire protocol encoding/decoding helpers for Java code generation,
+    /// handling scalars, enums, structs, arrays, and optionals.
+    /// </summary>
     internal sealed class JavaWireHelpers : WireHelpersBase<JavaWriter>
     {
         private readonly RuntimeNaming _runtime;
@@ -19,10 +23,6 @@ namespace extgen.Emitters.Android.Java
             _typeMap = typeMap;
             _enums = enums;
         }
-
-        // ============================================================
-        // Core scalar read / write helpers (Builtins only)
-        // ============================================================
 
         private static bool IsScalarBuiltin(BuiltinKind k) => k is
             BuiltinKind.Bool or
@@ -82,10 +82,6 @@ namespace extgen.Emitters.Android.Java
             _ => throw new NotSupportedException($"write unsupported scalar builtin {k}")
         };
 
-        // ============================================================
-        // Integer-only scalar helpers (for enum underlying types)
-        // ============================================================
-
         private static string ReadScalarIntegerOnly(BuiltinKind k, string buf, string wire) => k switch
         {
             BuiltinKind.Bool => $"{wire}.readBool({buf})",
@@ -141,10 +137,9 @@ namespace extgen.Emitters.Android.Java
             return underlying;
         }
 
-        // ============================================================
-        // Read / Write expressions (non-collection)
-        // ============================================================
-
+        /// <summary>
+        /// Generates a read expression for a non-collection type from the buffer.
+        /// </summary>
         public override string ReadExpr(IrType t, string bufferVar)
         {
             var wire = _runtime.WireClass;
@@ -186,6 +181,9 @@ namespace extgen.Emitters.Android.Java
             };
         }
 
+        /// <summary>
+        /// Generates a write expression for a non-collection type into the buffer.
+        /// </summary>
         public override string WriteExpr(IrType t, string bufferVar, string valueExpr)
         {
             var wire = _runtime.WireClass;
@@ -221,10 +219,9 @@ namespace extgen.Emitters.Android.Java
             };
         }
 
-        // ============================================================
-        // High-level decode / encode helpers (CStyleWriter-friendly)
-        // ============================================================
-
+        /// <summary>
+        /// Emits Java code to decode a value from the buffer, handling optionals and arrays.
+        /// </summary>
         public override void DecodeLines(JavaWriter w, IrType t, string accessor, bool declare, string bufferVar)
         {
             var javaType = _typeMap.Map(t);
@@ -277,6 +274,9 @@ namespace extgen.Emitters.Android.Java
             w.Assign(accessor, ReadExpr(t, bufferVar), declare ? javaType : null);
         }
 
+        /// <summary>
+        /// Emits Java code to encode a value into the buffer, handling optionals and arrays.
+        /// </summary>
         public override void EncodeLines(JavaWriter w, IrType t, string accessor, string bufVar)
         {
             var wireClass = _runtime.WireClass;
@@ -311,10 +311,9 @@ namespace extgen.Emitters.Android.Java
             w.Line($"{WriteExpr(t, bufVar, accessor)};");
         }
 
-        // ============================================================
-        // Helper for enum field type in generated Java
-        // ============================================================
-
+        /// <summary>
+        /// Returns the Java primitive type corresponding to an enum's underlying type.
+        /// </summary>
         public static string ScalarForEnum(IrType underlying)
         {
             underlying = IrType.StripNullable(underlying);

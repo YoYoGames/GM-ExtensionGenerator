@@ -2,6 +2,9 @@
 
 namespace extgen.Models.Config.Build
 {
+    /// <summary>
+    /// Console platform build configuration (Xbox, PlayStation, Switch).
+    /// </summary>
     public sealed class ConsoleBuildConfig
     {
         /// <summary>

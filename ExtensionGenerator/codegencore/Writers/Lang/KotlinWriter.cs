@@ -1,11 +1,24 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
+    /// <summary>
+    /// Provides a fluent API for generating Kotlin source code with support for classes, interfaces, functions, and properties.
+    /// </summary>
     public class KotlinWriter(ICodeWriter io) : CStyleWriter<KotlinWriter>(io)
     {
+        /// <summary>
+        /// Writes a package declaration.
+        /// </summary>
         public KotlinWriter Package(string name) => Line($"package {name}");
+
+        /// <summary>
+        /// Writes an import statement.
+        /// </summary>
         public KotlinWriter Import(string import) => Line($"import {import}");
 
+        /// <summary>
+        /// Writes an interface declaration with optional modifiers.
+        /// </summary>
         public KotlinWriter Interface(string name, Action<KotlinWriter> body, IEnumerable<string>? modifiers = null)
         {
             var mods = modifiers is null ? "" : $"{string.Join(" ", modifiers)} ";
@@ -13,6 +26,9 @@ namespace codegencore.Writers.Lang
             return this;
         }
 
+        /// <summary>
+        /// Writes a class declaration with optional base type, interfaces, and modifiers.
+        /// </summary>
         public KotlinWriter Class(
             string name,
             string? baseType,
@@ -36,7 +52,7 @@ namespace codegencore.Writers.Lang
         }
 
         /// <summary>
-        /// Simple function declaration (signature only).
+        /// Writes a function declaration signature without body.
         /// </summary>
         public KotlinWriter FunDecl(string name, IEnumerable<(string Name, string Type)> parameters, string returnType)
         {
@@ -47,8 +63,7 @@ namespace codegencore.Writers.Lang
         }
 
         /// <summary>
-        /// Function with body, e.g.:
-        ///   fun foo(x: Int): Double { ... }
+        /// Writes a function declaration with body.
         /// </summary>
         public KotlinWriter Fun(
             string name,
@@ -71,9 +86,7 @@ namespace codegencore.Writers.Lang
         }
 
         /// <summary>
-        /// Property declaration, e.g.:
-        ///   private val foo: Int
-        ///   private val foo: Int = 42
+        /// Writes a property declaration with optional initializer.
         /// </summary>
         public KotlinWriter Property(
             string name,

@@ -7,8 +7,14 @@ using extgen.Utils;
 
 namespace extgen.Emitters.Cmake
 {
+    /// <summary>
+    /// Emits CMake build configuration files for cross-platform extension compilation.
+    /// </summary>
     internal class CmakeEmitter(CmakeEmitterSettings settings, ExtGenConfig config) : IIrEmitter
     {
+        /// <summary>
+        /// Emits the CMake configuration for the given compilation.
+        /// </summary>
         public void Emit(IrCompilation comp, string outputDir)
         {
             var layout = new CmakeLayout(outputDir);
@@ -52,9 +58,9 @@ namespace extgen.Emitters.Cmake
             });
         }
 
-        private static void EmitSource(CmakeLayout layout) 
+        private static void EmitSource(CmakeLayout layout)
         {
-            // This is for the third_party template only create IF there is no file yet
+            // Only create if the file does not exist yet
             if (!File.Exists(Path.Combine(layout.SourceDir, "CMakeLists.txt")))
             {
                 ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.src.CMakeLists.txt", Path.Combine(layout.SourceDir, "CMakeLists.txt"));
@@ -92,7 +98,7 @@ namespace extgen.Emitters.Cmake
 
         private static void EmitThirdParty(CmakeLayout layout)
         {
-            // This is for the third_party template only create IF there is no file yet
+            // Only create if the file does not exist yet
             if (!File.Exists(Path.Combine(layout.ThirdPartyDir, "CMakeLists.txt")))
             {
                 ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.third_party.CMakeLists.txt", Path.Combine(layout.ThirdPartyDir, "CMakeLists.txt"));

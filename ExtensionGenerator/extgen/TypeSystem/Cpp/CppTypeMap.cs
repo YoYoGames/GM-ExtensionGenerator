@@ -3,14 +3,19 @@ using extgen.Models.Config;
 
 namespace extgen.TypeSystem.Cpp
 {
+    /// <summary>
+    /// Maps IR types to C++ type names with support for owned vs borrowed semantics.
+    /// </summary>
     internal sealed class CppTypeMap(RuntimeNaming runtime) : IIrTypeMap
     {
         /// <summary>
-        /// Map an IR type to a C++ type name.
-        /// owned:
-        ///   - true  => owning representation (std::string, streams, etc.)
-        ///   - false => view/borrowed representation where applicable (string_view, GMValue view types)
+        /// Maps an IR type to a C++ type name.
         /// </summary>
+        /// <param name="t">The IR type to map.</param>
+        /// <param name="owned">
+        /// When true, returns owning representation (std::string, streams).
+        /// When false, returns view/borrowed representation (string_view, GMValue view types).
+        /// </param>
         public string Map(IrType t, bool owned = false)
         {
             // 1) nullable wrapper applies last
@@ -27,6 +32,9 @@ namespace extgen.TypeSystem.Cpp
             return core;
         }
 
+        /// <summary>
+        /// Maps non-nullable IR types to C++ types.
+        /// </summary>
         private string MapNonNullable(IrType t, bool owned)
         {
             return t switch
@@ -49,6 +57,9 @@ namespace extgen.TypeSystem.Cpp
             };
         }
 
+        /// <summary>
+        /// Maps array types to std::array (fixed-length) or std::vector (dynamic).
+        /// </summary>
         private string MapArray(IrType.Array a, bool owned)
         {
             var elem = Map(a.Element, owned: owned);
@@ -58,6 +69,9 @@ namespace extgen.TypeSystem.Cpp
                 : $"std::vector<{elem}>";
         }
 
+        /// <summary>
+        /// Maps builtin types to their C++ equivalents.
+        /// </summary>
         private string MapBuiltin(IrType.Builtin b, bool owned)
         {
             var wireNs = runtime.ExtWireNamespace;
@@ -83,12 +97,18 @@ namespace extgen.TypeSystem.Cpp
 
                 BuiltinKind.String => owned ? "std::string" : "std::string_view",
 
-                // "Any" family: your runtime decides view vs owning streams
+                // Dynamic types (Any/AnyArray/AnyMap) have two representations:
+                // - Owned (for returns): Stream types that let you build up data to send back to GML
+                // - Borrowed (for params): View types that let you read data recieved from GML
+                // This mirrors Rust's owned vs borrowed semantics applied to GameMaker's dynamic types.
                 BuiltinKind.Any => owned ? $"{wireNs}::DataStream" : $"{wireNs}::GMValue",
                 BuiltinKind.AnyArray => owned ? $"{wireNs}::ArrayStream" : $"{wireNs}::GMArrayView",
                 BuiltinKind.AnyMap => owned ? $"{wireNs}::StructStream" : $"{wireNs}::GMObjectView",
 
-                // Buffer/Function: policy decision — you previously disallowed "owned" (return)
+                // Buffer and Function types are not supported as owned/return types.
+                // Why? Buffers are transient handles that only exist during the call; returning one
+                // would leave GML with a dangling reference. Functions similarly can't be "returned"
+                // because they're callback handles managed by the GML runtime, not native code.
                 BuiltinKind.Buffer => owned
                     ? throw new NotSupportedException("code emitter: buffer as owning/return type is not supported.")
                     : $"{wireNs}::GMBuffer",
@@ -102,9 +122,11 @@ namespace extgen.TypeSystem.Cpp
         }
 
         /// <summary>
-        /// Map the type used for parameter passing (by value vs const ref).
-        /// This does NOT mean ownership transfer; it's about C++ calling convention ergonomics.
+        /// Maps the type used for parameter passing (by value vs const ref).
+        /// Determines calling convention based on C++ ergonomics, not ownership transfer.
         /// </summary>
+        /// <param name="t">The IR type to map.</param>
+        /// <param name="owned">Whether to use owned representation.</param>
         public string MapPassType(IrType t, bool owned = false)
         {
             // Apply nullable stripping for pass-by-ref decision, but keep the mapped type identical.
@@ -123,6 +145,11 @@ namespace extgen.TypeSystem.Cpp
             return baseType;
         }
 
+        /// <summary>
+        /// Determines whether a type should be passed by const reference.
+        /// We pass by const ref for non-trivial types (structs, containers, strings).
+        /// Scalars, enums, and view types are passed by value.
+        /// </summary>
         private bool ShouldPassByConstRef(IrType t, bool owned)
         {
             // If it's nullable, the wrapper (std::optional<...>) is usually non-trivial.

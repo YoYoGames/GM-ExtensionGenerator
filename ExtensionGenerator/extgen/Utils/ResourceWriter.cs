@@ -6,16 +6,26 @@ using System.Text;
 
 namespace extgen.Utils
 {
+    /// <summary>
+    /// Helpers for writing embedded resources to disk.
+    /// </summary>
     internal static class ResourceWriter
     {
-        /// <summary>Writes an embedded resource to disk. Overwrites only if contents changed.</summary>
+        /// <summary>
+        /// Writes an embedded resource to disk.
+        /// Overwrites only if contents have changed.
+        /// </summary>
+        /// <param name="assembly">Assembly containing the embedded resource.</param>
+        /// <param name="resourceName">Fully qualified resource name.</param>
+        /// <param name="destinationPath">Destination file path.</param>
+        /// <param name="encoding">Text encoding (defaults to UTF-8 without BOM).</param>
         public static void WriteTextResource(
             Assembly assembly,
             string resourceName,
             string destinationPath,
             Encoding? encoding = null)
         {
-            encoding ??= new UTF8Encoding(encoderShouldEmitUTF8Identifier: false); // UTF-8 no BOM
+            encoding ??= new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
             using var stream = assembly.GetManifestResourceStream(resourceName)
@@ -26,22 +36,32 @@ namespace extgen.Utils
             using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: false);
             var newText = reader.ReadToEnd();
 
-            // Optional: normalize line endings to LF for C/C++ toolchains
             newText = newText.Replace("\r\n", "\n");
 
             if (File.Exists(destinationPath))
             {
                 var oldText = File.ReadAllText(destinationPath, encoding);
                 if (string.Equals(oldText, newText, StringComparison.Ordinal))
-                    return; // no write needed
+                    return;
             }
 
             File.WriteAllText(destinationPath, newText, encoding);
         }
 
+        /// <summary>
+        /// Writes an embedded resource with template token substitution.
+        /// </summary>
+        /// <param name="assembly">Assembly containing the embedded resource.</param>
+        /// <param name="resourceName">Fully qualified resource name.</param>
+        /// <param name="destinationPath">Destination file path.</param>
+        /// <param name="tokens">Token substitution dictionary (key -> value).</param>
+        /// <param name="encoding">Text encoding (defaults to UTF-8 without BOM).</param>
         public static void WriteTemplatedTextResource(
-            Assembly assembly, string resourceName, string destinationPath,
-            IReadOnlyDictionary<string, string> tokens, Encoding? encoding = null)
+            Assembly assembly,
+            string resourceName,
+            string destinationPath,
+            IReadOnlyDictionary<string, string> tokens,
+            Encoding? encoding = null)
         {
             encoding ??= new UTF8Encoding(false);
             using var s = assembly.GetManifestResourceStream(resourceName)

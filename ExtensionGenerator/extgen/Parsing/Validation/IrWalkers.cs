@@ -3,15 +3,30 @@ using extgen.Models;
 
 namespace extgen.Parsing.Validation
 {
+    /// <summary>
+    /// Categorizes where a type is used within the IR compilation.
+    /// </summary>
     public enum IrTypeOwnerKind
     {
+        /// <summary>Type used in a compilation constant.</summary>
         CompilationConstant,
+
+        /// <summary>Type used as an enum underlying type.</summary>
         EnumUnderlying,
+
+        /// <summary>Type used in a struct field.</summary>
         StructField,
+
+        /// <summary>Type used as a function return type.</summary>
         FunctionReturn,
+
+        /// <summary>Type used as a function parameter.</summary>
         FunctionParameter,
     }
 
+    /// <summary>
+    /// Represents a single occurrence of a type within the IR compilation.
+    /// </summary>
     public readonly record struct IrTypeOccurrence(
         IrType Type,
         string Path,
@@ -20,11 +35,16 @@ namespace extgen.Parsing.Validation
         string? MemberName = null
     );
 
+    /// <summary>
+    /// Utilities for walking the IR tree and finding all type occurrences.
+    /// </summary>
     public static class IrWalkers
     {
+        /// <summary>
+        /// Walks an IR compilation and yields all type occurrences.
+        /// </summary>
         public static IEnumerable<IrTypeOccurrence> WalkIrTypes(IrCompilation comp)
         {
-            // Constants
             foreach (var c in comp.Constants)
                 foreach (var occ in WalkType(c.Type,
                     $"Constants[{c.Name}].Type",

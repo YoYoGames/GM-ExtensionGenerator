@@ -35,7 +35,6 @@ namespace extgen.TypeSystem.Java
 
                 IrType.Builtin b => MapBuiltin(b, owned),
 
-                // If you add more shapes later, you'll be forced to update here.
                 _ => "Object"
             };
         }

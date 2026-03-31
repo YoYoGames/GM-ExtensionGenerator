@@ -8,8 +8,14 @@ using System.Text;
 
 namespace extgen.Emitters.Doc
 {
+    /// <summary>
+    /// Emits JSDoc-style documentation for GameMaker extensions.
+    /// </summary>
     internal sealed class DocEmitter(DocEmitterSettings settings, RuntimeNaming runtime) : IIrEmitter
     {
+        /// <summary>
+        /// Emits the documentation for the given compilation.
+        /// </summary>
         public void Emit(IrCompilation comp, string outputDir)
         {
             var ext = comp.Name;
@@ -102,7 +108,6 @@ namespace extgen.Emitters.Doc
             {
                 w.JsDoc(spec =>
                 {
-                    // You used const_partial/const_end before; keeping same tags.
                     spec.Tag("enum_partial", e.Name);
 
                     foreach (var m in e.Members)
@@ -125,7 +130,6 @@ namespace extgen.Emitters.Doc
         {
             w.JsDoc(spec =>
             {
-                // You used const_partial/const_end before; keeping same tags.
                 spec.Tag("const_partial", "macros");
 
                 foreach (var c in constants)
@@ -143,10 +147,6 @@ namespace extgen.Emitters.Doc
             w.Line();
         }
 
-        // ============================================================
-        // IrType helpers (new shape-based IrType)
-        // ============================================================
-
         private static bool IsVoid(IrType t) =>
             t is IrType.Builtin { Kind: BuiltinKind.Void };
 
@@ -156,16 +156,11 @@ namespace extgen.Emitters.Doc
         private static IrType StripNullable(IrType t) =>
             t is IrType.Nullable n ? n.Underlying : t;
 
-        // ============================================================
-        // JSDoc type mapping (GameMaker-facing)
-        // ============================================================
-
         public static string JsDocType(IrType t)
         {
-            // Nullable affects "optional" flag; for the type string we describe the underlying.
+            // Nullable affects "optional" flag; for the type string the underlying type is described.
             t = StripNullable(t);
 
-            // Array<T>
             if (t is IrType.Array a)
             {
                 return a.FixedLength is int n
@@ -173,7 +168,6 @@ namespace extgen.Emitters.Doc
                     : $"Array[{JsDocType(a.Element)}]";
             }
 
-            // Named types (Struct / Enum)
             if (t is IrType.Named named)
             {
                 return named.Kind switch
@@ -184,14 +178,12 @@ namespace extgen.Emitters.Doc
                 };
             }
 
-            // Builtins
             if (t is IrType.Builtin b)
             {
                 return b.Kind switch
                 {
                     BuiltinKind.Bool => "Bool",
 
-                    // numeric -> Real (GML number)
                     BuiltinKind.Int8 or BuiltinKind.UInt8
                     or BuiltinKind.Int16 or BuiltinKind.UInt16
                     or BuiltinKind.Int32 or BuiltinKind.UInt32
@@ -214,7 +206,6 @@ namespace extgen.Emitters.Doc
                 };
             }
 
-            // Fallback
             return "Any";
         }
     }

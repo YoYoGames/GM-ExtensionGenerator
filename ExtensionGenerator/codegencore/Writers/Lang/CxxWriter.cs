@@ -1,6 +1,9 @@
 ﻿
 namespace codegencore.Writers.Lang
 {
+    /// <summary>
+    /// Represents a member of a C++ enum with optional value and comment.
+    /// </summary>
     public readonly record struct EnumMember(string Name, string? Value = null, string? Comment = null)
     {
         public string ToMemberString() =>
@@ -9,17 +12,31 @@ namespace codegencore.Writers.Lang
                 : $"{Name}{(Value is null ? string.Empty : $" = {Value}")} // {Comment}";
     }
 
+    /// <summary>
+    /// Specifies the initialization style for C++ variable declarations.
+    /// </summary>
     public enum InitStyle { None, Equals, Parens, Braces }
 
+    /// <summary>
+    /// Provides a fluent API for generating C++ and C source code with support for namespaces, extern linkage, structs, enums, and advanced declarations.
+    /// </summary>
     public class CxxWriter<TSelf>(ICodeWriter io) : CStyleWriter<TSelf>(io)
         where TSelf : CxxWriter<TSelf>
     {
-        // #include / #pragams
+        /// <summary>
+        /// Writes a pragma once directive.
+        /// </summary>
         public TSelf PragmaOnce() => Line("#pragma once");
 
+        /// <summary>
+        /// Writes an include directive.
+        /// </summary>
         public TSelf Include(string header, bool system = true)
             => Line(system ? $"#include <{header}>" : $"#include \"{header}\"");
 
+        /// <summary>
+        /// Writes an ifdef conditional with optional else block.
+        /// </summary>
         public TSelf IfDef(string macro, Action<TSelf> thenBody, Action<TSelf>? elseBody = null)
         {
             Line($"#ifdef {macro}");
@@ -33,49 +50,51 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
-        // using namespace ...
+        /// <summary>
+        /// Writes a using namespace directive.
+        /// </summary>
         public TSelf UsingNamespace(string ns) => Line($"using namespace {ns};");
 
-        // namespace a::b { ... }
+        /// <summary>
+        /// Writes a namespace declaration.
+        /// </summary>
         public TSelf Namespace(string fullyQualified, Action<TSelf> body)
         {
             Line($"namespace {fullyQualified}").Block(body, trailingNewLine: true);
-            Line(); // blank after
+            Line();
             return (TSelf)this;
         }
 
-        // extern "C"/"C++" expr or block
+        /// <summary>
+        /// Writes an extern linkage expression.
+        /// </summary>
         public TSelf Extern(string linkage, Action<TSelf> expr)
             => Append($"extern \"{linkage}\" ").Block(expr);
 
+        /// <summary>
+        /// Writes an extern linkage block.
+        /// </summary>
         public TSelf ExternBlock(string linkage, Action<TSelf> body)
             => Line($"extern \"{linkage}\"").Block(body, trailingNewLine: true);
 
-        // Declarations / assignments
         /// <summary>
-        /// General-purpose C++ declaration builder, similar to Function(...).
-        /// Examples:
-        ///   Declare("int", "k", "42", modifiers: new[]{"static","constexpr"}, initStyle: InitStyle.Equals);
-        ///   Declare("std::array<int,3>", "a", "1, 2, 3", qualifiers: null, initStyle: InitStyle.Braces);
-        ///   Declare("float", "buf[16]", modifiers:new[]{"thread_local"}, attrSuffix:"alignas(64)");
+        /// Writes a general-purpose C++ variable declaration with optional modifiers, qualifiers, attributes, and initialization.
         /// </summary>
         public TSelf Declare(
             string type,
             string name,
             string? initializer = null,
-            IEnumerable<string>? modifiers = null,     // e.g. "static", "inline", "constexpr", "thread_local", "extern"
-            IEnumerable<string>? qualifiers = null,    // trailing qualifiers, e.g. "const", "volatile"
-            string? attrPrefix = null,                 // attributes before specifiers, e.g. "[[maybe_unused]]"
-            string? attrSuffix = null,                 // attributes after the declarator, e.g. "alignas(64)"
+            IEnumerable<string>? modifiers = null,
+            IEnumerable<string>? qualifiers = null,
+            string? attrPrefix = null,
+            string? attrSuffix = null,
             InitStyle initStyle = InitStyle.Equals,
             bool endWithSemicolon = true
         )
         {
-            // Prefix attributes (e.g. [[nodiscard]])
             if (!string.IsNullOrWhiteSpace(attrPrefix))
                 Append(attrPrefix).Append(" ");
 
-            // Modifiers/specifiers (emit in caller-provided order)
             if (modifiers is not null)
             {
                 var mods = string.Join(" ", modifiers.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -83,11 +102,9 @@ namespace codegencore.Writers.Lang
                     Append(mods).Append(" ");
             }
 
-            // Type
             if (!string.IsNullOrWhiteSpace(type))
                 Append(type).Append(" ");
 
-            // Trailing qualifiers (e.g. const, volatile)
             if (qualifiers is not null)
             {
                 var quals = string.Join(" ", qualifiers.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -95,14 +112,11 @@ namespace codegencore.Writers.Lang
                     Append(quals).Append(" ");
             }
 
-            // Name
             Append(name);
 
-            // Suffix attributes (e.g. alignas(64))
             if (!string.IsNullOrWhiteSpace(attrSuffix))
                 Append(" ").Append(attrSuffix);
 
-            // Initializer
             if (initStyle != InitStyle.None && !string.IsNullOrWhiteSpace(initializer))
             {
                 switch (initStyle)
@@ -117,7 +131,9 @@ namespace codegencore.Writers.Lang
             return (TSelf)this;
         }
 
-        // Convenience helpers for common init styles
+        /// <summary>
+        /// Writes a declaration with equals-style initialization.
+        /// </summary>
         public TSelf DeclareEq(string type, string name, string expr,
             IEnumerable<string>? modifiers = null,
             IEnumerable<string>? qualifiers = null,
@@ -126,6 +142,9 @@ namespace codegencore.Writers.Lang
             bool endWithSemicolon = true)
             => Declare(type, name, expr, modifiers, qualifiers, attrPrefix, attrSuffix, InitStyle.Equals, endWithSemicolon);
 
+        /// <summary>
+        /// Writes a declaration with parentheses-style initialization.
+        /// </summary>
         public TSelf DeclareParens(string type, string name, string args,
             IEnumerable<string>? modifiers = null,
             IEnumerable<string>? qualifiers = null,
@@ -134,6 +153,9 @@ namespace codegencore.Writers.Lang
             bool endWithSemicolon = true)
             => Declare(type, name, args, modifiers, qualifiers, attrPrefix, attrSuffix, InitStyle.Parens, endWithSemicolon);
 
+        /// <summary>
+        /// Writes a declaration with brace-style initialization.
+        /// </summary>
         public TSelf DeclareBraces(string type, string name, string elements,
             IEnumerable<string>? modifiers = null,
             IEnumerable<string>? qualifiers = null,
@@ -142,13 +164,15 @@ namespace codegencore.Writers.Lang
             bool endWithSemicolon = true)
             => Declare(type, name, elements, modifiers, qualifiers, attrPrefix, attrSuffix, InitStyle.Braces, endWithSemicolon);
 
-
-        // struct Foo { ... };
+        /// <summary>
+        /// Writes a struct declaration.
+        /// </summary>
         public TSelf Struct(string name, Action<TSelf> body)
             => Line($"struct {name}").Block(body).Line(";");
 
-        // enum Bar { ... };
-
+        /// <summary>
+        /// Writes an enum class declaration with optional underlying type.
+        /// </summary>
         public TSelf Enum(string name, IEnumerable<EnumMember> members, string? underlying = null)
         {
             var list = members.ToList();
@@ -175,7 +199,9 @@ namespace codegencore.Writers.Lang
         public TSelf Enum(string name, IEnumerable<string> memberNames)
             => Enum(name, memberNames.Select(n => new EnumMember(n)));
 
-        // { a, b, c }
+        /// <summary>
+        /// Writes a brace-enclosed initializer list.
+        /// </summary>
         public TSelf InitList(IEnumerable<string> items)
             => Append("{").AppendJoin(items).Append("}");
     }

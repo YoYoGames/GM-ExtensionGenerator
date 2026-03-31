@@ -2,6 +2,9 @@
 
 namespace extgen.Models.Config.Build
 {
+    /// <summary>
+    /// Configuration for Apple platform (iOS/tvOS) build and packaging settings.
+    /// </summary>
     public sealed class AppleBuildConfig
     {
         /// <summary>Default packaging config used by xcframework scripts.</summary>
@@ -13,7 +16,7 @@ namespace extgen.Models.Config.Build
         public bool BuildSimulator { get; set; } = true;
 
         /// <summary>
-        /// Apple simulator arch selection. Swift + multiple arch has caveats; you can drive this from presets.
+        /// Apple simulator architecture selection. Swift with multiple architectures may require additional configuration.
         /// </summary>
         [JsonPropertyName("simArm64")] public bool SimArm64 { get; set; } = true;
         [JsonPropertyName("simX64")] public bool SimX64 { get; set; } = false;

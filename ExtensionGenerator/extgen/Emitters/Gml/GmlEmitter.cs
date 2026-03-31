@@ -10,6 +10,9 @@ using System.Collections.Immutable;
 
 namespace extgen.Emitters.Gml
 {
+    /// <summary>
+    /// Generates GameMaker Language (GML) wrapper code and extension interface.
+    /// </summary>
     public sealed class GmlEmitter(GmlEmitterSettings settings) : IIrEmitter
     {
         private const string InternalArgBuffer = "__args_buffer";
@@ -22,6 +25,11 @@ namespace extgen.Emitters.Gml
         private const string ExtCoreFunctionRegister = "__ext_core_function_register";
         private const string ExtCoreFunctionDispatcher = "__GMNativeFunctionDispatcher";
 
+        /// <summary>
+        /// Emits GML code for the given compilation unit.
+        /// </summary>
+        /// <param name="comp">The IR compilation containing functions, structs, and types to emit.</param>
+        /// <param name="dir">The output directory for generated files.</param>
         public void Emit(IrCompilation comp, string dir)
         {
             var ctx = new GmlEmitterContext(comp.Name, settings);
@@ -40,10 +48,6 @@ namespace extgen.Emitters.Gml
             }
         }
 
-        // ============================================================
-        // Top-level emission
-        // ============================================================
-
         private static void EmitAll(GmlEmitterContext ctx, IrCompilation c, IIrTypeEnumResolver enums, GmlWriter w)
         {
             w.Comment("##### extgen :: Auto-generated file do not edit!! #####").Line();
@@ -56,10 +60,6 @@ namespace extgen.Emitters.Gml
 
             EmitHandlerRegistration(c, w);
         }
-
-        // ============================================================
-        // Higher level
-        // ============================================================
 
         private static void EmitFunctions(GmlEmitterContext ctx, ImmutableArray<IrFunction> funcs, IIrTypeEnumResolver enums, GmlWriter w)
         {
@@ -139,10 +139,6 @@ namespace extgen.Emitters.Gml
                 });
             }
         }
-
-        // ============================================================
-        // Lower level
-        // ============================================================
 
         private static void EmitConstant(IrConstant cst, GmlWriter w)
             => w.Line($"#macro {cst.Name} {cst.Literal}");
@@ -312,7 +308,6 @@ namespace extgen.Emitters.Gml
             if (usesDynamic)
                 body.Assign("__decoders", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
 
-            // --- encode params ---
             if (needArgsBuf)
             {
                 body.Assign(InternalArgBuffer, expr => expr.Call(ExtCoreArgsBuffer, []), VariableScope.Local).Line();
@@ -324,11 +319,9 @@ namespace extgen.Emitters.Gml
                 }
             }
 
-            // --- prepare ret buffer ---
             if (needRetBuf)
                 body.Assign(InternalRetBuffer, expr => expr.Call(ExtCoreRetBuffer, Array.Empty<string>()), VariableScope.Local).Line();
 
-            // --- external call ---
             List<string> args = [];
             if (needArgsBuf)
             {
@@ -345,7 +338,6 @@ namespace extgen.Emitters.Gml
 
             body.Assign("_return_value", expr => expr.Call($"__{fn.Name}", [.. args]), VariableScope.Local).Line();
 
-            // --- decode result ---
             if (needRetBuf)
             {
                 body.Assign("_result", "undefined", VariableScope.Local);
@@ -357,10 +349,6 @@ namespace extgen.Emitters.Gml
                 body.Line("return _return_value;");
             }
         }
-
-        // ============================================================
-        // Encode / Decode helpers
-        // ============================================================
 
         private static void WriteValue(GmlEmitterContext ctx, IIrTypeEnumResolver enums, GmlWriter w, string id, IrType t, string buf, string where)
         {
@@ -421,7 +409,7 @@ namespace extgen.Emitters.Gml
             switch (kind)
             {
                 case BuiltinKind.String:
-                    // write length + payload (you already do this)
+                    // write length + payload
                     w.Call("buffer_write", buf, "buffer_u32", $"string_byte_length({id})").Line(";");
                     w.Call("buffer_write", buf, GmlBufCode(new IrType.Builtin(BuiltinKind.String)), id).Line(";");
                     return;
@@ -515,7 +503,7 @@ namespace extgen.Emitters.Gml
 
         private static void ReadBuiltin(GmlWriter w, string id, BuiltinKind kind, string buf)
         {
-            // your string layout: skip length then read string
+            // string layout: skip length then read string
             if (kind == BuiltinKind.String)
                 w.Call("buffer_read", buf, "buffer_u32").Line(";");
 
@@ -542,16 +530,12 @@ namespace extgen.Emitters.Gml
                     w.Assign(id, expr => expr.Call("buffer_read", buf, GmlBufCode(new IrType.Builtin(kind))));
                     return;
 
-                // Buffer/function are not read directly from ret buffer in your current design
-                // (buffers are queued; functions come through dispatcher system).
+                // Buffer/function are not read directly from ret buffer
+                // (buffers are queued; functions come through dispatcher system)
                 default:
                     throw new NotSupportedException($"GML emitter: builtin read kind {kind} not supported.");
             }
         }
-
-        // ============================================================
-        // Optional helpers
-        // ============================================================
 
         private static void WriteOptional(GmlEmitterContext ctx, IIrTypeEnumResolver enums, GmlWriter w, string id, IrType inner, string buf, string where)
         {
@@ -575,10 +559,6 @@ namespace extgen.Emitters.Gml
                 elseBody.Assign(id, "undefined");
             });
         }
-
-        // ============================================================
-        // Validation + buffer code mapping
-        // ============================================================
 
         private static string EmitCheck(string id, IrType t, string where = "_where")
         {
@@ -627,8 +607,8 @@ namespace extgen.Emitters.Gml
                 IrType.Named { Kind: NamedKind.Struct, Name: var name } =>
                     $"if ({id}.__uid != {StringHash.ToUInt32(name)}) show_error($\"{{{where}}} :: {id} expected {name}\", true);",
 
-                // Enums in your GML surface are usually strings or numbers depending on your design.
-                // Here we DON'T enforce enum literals, just type correctness in WriteValue for underlying.
+                // Enums in GML surface are usually strings or numbers.
+                // We don't enforce enum literals, just type correctness in WriteValue for underlying.
                 IrType.Named { Kind: NamedKind.Enum } =>
                     string.Empty,
 
@@ -659,10 +639,10 @@ namespace extgen.Emitters.Gml
                 BuiltinKind.Float32 => "buffer_f32",
                 BuiltinKind.Float64 => "buffer_f64",
 
-                // You do length+payload yourself, but you still call buffer_write/read with this:
+                // length+payload is handled separately, but buffer_write/read still use this
                 BuiltinKind.String => "buffer_string",
 
-                // function handles and buffers are passed as u64 handles in your design
+                // function handles and buffers are passed as u64 handles
                 BuiltinKind.Function => "buffer_u64",
                 BuiltinKind.Buffer => "buffer_u64",
 
