@@ -276,6 +276,7 @@ namespace extgen.Parsing.Gmidl
                 GMIDLPrimitive.CString => IrType.String,
 
                 GMIDLPrimitive.Function => IrType.Function,
+                GMIDLPrimitive.Pointer => IrType.Pointer,
 
                 // Dynamic-ish
                 GMIDLPrimitive.Array => IrType.AnyArray,

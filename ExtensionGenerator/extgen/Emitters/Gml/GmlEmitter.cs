@@ -1,4 +1,4 @@
-using codegencore.Models;
+﻿using codegencore.Models;
 using codegencore.Writers.JSDoc;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Doc;
@@ -418,6 +418,10 @@ namespace extgen.Emitters.Gml
                     w.Call($"__{ctx.ExtName}_queue_buffer", $"buffer_get_address({id})", $"buffer_get_size({id})").Line(";");
                     return;
 
+                case BuiltinKind.Pointer:
+                    w.Call("buffer_write", buf, "buffer_u64", $"int64({id})").Line(";");
+                    return;
+
                 case BuiltinKind.Function:
                     w.Assign($"{id}_handle", expr => expr.Call(ExtCoreFunctionRegister, id, "__dispatcher"), VariableScope.Local);
                     w.Call("buffer_write", buf, "buffer_u64", $"{id}_handle").Line(";");
@@ -586,6 +590,9 @@ namespace extgen.Emitters.Gml
                 IrType.Builtin { Kind: BuiltinKind.Buffer } =>
                     $"if (!buffer_exists({id})) show_error($\"{{{where}}} :: {id} expected Id.Buffer\", true);",
 
+                IrType.Builtin { Kind: BuiltinKind.Pointer } =>
+                    $"if (!is_ptr({id})) show_error($\"{{{where}}} :: {id} expected ptr\", true);",
+
                 IrType.Builtin { Kind: BuiltinKind.Function } =>
                     $"if (!is_callable({id})) show_error($\"{{{where}}} :: {id} expected callable type\", true);",
 
@@ -644,6 +651,7 @@ namespace extgen.Emitters.Gml
 
                 // function handles and buffers are passed as u64 handles
                 BuiltinKind.Function => "buffer_u64",
+                BuiltinKind.Pointer => "buffer_u64",
                 BuiltinKind.Buffer => "buffer_u64",
 
                 _ => throw new NotSupportedException($"GML buffer code: builtin {b.Kind} not supported.")

@@ -1,4 +1,4 @@
-﻿using extgen.Models;
+using extgen.Models;
 using extgen.Models.Config;
 using extgen.Models.Config.Targets.Consoles;
 using extgen.Models.Config.Targets.Desktop;
