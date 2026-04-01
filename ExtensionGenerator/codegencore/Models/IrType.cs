@@ -34,6 +34,7 @@
         public static readonly IrType Void = new Builtin(BuiltinKind.Void);
 
         public static readonly IrType Buffer = new Builtin(BuiltinKind.Buffer);
+        public static readonly IrType Pointer = new Builtin(BuiltinKind.Pointer);
         public static readonly IrType Function = new Builtin(BuiltinKind.Function);
 
         public static readonly IrType Any = new Builtin(BuiltinKind.Any);
@@ -80,6 +81,7 @@
 
         // Special builtins (still just identity; semantics decided by generator)
         Buffer,
+        Pointer,
         Function,
 
         // Dynamic-ish builtins (identity only)

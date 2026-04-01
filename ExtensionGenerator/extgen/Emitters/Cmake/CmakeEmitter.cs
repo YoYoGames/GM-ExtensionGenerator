@@ -1,4 +1,4 @@
-﻿using extgen.Models;
+using extgen.Models;
 using extgen.Models.Config;
 using extgen.Models.Config.Targets.Consoles;
 using extgen.Models.Config.Targets.Desktop;
@@ -69,26 +69,73 @@ namespace extgen.Emitters.Cmake
 
         private void EmitScripts(CmakeEmitterContext ctx, CmakeLayout layout)
         {
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_xcframework.cmake"));
-
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_integrate_gamemaker_xcode.cmake", Path.Combine(layout.ScriptsDir, "extgen_integrate_gamemaker_xcode.cmake"));
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_integrate_gamemaker_xcode.rb", Path.Combine(layout.ScriptsDir, "extgen_integrate_gamemaker_xcode.rb"));
-            ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.Gemfile", Path.Combine(layout.ScriptsDir, "Gemfile"));
-
             var targets = config.Targets;
-            ResourceWriter.WriteTemplatedTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.extgen_package_xcframework.cmake", Path.Combine(layout.ScriptsDir, "extgen_package_xcframework.cmake"), new Dictionary<string, string>
-            {
-                // Frameworks
-                ["EXTGEN_IOS_OUTPUT"] = targets.Ios?.Output ?? "../iOSSourceFromMac",
-                ["EXTGEN_TVOS_OUTPUT"] = targets.Tvos?.Output ?? "../tvOSSourceFromMac",
-            });
 
-            if (targets.Switch is SwitchTargetConfig { Enabled: true }) 
+            // Desktop
+            EmitPlatformScripts(layout.ScriptsDir, "android",  postProject: true, postBuild: true);
+            EmitPlatformScripts(layout.ScriptsDir, "windows",  postProject: true, postBuild: true);
+            EmitPlatformScripts(layout.ScriptsDir, "macos",    postProject: true, postBuild: true);
+            EmitPlatformScripts(layout.ScriptsDir, "linux",    postProject: true, postBuild: true);
+
+            // Apple mobile
+            EmitPlatformScripts(layout.ScriptsDir, "ios",  postProject: true, postBuild: false);
+            EmitPlatformScripts(layout.ScriptsDir, "tvos", postProject: true, postBuild: false);
+
+            var appleMobileDir = Path.Combine(layout.ScriptsDir, "apple_mobile");
+            EmitScriptResource("apple_mobile.extgen_post_build.cmake",         appleMobileDir, "extgen_post_build.cmake");
+            EmitScriptResource("apple_mobile.extgen_xcframework_targets.cmake", appleMobileDir, "extgen_xcframework_targets.cmake");
+            EmitScriptResource("apple_mobile.extgen_xcframework_package.cmake", appleMobileDir, "extgen_xcframework_package.cmake");
+            EmitScriptResource("apple_mobile.extgen_xcode_integrate.cmake",     appleMobileDir, "extgen_xcode_integrate.cmake");
+            EmitScriptResource("apple_mobile.extgen_xcode_integrate.rb",        appleMobileDir, "extgen_xcode_integrate.rb");
+            EmitScriptResource("apple_mobile.Gemfile",                          appleMobileDir, "Gemfile");
+
+            // Switch
+            if (targets.Switch is SwitchTargetConfig { Enabled: true })
             {
-                var switchScripts = Path.Combine(layout.ScriptsDir, "switch");
-                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.switch.extgen_target_setup.cmake", Path.Combine(switchScripts, "extgen_target_setup.cmake"));
-                ResourceWriter.WriteTextResource(typeof(Program).Assembly, "extgen.Resources.Cmake.cmake.switch.Directory.Build.props.in", Path.Combine(switchScripts, "Directory.Build.props.in"));
+                var switchDir = Path.Combine(layout.ScriptsDir, "switch");
+                EmitPlatformScripts(layout.ScriptsDir, "switch", postProject: true, postBuild: true);
+                EmitScriptResource("switch.extgen_pre_project.cmake", switchDir, "extgen_pre_project.cmake");
+                EmitScriptResource("switch.Directory.Build.props.in", switchDir, "Directory.Build.props.in");
             }
+
+            // PS4
+            if (targets.Ps4 is Ps4TargetConfig { Enabled: true })
+            {
+                EmitPlatformScripts(layout.ScriptsDir, "ps4", postProject: true, postBuild: true);
+                EmitScriptResource("ps4.extgen_pre_project.cmake", Path.Combine(layout.ScriptsDir, "ps4"), "extgen_pre_project.cmake");
+            }
+
+            // PS5
+            if (targets.Ps5 is Ps5TargetConfig { Enabled: true })
+            {
+                EmitPlatformScripts(layout.ScriptsDir, "ps5", postProject: true, postBuild: true);
+                EmitScriptResource("ps5.extgen_pre_project.cmake", Path.Combine(layout.ScriptsDir, "ps5"), "extgen_pre_project.cmake");
+            }
+
+            // Xbox - one config entry covers both Xbox One and Scarlett
+            if (targets.Xbox is XboxTargetConfig { Enabled: true })
+            {
+                EmitPlatformScripts(layout.ScriptsDir, "xbox_one",      postProject: true, postBuild: true);
+                EmitScriptResource("xbox_one.extgen_pre_project.cmake",      Path.Combine(layout.ScriptsDir, "xbox_one"),      "extgen_pre_project.cmake");
+
+                EmitPlatformScripts(layout.ScriptsDir, "xbox_scarlett", postProject: true, postBuild: true);
+                EmitScriptResource("xbox_scarlett.extgen_pre_project.cmake", Path.Combine(layout.ScriptsDir, "xbox_scarlett"), "extgen_pre_project.cmake");
+            }
+        }
+
+        private void EmitPlatformScripts(string scriptsDir, string platform, bool postProject, bool postBuild)
+        {
+            var dir = Path.Combine(scriptsDir, platform);
+            if (postProject) EmitScriptResource($"{platform}.extgen_post_project.cmake", dir, "extgen_post_project.cmake");
+            if (postBuild) EmitScriptResource($"{platform}.extgen_post_build.cmake", dir, "extgen_post_build.cmake");
+        }
+
+        private static void EmitScriptResource(string resourceSuffix, string destDir, string fileName)
+        {
+            ResourceWriter.WriteTextResource(
+                typeof(Program).Assembly,
+                $"extgen.Resources.Cmake.cmake.{resourceSuffix}",
+                Path.Combine(destDir, fileName));
         }
 
         private static void EmitTemplates(CmakeEmitterContext ctx, CmakeLayout layout)

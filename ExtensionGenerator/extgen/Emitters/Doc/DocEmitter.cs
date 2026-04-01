@@ -200,6 +200,8 @@ namespace extgen.Emitters.Doc
                     BuiltinKind.Function => "Function",
                     BuiltinKind.Buffer => "Buffer",
 
+                    BuiltinKind.Pointer => "Pointer",
+
                     BuiltinKind.Void => "Undefined",
 
                     _ => "Any"

@@ -50,9 +50,7 @@ namespace extgen.Parsing.Gmidl
             ["func"] = GMIDLPrimitive.Function,
             ["function"] = GMIDLPrimitive.Function,
 
-            // not present in all GMIDLPrimitive versions,
-            // but kept here as hints:
-            ["buffer"] = GMIDLPrimitive.Pointer, // we'll special-case to IrType.Buffer
+            ["pointer"] = GMIDLPrimitive.Pointer,
         };
 
         private static readonly Dictionary<string, IrType> _hintToIrBuiltin = new(StringComparer.OrdinalIgnoreCase)
@@ -276,6 +274,7 @@ namespace extgen.Parsing.Gmidl
                 GMIDLPrimitive.CString => IrType.String,
 
                 GMIDLPrimitive.Function => IrType.Function,
+                GMIDLPrimitive.Pointer => IrType.Pointer,
 
                 // Dynamic-ish
                 GMIDLPrimitive.Array => IrType.AnyArray,

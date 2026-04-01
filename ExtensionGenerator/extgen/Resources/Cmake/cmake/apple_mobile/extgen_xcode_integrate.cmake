@@ -1,4 +1,4 @@
-# extgen_integrate_gamemaker_xcode.cmake
+# Apple mobile: -P script that bootstraps Bundler and runs the Xcode project integrator
 
 if(NOT DEFINED EXT_REPO_ROOT OR EXT_REPO_ROOT STREQUAL "")
   message(FATAL_ERROR "EXT_REPO_ROOT is empty (expected repo root path).")
@@ -11,7 +11,7 @@ if(NOT RUBY_EXECUTABLE)
 endif()
 
 # --- Where the Gemfile lives (repo) ---
-set(_GEMFILE "${EXT_REPO_ROOT}/cmake/Gemfile")
+set(_GEMFILE "${EXT_REPO_ROOT}/cmake/apple_mobile/Gemfile")
 if(NOT EXISTS "${_GEMFILE}")
   message(FATAL_ERROR "Gemfile not found: ${_GEMFILE}")
 endif()
@@ -95,7 +95,7 @@ endif()
 # --- Run integrator using the bundled gems ---
 execute_process(
   COMMAND ${_ENV_CMD} "${RUBY_EXECUTABLE}" -S bundle exec "${RUBY_EXECUTABLE}"
-    "${CMAKE_CURRENT_LIST_DIR}/extgen_integrate_gamemaker_xcode.rb"
+    "${CMAKE_CURRENT_LIST_DIR}/extgen_xcode_integrate.rb"
       --gm "${EXT_GM_XCODEPROJ}"
       --gm-target "${EXT_GM_APP_TARGET}"
       --ext-project "${EXT_EXT_XCODEPROJ}"

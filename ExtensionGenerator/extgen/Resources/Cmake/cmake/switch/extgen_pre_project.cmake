@@ -48,5 +48,5 @@ if(EXTGEN_PLATFORM_SWITCH)
   # Suppress Clang warning about GNU extension (##__VA_ARGS__)
   # Nintendo Switch uses clang-cl which supports this extension
   # Use -Xclang to pass flag directly to Clang compiler frontend
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -Wno-gnu-zero-variadic-macro-arguments" CACHE STRING "" FORCE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -Wno-gnu-zero-variadic-macro-arguments -fexceptions" CACHE STRING "" FORCE)
 endif()

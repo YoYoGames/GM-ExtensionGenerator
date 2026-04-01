@@ -48,6 +48,12 @@ namespace extgen.Emitters.Cpp
                 return $"{_runtime.BufferQueueField}.front()";
             }
 
+            if (t is IrType.Builtin { Kind: BuiltinKind.Pointer })
+            {
+                var pType = _typeMap.Map(t, owned: false);
+                return $"reinterpret_cast<{pType}>({ns}::readValue<std::uint64_t>({bufferVar}))";
+            }
+
             if (t is IrType.Builtin { Kind: BuiltinKind.Function })
             {
                 return $"{ns}::readFunction({bufferVar}, &{_runtime.DispatchQueueField})";

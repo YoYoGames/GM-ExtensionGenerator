@@ -105,7 +105,7 @@ namespace extgen.TypeSystem.Cpp
                 BuiltinKind.AnyArray => owned ? $"{wireNs}::ArrayStream" : $"{wireNs}::GMArrayView",
                 BuiltinKind.AnyMap => owned ? $"{wireNs}::StructStream" : $"{wireNs}::GMObjectView",
 
-                // Buffer and Function types are not supported as owned/return types.
+                // Buffer, Pointer and Function types are not supported as owned/return types.
                 // Why? Buffers are transient handles that only exist during the call; returning one
                 // would leave GML with a dangling reference. Functions similarly can't be "returned"
                 // because they're callback handles managed by the GML runtime, not native code.
@@ -116,6 +116,10 @@ namespace extgen.TypeSystem.Cpp
                 BuiltinKind.Function => owned
                     ? throw new NotSupportedException("code emitter: function as owning/return type is not supported.")
                     : $"{wireNs}::GMFunction",
+
+                BuiltinKind.Pointer => owned
+                    ? throw new NotSupportedException("code emitter: pointer as owning/return type is not supported.") 
+                    : "void*",
 
                 _ => throw new NotSupportedException($"code emitter: builtin kind '{b.Kind}' is not supported.")
             };

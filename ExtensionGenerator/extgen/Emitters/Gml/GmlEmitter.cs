@@ -1,4 +1,4 @@
-using codegencore.Models;
+﻿using codegencore.Models;
 using codegencore.Writers.JSDoc;
 using codegencore.Writers.Lang;
 using extgen.Emitters.Doc;
@@ -150,7 +150,7 @@ namespace extgen.Emitters.Gml
         {
             w.JsDoc(builder =>
             {
-                builder.Returns(DocEmitter.JsDocType(new IrType.Named(NamedKind.Struct, s.Name)));
+                builder.Returns(JsDocType(new IrType.Named(NamedKind.Struct, s.Name)));
 
                 if (s.Hidden)
                     builder.Tag("ignore");
@@ -175,10 +175,10 @@ namespace extgen.Emitters.Gml
                     body.JsDoc(builder =>
                     {
                         foreach (var p in patchedFunc.Parameters)
-                            builder.Param(new ParamDoc(p.Name, DocEmitter.JsDocType(p.Type)));
+                            builder.Param(new ParamDoc(p.Name, JsDocType(p.Type)));
 
                         if (!patchedFunc.ReturnType.IsVoid())
-                            builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
+                            builder.Returns(JsDocType(fn.ReturnType));
 
                         if (fn.Hidden)
                             builder.Tag("ignore");
@@ -280,10 +280,10 @@ namespace extgen.Emitters.Gml
             w.JsDoc(builder =>
             {
                 foreach (var p in fn.Parameters)
-                    builder.Param(new ParamDoc(p.Name, DocEmitter.JsDocType(p.Type)));
+                    builder.Param(new ParamDoc(p.Name, JsDocType(p.Type)));
 
                 if (!fn.ReturnType.IsVoid())
-                    builder.Returns(DocEmitter.JsDocType(fn.ReturnType));
+                    builder.Returns(JsDocType(fn.ReturnType));
 
                 if (fn.Hidden)
                     builder.Tag("ignore");
@@ -416,6 +416,10 @@ namespace extgen.Emitters.Gml
 
                 case BuiltinKind.Buffer:
                     w.Call($"__{ctx.ExtName}_queue_buffer", $"buffer_get_address({id})", $"buffer_get_size({id})").Line(";");
+                    return;
+
+                case BuiltinKind.Pointer:
+                    w.Call("buffer_write", buf, "buffer_u64", $"int64({id})").Line(";");
                     return;
 
                 case BuiltinKind.Function:
@@ -586,6 +590,9 @@ namespace extgen.Emitters.Gml
                 IrType.Builtin { Kind: BuiltinKind.Buffer } =>
                     $"if (!buffer_exists({id})) show_error($\"{{{where}}} :: {id} expected Id.Buffer\", true);",
 
+                IrType.Builtin { Kind: BuiltinKind.Pointer } =>
+                    $"if (!is_ptr({id})) show_error($\"{{{where}}} :: {id} expected ptr\", true);",
+
                 IrType.Builtin { Kind: BuiltinKind.Function } =>
                     $"if (!is_callable({id})) show_error($\"{{{where}}} :: {id} expected callable type\", true);",
 
@@ -644,10 +651,18 @@ namespace extgen.Emitters.Gml
 
                 // function handles and buffers are passed as u64 handles
                 BuiltinKind.Function => "buffer_u64",
+                BuiltinKind.Pointer => "buffer_u64",
                 BuiltinKind.Buffer => "buffer_u64",
 
                 _ => throw new NotSupportedException($"GML buffer code: builtin {b.Kind} not supported.")
             };
+        }
+
+        private static string JsDocType(IrType t)
+        {
+            if (t is IrType.Builtin and { Kind: BuiltinKind.Buffer }) return "Id.Buffer";
+
+            return DocEmitter.JsDocType(t);
         }
     }
 }
