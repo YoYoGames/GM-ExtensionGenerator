@@ -233,16 +233,17 @@ namespace extgen.Parsing.Validation
         /// <inheritdoc />
         public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
         {
-            List<IrFunction> allFunction = [.. comp.GetAllFunctions(IrFunctionUtil.PatchStructMethod)];
+            // Check global functions only
+            List<IrFunction> fncs = [.. comp.Functions];
 
-            if (allFunction.Count <= 1)
+            if (fncs.Count <= 1)
                 yield break;
 
             static string GetPrefix(string name) => name.Split('_', 2)[0];
 
-            var expected = GetPrefix(allFunction[0].Name);
+            var expected = GetPrefix(fncs[0].Name);
 
-            foreach (var fn in allFunction)
+            foreach (var fn in fncs)
             {
                 var prefix = GetPrefix(fn.Name);
                 if (!StringComparer.Ordinal.Equals(prefix, expected))
