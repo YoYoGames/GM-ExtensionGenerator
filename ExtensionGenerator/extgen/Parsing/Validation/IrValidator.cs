@@ -1,6 +1,5 @@
 ﻿using codegencore.Models;
 using extgen.Models;
-using extgen.Models.Utils;
 using System.Collections.Immutable;
 
 namespace extgen.Parsing.Validation

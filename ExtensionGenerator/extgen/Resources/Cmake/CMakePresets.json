@@ -361,46 +361,39 @@
     },
 
     {
-      "name": "ps-base-vs",
+      "name": "base-vs-ps4",
       "hidden": true,
       "inherits": "base-vs",
+      "architecture": { "value": "ORBIS", "strategy": "set" },
       "cacheVariables": {
-        "BUILD_SHARED_LIBS": "ON"
+        "BUILD_SHARED_LIBS": "ON",
+        "EXTGEN_PLATFORM_PS4": "ON",
+        "EXT_OUTPUT_DIR": "${EXTGEN_PS4_OUTPUT_FOLDER}"
       }
     },
 
     {
-      "name": "ps4-debug",
-      "displayName": "PlayStation 4 (ORBIS) Debug",
-      "hidden": ${EXTGEN_PS4_DISABLED},
-      "inherits": "ps-base-vs",
-      "architecture": { "value": "ORBIS" },
-      "cacheVariables": { "EXT_OUTPUT_DIR": "${EXTGEN_PS4_OUTPUT_FOLDER}" }
+      "name": "base-vs-ps5",
+      "hidden": true,
+      "inherits": "base-vs",
+      "architecture": { "value": "Prospero", "strategy": "set" },
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "ON",
+        "EXTGEN_PLATFORM_PS5": "ON",
+        "EXT_OUTPUT_DIR": "${EXTGEN_PS5_OUTPUT_FOLDER}"
+      }
     },
-    {
-      "name": "ps4-release",
-      "displayName": "PlayStation 4 (ORBIS) Release",
-      "hidden": ${EXTGEN_PS4_DISABLED},
-      "inherits": "ps-base-vs",
-      "architecture": { "value": "ORBIS" },
-      "cacheVariables": { "EXT_OUTPUT_DIR": "${EXTGEN_PS4_OUTPUT_FOLDER}" }
-    },
-
     {
       "name": "ps5-debug",
       "displayName": "PlayStation 5 (Prospero) Debug",
       "hidden": ${EXTGEN_PS5_DISABLED},
-      "inherits": "ps-base-vs",
-      "architecture": { "value": "Prospero" },
-      "cacheVariables": { "EXT_OUTPUT_DIR": "${EXTGEN_PS5_OUTPUT_FOLDER}" }
+      "inherits": "base-vs-ps5"
     },
     {
       "name": "ps5-release",
       "displayName": "PlayStation 5 (Prospero) Release",
       "hidden": ${EXTGEN_PS5_DISABLED},
-      "inherits": "ps-base-vs",
-      "architecture": { "value": "Prospero" },
-      "cacheVariables": { "EXT_OUTPUT_DIR": "${EXTGEN_PS5_OUTPUT_FOLDER}" }
+      "inherits": "base-vs-ps5"
     },
 
     {
@@ -443,9 +436,6 @@
 
     { "name": "xbox-scarlett-debug",  "configurePreset": "xbox-scarlett-debug",  "configuration": "Debug" },
     { "name": "xbox-scarlett-release","configurePreset": "xbox-scarlett-release","configuration": "Release" },
-
-    { "name": "ps4-debug",   "configurePreset": "ps4-debug",   "configuration": "Debug" },
-    { "name": "ps4-release", "configurePreset": "ps4-release", "configuration": "Release" },
 
     { "name": "ps5-debug",   "configurePreset": "ps5-debug",   "configuration": "Debug" },
     { "name": "ps5-release", "configurePreset": "ps5-release", "configuration": "Release" },

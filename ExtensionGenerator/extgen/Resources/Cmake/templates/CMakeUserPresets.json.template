@@ -7,6 +7,39 @@
   },
   "configurePresets": [
     {
+      "name": "ps4-paths",
+      "description": "PlayStation 4 SDK compiler and linker paths — edit to match your SCE_ORBIS_SDK_DIR installation",
+      "hidden": true,
+      "cacheVariables": {
+        "__comment_compiler_paths": "--- Compiler and linker paths (orbis-clang / orbis-ld from SCE_ORBIS_SDK_DIR) ---",
+        "CMAKE_C_COMPILER": {
+          "type": "FILEPATH",
+          "value": "$env{SCE_ORBIS_SDK_DIR}/path/to/orbis-clang.exe"
+        },
+        "CMAKE_CXX_COMPILER": {
+          "type": "FILEPATH",
+          "value": "$env{SCE_ORBIS_SDK_DIR}/path/to/orbis-clang++.exe"
+        },
+        "CMAKE_LINKER": {
+          "type": "FILEPATH",
+          "value": "$env{SCE_ORBIS_SDK_DIR}/path/to/orbis-ld.exe"
+        }
+      }
+    },
+    {
+      "name": "ps4-debug",
+      "displayName": "PlayStation 4 (ORBIS) Debug",
+      "inherits": [ "base-vs-ps4", "ps4-paths" ],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "ps4-release",
+      "displayName": "PlayStation 4 (ORBIS) Release",
+      "inherits": [ "base-vs-ps4", "ps4-paths" ],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
       "name": "switch-paths",
       "hidden": true,
       "cacheVariables": {
@@ -45,6 +78,9 @@
     }
   ],
   "buildPresets": [
+    { "name": "ps4-debug",   "configurePreset": "ps4-debug",   "configuration": "Debug" },
+    { "name": "ps4-release", "configurePreset": "ps4-release", "configuration": "Release" },
+
     {
       "name": "switch-debug",
       "configurePreset": "switch-debug",
