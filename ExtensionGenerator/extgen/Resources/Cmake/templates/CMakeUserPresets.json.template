@@ -11,7 +11,6 @@
       "description": "PlayStation 4 SDK compiler and linker paths — edit to match your SCE_ORBIS_SDK_DIR installation",
       "hidden": true,
       "cacheVariables": {
-        "__comment_compiler_paths": "--- Compiler and linker paths (orbis-clang / orbis-ld from SCE_ORBIS_SDK_DIR) ---",
         "CMAKE_C_COMPILER": {
           "type": "FILEPATH",
           "value": "$env{SCE_ORBIS_SDK_DIR}/path/to/orbis-clang.exe"
@@ -40,13 +39,41 @@
     },
 
     {
+      "name": "ps5-paths",
+      "description": "PlayStation 5 SDK compiler and linker paths — edit to match your SCE_PROSPERO_SDK_DIR installation",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": {
+          "type": "FILEPATH",
+          "value": "$env{SCE_PROSPERO_SDK_DIR}/path/to/prospero-clang.exe"
+        },
+        "CMAKE_CXX_COMPILER": {
+          "type": "FILEPATH",
+          "value": "$env{SCE_PROSPERO_SDK_DIR}/path/to/prospero-clang.exe"
+        },
+        "CMAKE_LINKER": {
+          "type": "FILEPATH",
+          "value": "$env{SCE_PROSPERO_SDK_DIR}/path/to/prospero-lld.exe"
+        }
+      }
+    },
+    {
+      "name": "ps5-debug",
+      "displayName": "PlayStation 5 (Prospero) Debug",
+      "inherits": [ "base-vs-ps5", "ps5-paths" ],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "ps5-release",
+      "displayName": "PlayStation 5 (Prospero) Release",
+      "inherits": [ "base-vs-ps5", "ps5-paths" ],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
       "name": "switch-paths",
       "hidden": true,
       "cacheVariables": {
-        "__comment_instructions": "=== REQUIRED: Configure these paths for your Nintendo SDK installation ===",
-        "__comment_note": "Edit paths below - they apply to both Debug and Release builds",
-
-        "__comment_compiler_paths": "--- Compiler paths (adjust for your SDK location) ---",
         "CMAKE_C_COMPILER": {
           "type": "FILEPATH",
           "value": "$env{NINTENDO_SDK_ROOT}/path/to/clang-cl.exe"
@@ -55,8 +82,6 @@
           "type": "FILEPATH",
           "value": "$env{NINTENDO_SDK_ROOT}/path/to/clang-cl.exe"
         },
-
-        "__comment_props_path": "--- SDK props file path (relative to NINTENDO_SDK_ROOT) ---",
         "NINTENDO_SDK_PROPS_PATH": "relative/path/to/ImportNintendoSdk.props"
       }
     },
@@ -80,6 +105,9 @@
   "buildPresets": [
     { "name": "ps4-debug",   "configurePreset": "ps4-debug",   "configuration": "Debug" },
     { "name": "ps4-release", "configurePreset": "ps4-release", "configuration": "Release" },
+
+    { "name": "ps5-debug",   "configurePreset": "ps5-debug",   "configuration": "Debug" },
+    { "name": "ps5-release", "configurePreset": "ps5-release", "configuration": "Release" },
 
     {
       "name": "switch-debug",

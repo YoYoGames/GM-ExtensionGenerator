@@ -384,19 +384,6 @@
       }
     },
     {
-      "name": "ps5-debug",
-      "displayName": "PlayStation 5 (Prospero) Debug",
-      "hidden": ${EXTGEN_PS5_DISABLED},
-      "inherits": "base-vs-ps5"
-    },
-    {
-      "name": "ps5-release",
-      "displayName": "PlayStation 5 (Prospero) Release",
-      "hidden": ${EXTGEN_PS5_DISABLED},
-      "inherits": "base-vs-ps5"
-    },
-
-    {
       "name": "base-vs-switch",
       "hidden": true,
       "inherits": "base-vs",
@@ -436,9 +423,6 @@
 
     { "name": "xbox-scarlett-debug",  "configurePreset": "xbox-scarlett-debug",  "configuration": "Debug" },
     { "name": "xbox-scarlett-release","configurePreset": "xbox-scarlett-release","configuration": "Release" },
-
-    { "name": "ps5-debug",   "configurePreset": "ps5-debug",   "configuration": "Debug" },
-    { "name": "ps5-release", "configurePreset": "ps5-release", "configuration": "Release" },
 
     {
       "name": "ios-xcframework-release",
