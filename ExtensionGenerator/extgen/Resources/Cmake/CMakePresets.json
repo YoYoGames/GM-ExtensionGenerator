@@ -333,6 +333,7 @@
       "hidden": ${EXTGEN_XBOX_DISABLED},
       "inherits": "base-vs",
       "architecture": { "value": "Gaming.Xbox.Scarlett.x64", "strategy": "set" },
+      "toolset": { "value": "v142" },
       "cacheVariables": { "EXTGEN_PLATFORM_XBOX_SCARLETT": "ON", "EXT_OUTPUT_DIR": "${EXTGEN_XBOX_OUTPUT_FOLDER}" }
     },
     {
@@ -341,6 +342,7 @@
       "hidden": ${EXTGEN_XBOX_DISABLED},
       "inherits": "base-vs",
       "architecture": { "value": "Gaming.Xbox.Scarlett.x64", "strategy": "set" },
+      "toolset": { "value": "v142" },
       "cacheVariables": { "EXTGEN_PLATFORM_XBOX_SCARLETT": "ON", "EXT_OUTPUT_DIR": "${EXTGEN_XBOX_OUTPUT_FOLDER}" }
     },
     {
@@ -349,6 +351,7 @@
       "hidden": ${EXTGEN_XBOX_DISABLED},
       "inherits": "base-vs",
       "architecture": { "value": "Gaming.Xbox.XboxOne.x64", "strategy": "set" },
+      "toolset": { "value": "v142" },
       "cacheVariables": { "EXTGEN_PLATFORM_XBOX_ONE": "ON", "EXT_OUTPUT_DIR": "${EXTGEN_XBOX_OUTPUT_FOLDER}" }
     },
     {
@@ -357,6 +360,7 @@
       "hidden": ${EXTGEN_XBOX_DISABLED},
       "inherits": "base-vs",
       "architecture": { "value": "Gaming.Xbox.XboxOne.x64", "strategy": "set" },
+      "toolset": { "value": "v142" },
       "cacheVariables": { "EXTGEN_PLATFORM_XBOX_ONE": "ON", "EXT_OUTPUT_DIR": "${EXTGEN_XBOX_OUTPUT_FOLDER}" }
     },
 
