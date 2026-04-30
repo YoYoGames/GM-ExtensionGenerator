@@ -31,7 +31,7 @@ All behavior is controlled via a **JSON config file** validated by an automatica
 
 ## ⬇️ Installation
 
-The latest available source code for this project has been automatically compiled and is available for download at: [https://github.com/YoYoGames/GM-ExtensionGenerator/releases/latest](https://github.com/YoYoGames/GM-ExtensionGenerator/releases/tag/nightly).
+The latest available source code for this project has been automatically compiled and is available for download at: [https://github.com/YoYoGames/GM-ExtensionGenerator/releases/tag/nightly](https://github.com/YoYoGames/GM-ExtensionGenerator/releases/tag/nightly).
 
 ---
 
