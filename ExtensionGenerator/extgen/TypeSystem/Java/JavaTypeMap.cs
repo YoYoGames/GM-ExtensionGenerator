@@ -69,9 +69,9 @@ namespace extgen.TypeSystem.Java
                 BuiltinKind.String => MapString(owned),
 
                 // Dynamic types: Any is GMValue, arrays/maps use generic containers
-                BuiltinKind.Any => "GMValue",
-                BuiltinKind.AnyArray => "java.util.List<GMValue>",
-                BuiltinKind.AnyMap => "java.util.Map<String, GMValue>",
+                BuiltinKind.Any => owned ? "GMExtWire.DataStream" : "GMValue",
+                BuiltinKind.AnyArray => owned ? "GMExtWire.ArrayStream" : "java.util.List<GMValue>",
+                BuiltinKind.AnyMap => owned ? "GMExtWire.StructStream" : "java.util.Map<String, GMValue>",
 
                 BuiltinKind.Function => "GMFunction",
                 BuiltinKind.Buffer => "java.nio.ByteBuffer",
