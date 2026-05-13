@@ -246,9 +246,10 @@ namespace extgen.Emitters.Android.Java
 
             bool needsEnum = c.Enums.Any();
             bool needsRecords = c.Structs.Any();
-
-            if (needsEnum) w.Import($"{pkg}.enums.*");
+            
             if (needsRecords) w.Import($"{pkg}.records.*");
+            if (needsRecords) w.Import($"{pkg}.codecs.*");
+            if (needsEnum) w.Import($"{pkg}.enums.*");
 
             w.Line();
 

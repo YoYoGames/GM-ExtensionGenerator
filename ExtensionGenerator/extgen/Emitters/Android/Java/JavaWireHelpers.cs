@@ -207,13 +207,13 @@ namespace extgen.Emitters.Android.Java
 
                 // Special builtins
                 IrType.Builtin { Kind: BuiltinKind.Any } =>
-                    $"{wire}.writeGMValue({bufferVar}, {valueExpr})",
+                    $"{valueExpr}.writeTo({bufferVar})",
 
                 IrType.Builtin { Kind: BuiltinKind.AnyArray } =>
-                    $"{wire}.writeGMArray({bufferVar}, {valueExpr})",
+                    $"{valueExpr}.writeTo({bufferVar})",
 
                 IrType.Builtin { Kind: BuiltinKind.AnyMap } =>
-                    $"{wire}.writeGMObject({bufferVar}, {valueExpr})",
+                    $"{valueExpr}.writeTo({bufferVar})",
 
                 _ => throw new NotSupportedException($"write unsupported type {t}")
             };

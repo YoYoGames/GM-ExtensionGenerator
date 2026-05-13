@@ -77,9 +77,9 @@ namespace extgen.TypeSystem.Kotlin
 
                 BuiltinKind.String => "String",
 
-                BuiltinKind.Any => "GMValue",
-                BuiltinKind.AnyArray => "List<GMValue>",
-                BuiltinKind.AnyMap => "Map<String, GMValue>",
+                BuiltinKind.Any => owned ? "GMExtWire.DataStream" : "GMValue",
+                BuiltinKind.AnyArray => owned ? "GMExtWire.ArrayStream" : "List<GMValue>",
+                BuiltinKind.AnyMap => owned ? "GMExtWire.StructStream" : "Map<String, GMValue>",
 
                 BuiltinKind.Function => "GMFunction",
 
