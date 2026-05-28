@@ -36,7 +36,7 @@ namespace extgen.Emitters.Android.Kotlin
             EmitJavaLayer(ctx, c, layout);
 
             // Kotlin shares artifacts but emits .kt instead of .java
-            FileEmitHelpers.WriteKotlin(layout.BaseDir, $"{c.Name}Interface.kt", w => EmitKotlinInterface(ctx, c, w));
+            FileEmitHelpers.WriteKotlin(layout.CodeGenDir, $"{c.Name}Interface.kt", w => EmitKotlinInterface(ctx, c, w));
 
             FileEmitHelpers.WriteKotlinIfMissing(layout.BaseDir, $"{c.Name}Kotlin.kt", w => EmitKotlinImpl(ctx, w));
         }
@@ -52,7 +52,6 @@ namespace extgen.Emitters.Android.Kotlin
 
             var common = new JavaCommonEmitter(javaCtx, javaTypeMap, bridge);
             common.EmitJavaArtifacts(c, layout);
-            common.EmitJavaInterface(c, layout);
             common.EmitInternal(c, layout);
             common.EmitJavaUserShell(c, layout);
         }

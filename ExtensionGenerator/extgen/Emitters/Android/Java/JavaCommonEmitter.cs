@@ -268,7 +268,7 @@ namespace extgen.Emitters.Android.Java
                     bridge.EmitFunctionBridge(ctx, fn, clsBody);
 
                 foreach (var cn in c.Constants)
-                    w.Const(typeMap.Map(cn.Type, false), cn.Name, cn.Literal, extraModifiers: ["public"]);
+                    w.Const(typeMap.Map(cn.Type, false), cn.Name, cn.Literal);
 
             },
             modifiers: ["public", "abstract"],
