@@ -36,7 +36,6 @@ namespace extgen.Emitters.Android.Kotlin
             EmitJavaLayer(ctx, c, layout);
 
             // Kotlin shares artifacts but emits .kt instead of .java
-            FileEmitHelpers.WriteKotlin(layout.CodeGenDir, $"{c.Name}Interface.kt", w => EmitKotlinInterface(ctx, c, w));
 
             FileEmitHelpers.WriteKotlinIfMissing(layout.BaseDir, $"{c.Name}Kotlin.kt", w => EmitKotlinImpl(ctx, w));
         }
@@ -52,36 +51,9 @@ namespace extgen.Emitters.Android.Kotlin
 
             var common = new JavaCommonEmitter(javaCtx, javaTypeMap, bridge);
             common.EmitJavaArtifacts(c, layout);
+            common.EmitJavaInterface(c, layout);
             common.EmitInternal(c, layout);
             common.EmitJavaUserShell(c, layout);
-        }
-
-        private void EmitKotlinInterface(KotlinEmitterContext ctx, IrCompilation c, KotlinWriter w)
-        {
-            string pkg = ctx.Runtime.BasePackage;
-            string wire = ctx.Runtime.WireClass;
-
-            w.Comment("##### extgen :: Auto-generated file do not edit!! #####").Line();
-            w.Package(pkg);
-            w.Import($"{pkg}.{wire}.GMFunction");
-            w.Import($"{pkg}.{wire}.GMValue");
-            w.Import($"{pkg}.records.*");
-            w.Import($"{pkg}.codecs.*");
-            w.Import($"{pkg}.enums.*");
-
-            w.Interface($"{ctx.ExtName}Interface", iface =>
-            {
-                var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
-                foreach (var fn in allFunctions)
-                {
-                    string ret = typeMap.Map(fn.ReturnType, owned: true);
-
-                    var parameters = fn.Parameters
-                        .Select(p => (p.Name, typeMap.Map(p.Type)));
-
-                    iface.FunDecl(fn.Name, parameters, ret);
-                }
-            });
         }
 
         private void EmitKotlinImpl(KotlinEmitterContext ctx, KotlinWriter w)
