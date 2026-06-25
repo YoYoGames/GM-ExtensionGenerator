@@ -14,6 +14,7 @@ namespace extgen
             ReadCommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = true,
             Converters =
             {
                 new JsonStringEnumConverter()
