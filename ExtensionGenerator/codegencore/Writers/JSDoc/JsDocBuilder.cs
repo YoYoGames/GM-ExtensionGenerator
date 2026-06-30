@@ -44,11 +44,11 @@
         /// <summary>Adds a <c>@returns</c> tag.</summary>
         public JsDocBuilder Returns(string type, string? description = null)
         {
-            Line($"@returns {{{type}}} {description}");
+            Line($"@returns {{{type}}} {description}".TrimEnd());
             return this;
         }
         /// <summary>Adds an arbitrary raw tag, e.g., <c>@deprecated</c>.</summary>
-        public JsDocBuilder Tag(string raw, string? meta = null) => Line($"@{raw} {meta}");
+        public JsDocBuilder Tag(string raw, string? meta = null) => Line($"@{raw} {meta}".TrimEnd());
 
         public IReadOnlyList<string> Lines => _lines;
         public IReadOnlyList<ParamDoc> Params => _params;
