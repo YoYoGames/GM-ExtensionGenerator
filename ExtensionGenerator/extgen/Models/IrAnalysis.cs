@@ -89,6 +89,9 @@ namespace extgen.Models
             if (fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.Void })
                 return false;
 
+            if (fn.ReturnType.IsNullable())
+                return true;
+
             if (fn.ReturnType.IsStringScalar())
                 return false;
 
