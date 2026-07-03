@@ -1210,6 +1210,12 @@ namespace gm::wire::codec {
 
     inline void writeValue(gm::byteio::IByteWriter& buf, const std::string& s) { writeValue(buf, std::string_view{ s }); }
 
+    // Declared up front so the composite writers below resolve each other regardless of
+    // definition order (e.g. optional<vector<T>>); strict Clang needs this, MSVC tolerates its absence.
+    template<class T> inline void writeValue(gm::byteio::IByteWriter& buf, const std::optional<T>& opt);
+    template<class T, std::size_t N> inline void writeValue(gm::byteio::IByteWriter& buf, const std::array<T, N>& arr);
+    template<class T> inline void writeValue(gm::byteio::IByteWriter& buf, const std::vector<T>& vec);
+
     template<class T>
     inline void writeValue(gm::byteio::IByteWriter& buf, const std::optional<T>& opt)
     {
