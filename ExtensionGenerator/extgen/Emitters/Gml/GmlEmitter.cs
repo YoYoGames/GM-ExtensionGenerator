@@ -132,12 +132,22 @@ namespace extgen.Emitters.Gml
                 w.Line("/// @ignore");
                 w.Function($"__{c.Name}_get_dispatcher", [], funcBody =>
                 {
+                    funcBody.Assign("__available", $"__{c.Name}_is_available()", VariableScope.Static);
+                    funcBody.Line("if (!__available) return;").Line();
+
                     funcBody.Assign("__dispatcher",
                         $"new {ExtCoreFunctionDispatcher}(__{c.Name}_invocation_handler, __{c.Name}_get_decoders())",
                         VariableScope.Static);
                     funcBody.Return("__dispatcher");
                 });
             }
+
+            w.Line("/// @ignore");
+            w.Function($"__{c.Name}_is_available", [], funcBody =>
+            {
+                funcBody.Assign("__available", $"extension_exists(\"{c.Name}\")", VariableScope.Static);
+                funcBody.Return("__available");
+            });
         }
 
         private static void EmitConstant(IrConstant cst, GmlWriter w)
@@ -299,6 +309,9 @@ namespace extgen.Emitters.Gml
         {
             bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
             bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
+
+            body.Assign("__available", $"__{ctx.ExtName}_is_available()", VariableScope.Static);
+            body.Line("if (!__available) return;").Line();
 
             var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function));
             if (usesFunctions)
