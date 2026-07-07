@@ -136,7 +136,7 @@ namespace extgen.Emitters.Doc
                 {
                     spec.Member(new(
                         c.Name,
-                        JsDocType(c.Type),
+                        null,
                         Description: $"(value: '{c.Literal}')",
                         Optional: false));
                 }
