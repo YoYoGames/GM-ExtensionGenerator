@@ -132,9 +132,6 @@ namespace extgen.Emitters.Gml
                 w.Line("/// @ignore");
                 w.Function($"__{c.Name}_get_dispatcher", [], funcBody =>
                 {
-                    funcBody.Assign("__available", $"__{c.Name}_is_available()", VariableScope.Static);
-                    funcBody.Line("if (!__available) return;").Line();
-
                     funcBody.Assign("__dispatcher",
                         $"new {ExtCoreFunctionDispatcher}(__{c.Name}_invocation_handler, __{c.Name}_get_decoders())",
                         VariableScope.Static);
@@ -310,12 +307,12 @@ namespace extgen.Emitters.Gml
             bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
             bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
 
-            body.Assign("__available", $"__{ctx.ExtName}_is_available()", VariableScope.Static);
+            body.Assign("__available", $"__{ctx.ExtName}_is_available()", VariableScope.Local);
             body.Line("if (!__available) return;").Line();
 
             var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function));
             if (usesFunctions)
-                body.Assign("__dispatcher", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Static).Line();
+                body.Assign("__dispatcher", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Local).Line();
 
             var usesDynamic = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.AnyArray) || p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
             if (usesDynamic)
