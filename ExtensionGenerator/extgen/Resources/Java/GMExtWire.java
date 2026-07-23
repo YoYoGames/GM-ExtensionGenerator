@@ -293,6 +293,8 @@ public class GMExtWire
                 put((boolean) v);
             else if (v instanceof String)
                 put((String) v);
+            else if (v instanceof Optional)
+                put((Optional<?>) v);
             else if (v instanceof ITypedStruct)
                 put((ITypedStruct) v);
             else if (v instanceof DataStream)
