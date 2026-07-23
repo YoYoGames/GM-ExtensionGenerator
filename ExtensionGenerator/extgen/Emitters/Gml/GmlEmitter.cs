@@ -119,10 +119,10 @@ namespace extgen.Emitters.Gml
             w.Line("/// @ignore");
             w.Function($"__{c.Name}_get_decoders", [], funcBody =>
             {
-                funcBody.Assign("__decoders",
+                funcBody.Assign("__decoders__",
                     expr => expr.ArrayLiteral(c.Structs.Select(s => $"__{s.Name}_decode"), true),
                     VariableScope.Static);
-                funcBody.Return("__decoders");
+                funcBody.Return("__decoders__");
             });
 
             // dispatcher (only if any param uses Function)
@@ -132,18 +132,18 @@ namespace extgen.Emitters.Gml
                 w.Line("/// @ignore");
                 w.Function($"__{c.Name}_get_dispatcher", [], funcBody =>
                 {
-                    funcBody.Assign("__dispatcher",
+                    funcBody.Assign("__dispatcher__",
                         $"new {ExtCoreFunctionDispatcher}(__{c.Name}_invocation_handler, __{c.Name}_get_decoders())",
                         VariableScope.Static);
-                    funcBody.Return("__dispatcher");
+                    funcBody.Return("__dispatcher__");
                 });
             }
 
             w.Line("/// @ignore");
             w.Function($"__{c.Name}_is_available", [], funcBody =>
             {
-                funcBody.Assign("__available", $"extension_exists(\"{c.Name}\")", VariableScope.Static);
-                funcBody.Return("__available");
+                funcBody.Assign("__available__", $"extension_exists(\"{c.Name}\")", VariableScope.Static);
+                funcBody.Return("__available__");
             });
         }
 
@@ -250,7 +250,7 @@ namespace extgen.Emitters.Gml
             w.Function($"__{s.Name}_decode", [bufferName, "_offset"], fn =>
             {
                 if (usesDynamic)
-                    fn.Assign("__decoders", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
+                    fn.Assign("__decoders__", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
 
                 fn.Call("buffer_seek", bufferName, "buffer_seek_start", "_offset").Line(";");
 
@@ -307,16 +307,16 @@ namespace extgen.Emitters.Gml
             bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
             bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);
 
-            body.Assign("__available", $"__{ctx.ExtName}_is_available()", VariableScope.Local);
-            body.Line("if (!__available) return;").Line();
+            body.Assign("__available__", $"__{ctx.ExtName}_is_available()", VariableScope.Local);
+            body.Line("if (!__available__) return;").Line();
 
             var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function));
             if (usesFunctions)
-                body.Assign("__dispatcher", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Local).Line();
+                body.Assign("__dispatcher__", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Local).Line();
 
             var usesDynamic = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.AnyArray) || p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
             if (usesDynamic)
-                body.Assign("__decoders", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
+                body.Assign("__decoders__", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
 
             if (needArgsBuf)
             {
@@ -346,17 +346,17 @@ namespace extgen.Emitters.Gml
             if (needRetBuf)
                 args.AddRange([$"buffer_get_address({InternalRetBuffer})", $"buffer_get_size({InternalRetBuffer})"]);
 
-            body.Assign("_return_value", expr => expr.Call($"__{fn.Name}", [.. args]), VariableScope.Local).Line();
+            body.Assign("__return_value__", expr => expr.Call($"__{fn.Name}", [.. args]), VariableScope.Local).Line();
 
             if (needRetBuf)
             {
-                body.Assign("_result", "undefined", VariableScope.Local);
-                ReadValue(enums, body, "_result", fn.ReturnType, InternalRetBuffer);
-                body.Line("return _result;");
+                body.Assign("__result__", "undefined", VariableScope.Local);
+                ReadValue(enums, body, "__result__", fn.ReturnType, InternalRetBuffer);
+                body.Line("return __result__;");
             }
             else
             {
-                body.Line("return _return_value;");
+                body.Line("return __return_value__;");
             }
         }
 
@@ -376,11 +376,11 @@ namespace extgen.Emitters.Gml
 
                 if (arr.FixedLength is null)
                 {
-                    w.Assign("_length", expr => expr.Call("array_length", id), VariableScope.Local);
-                    w.Call("buffer_write", buf, "buffer_u32", "_length").Line(";");
+                    w.Assign("__length__", expr => expr.Call("array_length", id), VariableScope.Local);
+                    w.Call("buffer_write", buf, "buffer_u32", "__length__").Line(";");
                 }
 
-                var lenExpr = arr.FixedLength.HasValue ? arr.FixedLength.Value.ToString() : "_length";
+                var lenExpr = arr.FixedLength.HasValue ? arr.FixedLength.Value.ToString() : "__length__";
                 w.For("var _i = 0", $"_i < {lenExpr}", "++_i", forBody =>
                 {
                     WriteValue(ctx, enums, forBody, $"{id}[_i]", arr.Element, buf, where);
@@ -433,7 +433,7 @@ namespace extgen.Emitters.Gml
                     return;
 
                 case BuiltinKind.Function:
-                    w.Assign($"{id}_handle", expr => expr.Call(ExtCoreFunctionRegister, id, "__dispatcher"), VariableScope.Local);
+                    w.Assign($"{id}_handle", expr => expr.Call(ExtCoreFunctionRegister, id, "__dispatcher__"), VariableScope.Local);
                     w.Call("buffer_write", buf, "buffer_u64", $"{id}_handle").Line(";");
                     return;
 
@@ -480,9 +480,9 @@ namespace extgen.Emitters.Gml
             if (t is IrType.Array arr)
             {
                 if (arr.FixedLength is null)
-                    w.Assign("_length", expr => expr.Call("buffer_read", buf, "buffer_u32"), VariableScope.Local);
+                    w.Assign("__length__", expr => expr.Call("buffer_read", buf, "buffer_u32"), VariableScope.Local);
 
-                var lenExpr = arr.FixedLength.HasValue ? arr.FixedLength.Value.ToString() : "_length";
+                var lenExpr = arr.FixedLength.HasValue ? arr.FixedLength.Value.ToString() : "__length__";
 
                 w.Assign(id, expr => expr.Call("array_create", lenExpr));
                 w.For("var _i = 0", $"_i < {lenExpr}", "++_i", forBody =>
@@ -526,7 +526,7 @@ namespace extgen.Emitters.Gml
                 case BuiltinKind.Any:
                 case BuiltinKind.AnyArray:
                 case BuiltinKind.AnyMap:
-                    w.Assign(id, expr => expr.Call(ExtCoreUnmarshalValue, buf, "__decoders"));
+                    w.Assign(id, expr => expr.Call(ExtCoreUnmarshalValue, buf, "__decoders__"));
                     return;
 
                 case BuiltinKind.Bool:
