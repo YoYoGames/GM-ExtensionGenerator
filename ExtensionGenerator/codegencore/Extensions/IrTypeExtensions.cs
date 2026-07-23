@@ -74,6 +74,19 @@ namespace codegencore.Models
             };
         }
 
+        public static bool ContainsEnum(this IrType t)
+        {
+            // search through Nullable/Array nesting - a field/param whose only enum use
+            // is as an array element (e.g. MyEnum[]) still needs the enums.* import.
+            return t switch
+            {
+                IrType.Named { Kind: NamedKind.Enum } => true,
+                IrType.Nullable n => n.Underlying.ContainsEnum(),
+                IrType.Array a => a.Element.ContainsEnum(),
+                _ => false
+            };
+        }
+
         public static bool ContainsNullable(this IrType t) =>
             t switch
             {

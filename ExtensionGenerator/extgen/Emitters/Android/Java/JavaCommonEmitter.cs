@@ -112,7 +112,7 @@ namespace extgen.Emitters.Android.Java
             bool needsOptional = s.Fields.Any(f => IrType.IsNullable(f.Type));
             bool needsList = s.Fields.Any(f => f.Type.IsVarArray());
             bool needsArray = s.Fields.Any(f => f.Type.IsFixedArray());
-            bool needsEnum = s.Fields.Any(f => f.Type.IsEnum());
+            bool needsEnum = s.Fields.Any(f => f.Type.ContainsEnum());
 
             w.Import($"{pkg}.{ctx.Runtime.WireClass}");
             w.Import($"{pkg}.codecs.*");
@@ -151,7 +151,7 @@ namespace extgen.Emitters.Android.Java
             bool needsOptional = s.Fields.Any(f => IrType.IsNullable(f.Type));
             bool needsList = s.Fields.Any(f => f.Type.IsVarArray());
             bool needsArray = s.Fields.Any(f => f.Type.IsFixedArray());
-            bool needsEnum = s.Fields.Any(f => f.Type.IsEnum());
+            bool needsEnum = s.Fields.Any(f => f.Type.ContainsEnum());
 
             w.Import("java.nio.ByteBuffer").Line();
 
