@@ -132,7 +132,7 @@ namespace extgen.Emitters.Android.Java
                 recordBody.Field("int", "CODEC_ID", $"{index}", ["public", "static", "final"]);
 
                 recordBody.Annotations(["Override"]);
-                recordBody.Function("encode", [new("ByteBuffer", "b")], encodeBody => 
+                recordBody.Function("encode", [new($"{ctx.Runtime.WireClass}.IByteWriter", "b")], encodeBody =>
                 {
                     encodeBody.Call($"{s.Name}Codec.write", "b", "this").Line(";");
                 }, "void", modifiers: ["public"]);
@@ -178,7 +178,12 @@ namespace extgen.Emitters.Android.Java
                     read.Line($"return new {s.Name}({string.Join(", ", args)});");
                 }, s.Name, modifiers: ["public", "static"]).Line();
 
-                cls.Function("write", [new Param("ByteBuffer", "b"), new Param(s.Name, "obj")], write =>
+                // One overload, against the IByteWriter interface: GMByteWriter (growable,
+                // used by ITypedStruct.encode) and GMBufferWriter (fixed, wrapping the
+                // native return-value buffer in JavaBridgeGenerator) both implement it,
+                // so this single body serves both callers — mirrors C++'s single
+                // writeValue(IByteWriter&, T) working over BufferWriter/VectorWriter.
+                cls.Function("write", [new Param($"{wire}.IByteWriter", "b"), new Param(s.Name, "obj")], write =>
                 {
                     foreach (var f in s.Fields)
                     {

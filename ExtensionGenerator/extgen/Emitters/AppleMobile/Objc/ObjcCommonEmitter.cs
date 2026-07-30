@@ -116,6 +116,14 @@ namespace extgen.Emitters.AppleMobile.Objc
                     return extOptGetString(const_cast<char*>(ext), const_cast<char*>(opt));
                 }
 
+                extern "C" const char* extGetVersion(char* _ext);
+
+                // Adapter: matches const signature expected by the C++ API
+                static const char* ExtGetVersion(const char* ext)
+                {
+                    return extGetVersion(const_cast<char*>(ext));
+                }
+
                 static BOOL GMIsSubclassOf(Class cls, Class base)
                 {
                     for (Class c = cls; c != Nil; c = class_getSuperclass(c)) {
@@ -201,6 +209,7 @@ namespace extgen.Emitters.AppleMobile.Objc
 
                         gm::details::GMRTRunnerInterface ri{};
                         ri.ExtOptGetString = &ExtOptGetString;
+                        ri.ExtGetVersion = &ExtGetVersion;
                         GMExtensionInitialise(&ri, sizeof(ri));
                     }
 

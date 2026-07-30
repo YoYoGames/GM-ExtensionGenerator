@@ -179,10 +179,18 @@ namespace extgen.Bridge.Java
             if (!needRetBuf)
                 return;
 
+            // __ret_buffer is the fixed, native-owned return buffer — it can't grow.
+            // Wrap it as an IByteWriter (GMBufferWriter: throws on overflow, same as
+            // today) so EncodeLines' generated calls resolve against the same
+            // IByteWriter-typed overloads/Codec.write() used by ITypedStruct.encode,
+            // instead of needing a separate ByteBuffer-only code path.
+            string retWriter = $"{Runtime.RetBufferParam}_writer";
+
             m.Line();
             m.Call($"{Runtime.WireClass}.order", [Runtime.RetBufferParam]).Line(";");
+            m.Assign(retWriter, $"new {Runtime.WireClass}.GMBufferWriter({Runtime.RetBufferParam})", $"{Runtime.WireClass}.IByteWriter");
             m.Comment($"return: {Runtime.ResultVar}, type: {fn.ReturnType.ToDebugString()}");
-            Wire.EncodeLines(m, fn.ReturnType, Runtime.ResultVar, Runtime.RetBufferParam);
+            Wire.EncodeLines(m, fn.ReturnType, Runtime.ResultVar, retWriter);
             m.Line();
         }
 
