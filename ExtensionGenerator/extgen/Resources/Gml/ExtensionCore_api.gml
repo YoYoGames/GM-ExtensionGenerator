@@ -41,8 +41,11 @@ function __ext_core_buffer_unmarshal_value(_buff, _decoders)
 			var _array = array_create(_size);
 			if (_elem_type == EXT_CORE_GM_TYPE_TYPED_STRUCT)
 			{
+				// One codec ID for the whole array (every element shares the same
+				// type) - matches TypedArrayStream.writeTo() on the Java side, which
+				// writes codecId once, not once per element.
+				var _decoder_id = buffer_read(_buff, buffer_u32);
 				for (var _i = 0 ; _i < _size ; _i++) {
-					var _decoder_id = buffer_read(_buff, buffer_u32);
 					_array[_i] = _decoders[_decoder_id](_buff, buffer_tell(_buff));
 				}
 			}
@@ -250,7 +253,7 @@ function __GMNativeFunctionDispatcher(_handler, _decoders) constructor {
 	}, [], -1);
 	
 	/// @func dispatch(_amount)
-	/// @desc Increments the internal reference count and ensures the dispatcher’s time source is running.
+	/// @desc Increments the internal reference count and ensures the dispatcherï¿½s time source is running.
     /// Should be called whenever a new function is registered on the GML side.
     /// @param {Real} [_amount=1] The number of active references to add.
 	static dispatch = function(_amount = 1) {
