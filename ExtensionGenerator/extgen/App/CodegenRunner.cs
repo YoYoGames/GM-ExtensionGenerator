@@ -1,6 +1,4 @@
 ﻿using extgen.Config;
-using extgen.Emitters.Cmake;
-using extgen.Mappers;
 using extgen.Models;
 using extgen.Models.Config;
 using extgen.Parsing.Gmidl;
@@ -19,30 +17,14 @@ namespace extgen.App
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly ConfigSchemaService _schema;
 
-        /// <summary>
-        /// Initializes a new code generation runner with JSON serialization options and schema service.
-        /// </summary>
         public CodegenRunner(JsonSerializerOptions jsonOptions, ConfigSchemaService schema)
         {
             _jsonOptions = jsonOptions ?? throw new ArgumentNullException(nameof(jsonOptions));
             _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         }
 
-        /// <summary>
-        /// Runs the code generation pipeline using the specified configuration file.
-        /// </summary>
-        /// <param name="configPath">Path to the extgen configuration JSON file.</param>
-        /// <returns>Exit code (0 for success, non-zero for errors).</returns>
         public int RunFromConfig(string configPath)
         {
-            // Pipeline stages:
-            // 1. Load config JSON
-            // 2. Emit JSON schema beside config (for IDE autocomplete)
-            // 3. Resolve paths and validate config
-            // 4. Load GMIDL file → parse into IR compilation
-            // 5. Emit CMake build system (runs first, needed by other targets)
-            // 6. Emit each enabled target (GML, Swift, Java, etc.)
-
             var fullConfigPath = Path.GetFullPath(configPath);
             if (!File.Exists(fullConfigPath))
             {
@@ -50,9 +32,6 @@ namespace extgen.App
                 return 3;
             }
 
-            // Always emit schema file beside the config (e.g., extgen.config.json → extgen.schema.json).
-            // This enables IDE autocomplete/validation. We also patch the config's $schema property
-            // to point to this generated file. If the config is already valid, this is a no-op.
             try
             {
                 var modified = _schema.EnsureSchemaBesideConfigAndPatchConfigJson<ExtGenConfig>(fullConfigPath);
@@ -84,9 +63,11 @@ namespace extgen.App
             }
 
             ResolvedConfig rc;
+            EmitterPlan plan;
             try
             {
                 rc = ConfigResolver.Resolve(cfg, fullConfigPath, PathUtils.ResolvePath);
+                plan = EmitterPlanBuilder.Build(rc);
             }
             catch (Exception ex)
             {
@@ -106,25 +87,24 @@ namespace extgen.App
                 return 6;
             }
 
-            // Build emitters for each enabled target (GML, Android, iOS, etc.)
-            var emitters = EmitterBuilder.Build(rc);
+            var emitters = EmitterBuilder.Build(plan);
 
-            // CMake runs first because other targets may reference build artifacts.
-            // It generates CMakeLists.txt + presets for each platform (Win/Mac/Linux/Switch).
-            // This must complete before platform-specific emitters run.
-            try
+            var buildEmitter = BuildSystemEmitterFactory.Create(plan);
+            if (buildEmitter is not null)
             {
-                var config = rc.Raw.Build.Cmake;
-                var cmakeEmitter = new CmakeEmitter(config.ToSettings(), rc.Raw);
-                cmakeEmitter.Emit(compilation, rc.OutputDir);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[CMake] Failed: {ex}");
-                return 20;
+                try
+                {
+                    Console.WriteLine($"[extgen] BUILD:{plan.BuildSystem.ToString().ToUpperInvariant()} -> {rc.OutputDir}");
+                    buildEmitter.Emit(compilation, rc.OutputDir);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[{plan.BuildSystem}] Failed: {ex}");
+                    return 20;
+                }
             }
 
-            if (emitters.Count == 0)
+            if (emitters.Count == 0 && buildEmitter is null)
             {
                 Console.WriteLine("[extgen] No targets enabled in config. Nothing to generate.");
                 return 0;

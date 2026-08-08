@@ -3,6 +3,7 @@ using extgen.Emitters.Cpp;
 using extgen.Emitters.CppInjectors;
 using extgen.Emitters.Doc;
 using extgen.Emitters.Gml;
+using extgen.Emitters.Rust;
 using extgen.Emitters.Yy;
 using extgen.Mappers;
 using extgen.Models.Config.GameMaker;
@@ -12,23 +13,27 @@ namespace extgen.Planning
 {
     public static class EmitterBuilder
     {
-        public static Dictionary<string, IIrEmitter> Build(ResolvedConfig rc)
+        public static Dictionary<string, IIrEmitter> Build(EmitterPlan plan)
         {
             var emitters = new Dictionary<string, IIrEmitter>(StringComparer.OrdinalIgnoreCase);
+            var rc = plan.Config;
 
-            // Core C++ only if required
-            if (rc.NeedsCpp)
+            if (plan.NeedsCpp)
             {
                 var cppSettings = new CppEmitterSettings
                 {
                     SourceFilename = rc.Raw.Targets.SourceFilename,
                     SourceFolder = rc.Raw.Targets.SourceFolder
                 };
-                emitters["cpp"] = new CppEmitter(cppSettings, rc.Raw.Runtime);
+                emitters["cpp"] = new CppEmitter(cppSettings, plan.Runtime);
             }
 
-            // Bindings (GML + YY are coupled)
-            if (rc.AllowBindings)
+            if (plan.NeedsRust)
+            {
+                emitters["rust"] = new RustEmitter(RustEmitterSettings.From(plan), plan.Runtime);
+            }
+
+            if (plan.AllowBindings)
             {
                 if (rc.Raw.GameMaker.Wrappers is { Enabled: true } wrapperCfg)
                     emitters["gml"] = new GmlEmitter(wrapperCfg.ToSettings());
@@ -37,42 +42,32 @@ namespace extgen.Planning
                     emitters["runtime"] = new GmlEmitter(runtimeCfg.ToSettings());
 
                 if (rc.Raw.GameMaker.Extension is { Enabled: true } yyConfig)
-                    emitters["extension"] = new YyEmitter(yyConfig.ToSettings(rc.AndroidEnabled, rc.IosEnabled, rc.TvosEnabled), rc.Raw.Runtime);
+                    emitters["extension"] = new YyEmitter(yyConfig.ToSettings(rc.AndroidEnabled, rc.IosEnabled, rc.TvosEnabled), plan.Runtime);
 
-                if (rc.Raw.GameMaker.Injectors is { Enabled: true } injectorsCfg)
+                if (!plan.SkipInjectors && rc.Raw.GameMaker.Injectors is { Enabled: true } injectorsCfg)
                 {
                     ExtensionConfig extConfig = rc.Raw.GameMaker.Extension ?? new();
-                    emitters["injectors"] = new CppInjectorsEmitter(injectorsCfg.ToSettings(extConfig), rc.Raw.Runtime);
+                    emitters["injectors"] = new CppInjectorsEmitter(injectorsCfg.ToSettings(extConfig), plan.Runtime);
                 }
-
-
             }
 
-            // Android
             if (rc.Raw.Targets.Android is AndroidTargetConfig { Enabled: true } androidCfg)
-            {
-                emitters["android"] = AndroidEmitterFactory.Create(rc, androidCfg);
-            }
+                emitters["android"] = AndroidEmitterFactory.Create(plan, androidCfg);
 
-            // iOS
             if (rc.Raw.Targets.Ios is IosTargetConfig { Enabled: true } iosCfg)
-            {
-                emitters["ios"] = AppleEmitterFactory.CreateIos(rc, iosCfg);
-            }
+                emitters["ios"] = AppleEmitterFactory.CreateIos(plan, iosCfg);
 
-            // tvOS
             if (rc.Raw.Targets.Tvos is TvosTargetConfig { Enabled: true } tvosCfg)
-            {
-                emitters["tvos"] = AppleEmitterFactory.CreateTvos(rc, tvosCfg);
-            }
+                emitters["tvos"] = AppleEmitterFactory.CreateTvos(plan, tvosCfg);
 
-            // Docs (extras)
             if (rc.Raw.Extras.Docs is { Enabled: true } d)
-            {
-                emitters["docs"] = new DocEmitter(d.ToSettings(), rc.Raw.Runtime);
-            }
+                emitters["docs"] = new DocEmitter(d.ToSettings(), plan.Runtime);
 
             return emitters;
         }
+
+        /// <summary>Legacy overload — builds an <see cref="EmitterPlan"/> first.</summary>
+        public static Dictionary<string, IIrEmitter> Build(ResolvedConfig rc) =>
+            Build(EmitterPlanBuilder.Build(rc));
     }
 }

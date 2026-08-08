@@ -75,6 +75,14 @@ namespace extgen.Emitters.Utils
             ExportType.Pointer => "UnsafeMutablePointer<CChar>?",
             _ => throw new NotImplementedException(),
         };
+
+        public static string AsRustType(this ExportType hostParamType) => hostParamType switch
+        {
+            ExportType.Double => "f64",
+            ExportType.String => "*const c_char",
+            ExportType.Pointer => "*mut c_char",
+            _ => throw new NotImplementedException(),
+        };
     }
 
     /// <summary>

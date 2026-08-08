@@ -40,6 +40,15 @@ namespace extgen.Models
                     continue;
                 }
 
+                // Raw host pointers (e.g. buffer_get_address) are first-class direct args.
+                // They use YY arg type 1 (same slot as strings) and share the string-like constraint.
+                if (p.Type.IsPointerScalar())
+                {
+                    hasString = true;
+                    directCount++;
+                    continue;
+                }
+
                 // Numeric scalars can be passed directly, EXCEPT int64/uint64 which exceed
                 // GML's number precision (GML uses doubles internally, can't represent all int64 values)
                 if (p.Type.IsNumericScalar() && !(p.Type is IrType.Builtin { Kind: BuiltinKind.Int64 or BuiltinKind.UInt64 }))

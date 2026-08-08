@@ -143,6 +143,8 @@
 		<Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
 		<EmbeddedResource Include="Resources\Cmake\.gitignore" />
 		<EmbeddedResource Include="Resources\Swift\GMExtUtilsBridge.mm" />
+		<EmbeddedResource Include="Resources\Rust\gm_ext_wire\**\*" />
+		<EmbeddedResource Include="Resources\Rust\scripts\**\*" />
 	</ItemGroup>
 
 </Project>

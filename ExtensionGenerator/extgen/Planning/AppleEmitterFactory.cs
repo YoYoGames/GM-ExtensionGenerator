@@ -9,29 +9,32 @@ namespace extgen.Planning
 {
     public static class AppleEmitterFactory
     {
-        public static IIrEmitter CreateIos(ResolvedConfig rc, IosTargetConfig cfg)
+        public static IIrEmitter CreateIos(EmitterPlan plan, IosTargetConfig cfg)
         {
             var opts = cfg.ToSettings();
+            var runtime = plan.Runtime;
 
-            return rc.IosMode switch
+            // ObjC native forwards to extern "C" — works for both Cpp and Rust staticlibs.
+            return plan.Config.IosMode switch
             {
-                AppleMobileMode.Objc => new ObjcEmitter(opts, rc.Raw.Runtime),
-                AppleMobileMode.Swift => new SwiftEmitter(opts, rc.Raw.Runtime),
-                AppleMobileMode.Native => new ObjcNativeEmitter(opts, rc.Raw.Runtime),
-                _ => throw new ArgumentOutOfRangeException(nameof(rc.IosMode), rc.IosMode, "Unknown AppleMobileMode")
+                AppleMobileMode.Objc => new ObjcEmitter(opts, runtime),
+                AppleMobileMode.Swift => new SwiftEmitter(opts, runtime),
+                AppleMobileMode.Native => new ObjcNativeEmitter(opts, runtime),
+                _ => throw new ArgumentOutOfRangeException(nameof(plan.Config.IosMode), plan.Config.IosMode, "Unknown AppleMobileMode")
             };
         }
 
-        public static IIrEmitter CreateTvos(ResolvedConfig rc, TvosTargetConfig cfg)
+        public static IIrEmitter CreateTvos(EmitterPlan plan, TvosTargetConfig cfg)
         {
             var opts = cfg.ToSettings();
+            var runtime = plan.Runtime;
 
-            return rc.TvosMode switch
+            return plan.Config.TvosMode switch
             {
-                AppleMobileMode.Objc => new ObjcEmitter(opts, rc.Raw.Runtime),
-                AppleMobileMode.Swift => new SwiftEmitter(opts, rc.Raw.Runtime),
-                AppleMobileMode.Native => new ObjcNativeEmitter(opts, rc.Raw.Runtime),
-                _ => throw new ArgumentOutOfRangeException(nameof(rc.TvosMode), rc.TvosMode, "Unknown AppleMobileMode")
+                AppleMobileMode.Objc => new ObjcEmitter(opts, runtime),
+                AppleMobileMode.Swift => new SwiftEmitter(opts, runtime),
+                AppleMobileMode.Native => new ObjcNativeEmitter(opts, runtime),
+                _ => throw new ArgumentOutOfRangeException(nameof(plan.Config.TvosMode), plan.Config.TvosMode, "Unknown AppleMobileMode")
             };
         }
     }

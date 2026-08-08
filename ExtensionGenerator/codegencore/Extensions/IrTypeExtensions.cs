@@ -17,6 +17,12 @@ namespace codegencore.Models
         public static bool IsStringScalar(this IrType t) =>
             t.StripNullable() is IrType.Builtin { Kind: BuiltinKind.String };
 
+        /// <summary>
+        /// Host pointer (GameMaker buffer address / raw ptr). Counts as string-like for GM direct-call limits.
+        /// </summary>
+        public static bool IsPointerScalar(this IrType t) =>
+            t.StripNullable() is IrType.Builtin { Kind: BuiltinKind.Pointer };
+
         public static bool IsNumericScalar(this IrType t)
         {
             t = t.StripNullable();

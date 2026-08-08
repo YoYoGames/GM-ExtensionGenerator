@@ -15,7 +15,7 @@ namespace extgen.Emitters.Utils
 
     /// <summary>
     /// Default export type classification strategy.
-    /// Maps strings to String type, everything else to Double.
+    /// Maps strings → String, pointers → Pointer, everything else → Double.
     /// </summary>
     internal sealed class DefaultExportTypeMap : IExportTypeMap
     {
@@ -24,6 +24,9 @@ namespace extgen.Emitters.Utils
         {
             if (t is IrType.Builtin { Kind: BuiltinKind.String })
                 return ExportType.String;
+
+            if (t is IrType.Builtin { Kind: BuiltinKind.Pointer })
+                return ExportType.Pointer;
 
             return ExportType.Double;
         }

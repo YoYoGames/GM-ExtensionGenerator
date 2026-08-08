@@ -1,4 +1,5 @@
 ﻿using extgen.Emitters.Utils;
+using extgen.Models.Config;
 
 namespace extgen.Emitters.Android.Jni
 {
@@ -8,5 +9,14 @@ namespace extgen.Emitters.Android.Jni
         string NativeName,
         IEnumerable<ExportParam> ExportParams,
         ExportType ExportReturnType
-    );
+    )
+    {
+        public static JniFunctionSpec From(NativeExportSpec export, RuntimeNaming naming) =>
+            new(
+                Name: export.FunctionName,
+                ExportName: $"{naming.JniPrefix}{export.FunctionName}",
+                NativeName: export.NativeSymbol,
+                ExportParams: export.Params,
+                ExportReturnType: export.ReturnType);
+    }
 }

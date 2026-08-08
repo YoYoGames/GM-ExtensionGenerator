@@ -61,8 +61,12 @@ namespace extgen.Utils
             string resourceName,
             string destinationPath,
             IReadOnlyDictionary<string, string> tokens,
-            Encoding? encoding = null)
+            Encoding? encoding = null,
+            bool replace = true)
         {
+            if (!replace && File.Exists(destinationPath))
+                return;
+
             encoding ??= new UTF8Encoding(false);
             using var s = assembly.GetManifestResourceStream(resourceName)
                 ?? throw new InvalidOperationException($"Missing resource {resourceName}");
@@ -75,6 +79,16 @@ namespace extgen.Utils
             text = text.Replace("\r\n", "\n");
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             File.WriteAllText(destinationPath, text, encoding);
+        }
+
+        /// <summary>Writes UTF-8 text only when the destination does not already exist.</summary>
+        public static void WriteUtf8IfMissing(string destinationPath, string contents)
+        {
+            if (File.Exists(destinationPath))
+                return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.WriteAllText(destinationPath, contents, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
     }
 }

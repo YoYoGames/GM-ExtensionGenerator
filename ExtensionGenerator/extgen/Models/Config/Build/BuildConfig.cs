@@ -7,7 +7,14 @@ namespace extgen.Models.Config.Build
     /// </summary>
     public sealed class BuildConfig
     {
-        /// <summary>If false, do not emit any CMake build files/presets.</summary>
+        /// <summary>
+        /// Native implementation language. Default is C++ (existing behavior).
+        /// When set to Rust, Cargo is used instead of CMake and Rust emitters run.
+        /// </summary>
+        [JsonPropertyName("nativeBackend")]
+        public NativeBackend NativeBackend { get; set; } = NativeBackend.Cpp;
+
+        /// <summary>If false, do not emit any CMake build files/presets (Cpp backend only).</summary>
         [JsonPropertyName("emitCmake")]
         public bool EmitCmake { get; set; } = true;
 

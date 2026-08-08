@@ -10,7 +10,7 @@ namespace extgen.Emitters.Cmake
     /// <summary>
     /// Emits CMake build configuration files for cross-platform extension compilation.
     /// </summary>
-    internal class CmakeEmitter(CmakeEmitterSettings settings, ExtGenConfig config) : IIrEmitter
+    internal class CmakeEmitter(CmakeEmitterSettings settings, ExtGenConfig config) : global::extgen.Emitters.IBuildSystemEmitter
     {
         /// <summary>
         /// Emits the CMake configuration for the given compilation.

@@ -38,12 +38,33 @@ namespace extgen.Planning
         public AppleMobileMode IosMode => Raw.Targets.Ios?.Mode ?? AppleMobileMode.Objc;
         public AppleMobileMode TvosMode => Raw.Targets.Tvos?.Mode ?? AppleMobileMode.Objc;
 
-        public bool NeedsCpp =>
+        public NativeBackend Backend => Raw.Build.NativeBackend;
+
+        /// <summary>
+        /// True when any target requires a native (C ABI) implementation layer,
+        /// regardless of whether that layer is C++ or Rust.
+        /// Prefer <see cref="EmitterPlan.NeedsCpp"/> / <see cref="EmitterPlan.NeedsRust"/> for emission.
+        /// </summary>
+        public bool WantsNativePlatforms =>
             HasWindows || HasMac || HasLinux ||
             HasXbox || HasPs4 || HasPs5 || HasSwitch ||
             (AndroidEnabled && AndroidMode == AndroidMode.Jni) ||
             (IosEnabled && IosMode == AppleMobileMode.Native) ||
             (TvosEnabled && TvosMode == AppleMobileMode.Native);
+
+        /// <summary>
+        /// Legacy alias: C++ native sources are needed only for the Cpp backend.
+        /// </summary>
+        public bool NeedsCpp => Backend == NativeBackend.Cpp && WantsNativePlatforms;
+
+        public bool NeedsRust =>
+            Backend == NativeBackend.Rust && (
+                HasWindows || HasMac || HasLinux ||
+                (AndroidEnabled && AndroidMode == AndroidMode.Jni) ||
+                (IosEnabled && IosMode == AppleMobileMode.Native) ||
+                (TvosEnabled && TvosMode == AppleMobileMode.Native));
+
+        public bool NeedsNative => NeedsCpp || NeedsRust;
 
         public ResolvedConfig(ExtGenConfig raw, string configPath, string baseDir, string inputPath, string outputDir)
         {

@@ -345,6 +345,11 @@ namespace extgen.Emitters.Yy
                         args.Add(1);
                         docs.Add($"@param {{String}} {p.Name}");
                     }
+                    else if (p.Type is IrType.Builtin { Kind: BuiltinKind.Pointer })
+                    {
+                        args.Add(1);
+                        docs.Add($"@param {{Pointer}} {p.Name}");
+                    }
                     else
                     {
                         args.Add(2);
