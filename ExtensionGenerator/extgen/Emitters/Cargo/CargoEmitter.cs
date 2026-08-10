@@ -26,7 +26,7 @@ namespace extgen.Emitters.Cargo
 
         private void EmitCargoToml(string rustRoot, IrCompilation comp)
         {
-            // IfMissing: do not wipe hand-maintained deps (e.g. RustySDF: rustybuzz, fdsm, …).
+            // IfMissing: do not wipe hand-maintained user deps in an existing Cargo.toml.
             var path = Path.Combine(rustRoot, "Cargo.toml");
             if (File.Exists(path))
                 return;
@@ -67,31 +67,44 @@ namespace extgen.Emitters.Cargo
             var sb = new StringBuilder();
             sb.AppendLine("# ##### extgen :: generated #####");
 
-            sb.AppendLine("[env]");
-            sb.AppendLine($"MACOSX_DEPLOYMENT_TARGET = \"{settings.MacosMinVersion}\"");
-            sb.AppendLine($"IPHONEOS_DEPLOYMENT_TARGET = \"{settings.IosMinVersion}\"");
-            sb.AppendLine($"TVOS_DEPLOYMENT_TARGET = \"{settings.TvosMinVersion}\"");
-            sb.AppendLine();
+            var needsAppleEnv = settings.HasMac || settings.HasIos || settings.HasTvos;
+            if (needsAppleEnv)
+            {
+                sb.AppendLine("[env]");
+                if (settings.HasMac)
+                    sb.AppendLine($"MACOSX_DEPLOYMENT_TARGET = \"{settings.MacosMinVersion}\"");
+                if (settings.HasIos)
+                    sb.AppendLine($"IPHONEOS_DEPLOYMENT_TARGET = \"{settings.IosMinVersion}\"");
+                if (settings.HasTvos)
+                    sb.AppendLine($"TVOS_DEPLOYMENT_TARGET = \"{settings.TvosMinVersion}\"");
+                sb.AppendLine();
+            }
 
-            sb.AppendLine("[target.x86_64-pc-windows-msvc]");
-            sb.AppendLine("rustflags = [\"-C\", \"target-feature=+crt-static\"]");
-            sb.AppendLine();
+            if (settings.HasWindows)
+            {
+                sb.AppendLine("[target.x86_64-pc-windows-msvc]");
+                sb.AppendLine("rustflags = [\"-C\", \"target-feature=+crt-static\"]");
+                sb.AppendLine();
+            }
 
-            const string androidRustflags =
-                "rustflags = [" +
-                "\"-C\", \"link-arg=-Wl,-z,max-page-size=16384\", " +
-                "\"-C\", \"link-arg=-llog\", " +
-                "\"-C\", \"link-arg=-landroid\"" +
-                "]";
-            sb.AppendLine("[target.aarch64-linux-android]");
-            sb.AppendLine(androidRustflags);
-            sb.AppendLine();
-            sb.AppendLine("[target.armv7-linux-androideabi]");
-            sb.AppendLine(androidRustflags);
-            sb.AppendLine();
-            sb.AppendLine("[target.x86_64-linux-android]");
-            sb.AppendLine(androidRustflags);
-            sb.AppendLine();
+            if (settings.HasAndroid)
+            {
+                const string androidRustflags =
+                    "rustflags = [" +
+                    "\"-C\", \"link-arg=-Wl,-z,max-page-size=16384\", " +
+                    "\"-C\", \"link-arg=-llog\", " +
+                    "\"-C\", \"link-arg=-landroid\"" +
+                    "]";
+                sb.AppendLine("[target.aarch64-linux-android]");
+                sb.AppendLine(androidRustflags);
+                sb.AppendLine();
+                sb.AppendLine("[target.armv7-linux-androideabi]");
+                sb.AppendLine(androidRustflags);
+                sb.AppendLine();
+                sb.AppendLine("[target.x86_64-linux-android]");
+                sb.AppendLine(androidRustflags);
+                sb.AppendLine();
+            }
 
             // Dynamic Apple frameworks: @executable_path (GameMaker runners often lack LC_RPATH).
             var fw = settings.IosFrameworkName;
@@ -104,25 +117,31 @@ namespace extgen.Emitters.Cargo
                 $"\"-C\", \"link-arg=-Wl,-install_name,{installName}\"" +
                 "]";
 
-            sb.AppendLine("[target.aarch64-apple-ios]");
-            sb.AppendLine(AppleMobileFlags("-miphoneos-version-min=", iosMin));
-            sb.AppendLine();
-            sb.AppendLine("[target.aarch64-apple-ios-sim]");
-            sb.AppendLine(AppleMobileFlags("-miphonesimulator-version-min=", iosMin));
-            sb.AppendLine();
-            sb.AppendLine("[target.x86_64-apple-ios]");
-            sb.AppendLine(AppleMobileFlags("-miphonesimulator-version-min=", iosMin));
-            sb.AppendLine();
+            if (settings.HasIos)
+            {
+                sb.AppendLine("[target.aarch64-apple-ios]");
+                sb.AppendLine(AppleMobileFlags("-miphoneos-version-min=", iosMin));
+                sb.AppendLine();
+                sb.AppendLine("[target.aarch64-apple-ios-sim]");
+                sb.AppendLine(AppleMobileFlags("-miphonesimulator-version-min=", iosMin));
+                sb.AppendLine();
+                sb.AppendLine("[target.x86_64-apple-ios]");
+                sb.AppendLine(AppleMobileFlags("-miphonesimulator-version-min=", iosMin));
+                sb.AppendLine();
+            }
 
-            sb.AppendLine("[target.aarch64-apple-tvos]");
-            sb.AppendLine(AppleMobileFlags("-mappletvos-version-min=", tvosMin));
-            sb.AppendLine();
-            sb.AppendLine("[target.aarch64-apple-tvos-sim]");
-            sb.AppendLine(AppleMobileFlags("-mappletvsimulator-version-min=", tvosMin));
-            sb.AppendLine();
-            sb.AppendLine("[target.x86_64-apple-tvos]");
-            sb.AppendLine(AppleMobileFlags("-mappletvsimulator-version-min=", tvosMin));
-            sb.AppendLine();
+            if (settings.HasTvos)
+            {
+                sb.AppendLine("[target.aarch64-apple-tvos]");
+                sb.AppendLine(AppleMobileFlags("-mappletvos-version-min=", tvosMin));
+                sb.AppendLine();
+                sb.AppendLine("[target.aarch64-apple-tvos-sim]");
+                sb.AppendLine(AppleMobileFlags("-mappletvsimulator-version-min=", tvosMin));
+                sb.AppendLine();
+                sb.AppendLine("[target.x86_64-apple-tvos]");
+                sb.AppendLine(AppleMobileFlags("-mappletvsimulator-version-min=", tvosMin));
+                sb.AppendLine();
+            }
 
             File.WriteAllText(Path.Combine(rustRoot, ".cargo", "config.toml"), sb.ToString(), new UTF8Encoding(false));
         }
@@ -178,19 +197,36 @@ namespace extgen.Emitters.Cargo
                     tokens,
                     replace: false);
 
-            EmitCore("build_windows.bat", "build_windows.bat");
-            EmitCore("build_android.sh", "build_android.sh");
-            EmitCore("build_macos.sh", "build_macos.sh");
-            EmitCore("build_linux.sh", "build_linux.sh");
-            EmitCore("build_ios.sh", "build_ios.sh");
-            EmitCore("build_tvos.sh", "build_tvos.sh");
-
-            EmitWrapper("build_windows_wrapper.bat", "build_windows.bat");
-            EmitWrapper("build_android_wrapper.sh", "build_android.sh");
-            EmitWrapper("build_macos_wrapper.sh", "build_macos.sh");
-            EmitWrapper("build_linux_wrapper.sh", "build_linux.sh");
-            EmitWrapper("build_ios_wrapper.sh", "build_ios.sh");
-            EmitWrapper("build_tvos_wrapper.sh", "build_tvos.sh");
+            if (settings.HasWindows)
+            {
+                EmitCore("build_windows.bat", "build_windows.bat");
+                EmitWrapper("build_windows_wrapper.bat", "build_windows.bat");
+            }
+            if (settings.HasAndroid)
+            {
+                EmitCore("build_android.sh", "build_android.sh");
+                EmitWrapper("build_android_wrapper.sh", "build_android.sh");
+            }
+            if (settings.HasMac)
+            {
+                EmitCore("build_macos.sh", "build_macos.sh");
+                EmitWrapper("build_macos_wrapper.sh", "build_macos.sh");
+            }
+            if (settings.HasLinux)
+            {
+                EmitCore("build_linux.sh", "build_linux.sh");
+                EmitWrapper("build_linux_wrapper.sh", "build_linux.sh");
+            }
+            if (settings.HasIos)
+            {
+                EmitCore("build_ios.sh", "build_ios.sh");
+                EmitWrapper("build_ios_wrapper.sh", "build_ios.sh");
+            }
+            if (settings.HasTvos)
+            {
+                EmitCore("build_tvos.sh", "build_tvos.sh");
+                EmitWrapper("build_tvos_wrapper.sh", "build_tvos.sh");
+            }
         }
 
         private static string? TryReadCargoPackageName(string cargoTomlPath)

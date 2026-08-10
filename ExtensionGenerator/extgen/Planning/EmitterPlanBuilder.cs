@@ -49,23 +49,10 @@ namespace extgen.Planning
         private static PortableNativeLanguage ResolvePortableLanguage(ResolvedConfig rc, NativeBackend backend) =>
             backend switch
             {
-                NativeBackend.Cpp when WantsNativePlatforms(rc) => PortableNativeLanguage.Cpp,
-                NativeBackend.Rust when WantsRustNativePlatforms(rc) => PortableNativeLanguage.Rust,
+                NativeBackend.Cpp when rc.WantsNativePlatforms => PortableNativeLanguage.Cpp,
+                NativeBackend.Rust when rc.WantsRustNativePlatforms => PortableNativeLanguage.Rust,
                 _ => PortableNativeLanguage.None,
             };
-
-        private static bool WantsNativePlatforms(ResolvedConfig rc) =>
-            rc.HasWindows || rc.HasMac || rc.HasLinux ||
-            rc.HasXbox || rc.HasPs4 || rc.HasPs5 || rc.HasSwitch ||
-            (rc.AndroidEnabled && rc.AndroidMode == AndroidMode.Jni) ||
-            (rc.IosEnabled && rc.IosMode == AppleMobileMode.Native) ||
-            (rc.TvosEnabled && rc.TvosMode == AppleMobileMode.Native);
-
-        private static bool WantsRustNativePlatforms(ResolvedConfig rc) =>
-            rc.HasWindows || rc.HasMac || rc.HasLinux ||
-            (rc.AndroidEnabled && rc.AndroidMode == AndroidMode.Jni) ||
-            (rc.IosEnabled && rc.IosMode == AppleMobileMode.Native) ||
-            (rc.TvosEnabled && rc.TvosMode == AppleMobileMode.Native);
 
         private static void ValidateRustConstraints(ResolvedConfig rc, NativeBackend backend)
         {
@@ -88,8 +75,7 @@ namespace extgen.Planning
                 throw new InvalidOperationException(
                     "nativeBackend=rust requires targets.tvos.mode = \"native\" when tvOS is enabled.");
 
-            if (!rc.HasWindows && !rc.HasMac && !rc.HasLinux &&
-                !rc.AndroidEnabled && !rc.IosEnabled && !rc.TvosEnabled)
+            if (!rc.WantsRustNativePlatforms)
             {
                 throw new InvalidOperationException(
                     "nativeBackend=rust requires at least one desktop or mobile (jni/native) target.");

@@ -53,16 +53,26 @@ namespace extgen.Planning
             (TvosEnabled && TvosMode == AppleMobileMode.Native);
 
         /// <summary>
+        /// Desktop + mobile platforms supported by the Rust portable backend (consoles excluded).
+        /// Shared with <see cref="EmitterPlanBuilder"/> so need-resolution stays single-sourced.
+        /// </summary>
+        public bool WantsRustNativePlatforms =>
+            HasWindows || HasMac || HasLinux ||
+            (AndroidEnabled && AndroidMode == AndroidMode.Jni) ||
+            (IosEnabled && IosMode == AppleMobileMode.Native) ||
+            (TvosEnabled && TvosMode == AppleMobileMode.Native);
+
+        /// <summary>
         /// Legacy alias: C++ native sources are needed only for the Cpp backend.
+        /// Prefer <see cref="EmitterPlan.NeedsCpp"/> for emission decisions.
         /// </summary>
         public bool NeedsCpp => Backend == NativeBackend.Cpp && WantsNativePlatforms;
 
-        public bool NeedsRust =>
-            Backend == NativeBackend.Rust && (
-                HasWindows || HasMac || HasLinux ||
-                (AndroidEnabled && AndroidMode == AndroidMode.Jni) ||
-                (IosEnabled && IosMode == AppleMobileMode.Native) ||
-                (TvosEnabled && TvosMode == AppleMobileMode.Native));
+        /// <summary>
+        /// Legacy alias for Rust need detection.
+        /// Prefer <see cref="EmitterPlan.NeedsRust"/> for emission decisions.
+        /// </summary>
+        public bool NeedsRust => Backend == NativeBackend.Rust && WantsRustNativePlatforms;
 
         public bool NeedsNative => NeedsCpp || NeedsRust;
 

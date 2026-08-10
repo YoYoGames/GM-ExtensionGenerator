@@ -97,7 +97,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
 
             if (linkExternalCdylib)
             {
-                EmitRustExternCDecls(ctx, c, w);
+                EmitExternalCdylibExternCDecls(ctx, c, w);
             }
             else
             {
@@ -277,9 +277,9 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
         }
 
         /// <summary>
-        /// Declares C symbols provided by the Rust cdylib / embedded framework.
+        /// Declares C symbols provided by an external cdylib / embedded framework (e.g. Rust).
         /// </summary>
-        private static void EmitRustExternCDecls(ObjcEmitterContext ctx, IrCompilation c, ObjcWriter w)
+        private static void EmitExternalCdylibExternCDecls(ObjcEmitterContext ctx, IrCompilation c, ObjcWriter w)
         {
             var ext = ctx.ExtName;
             var usesFunctions = c.HasFunctionType();
@@ -313,7 +313,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
                 w.Line($"double {ctx.Runtime.NativePrefix}{ext}_queue_buffer(char* {bp}, double {bl});");
             }
 
-            // Always available from Rust gm_ext_wire / ffi.rs
+            // Always available from the external native wire/FFI layer
             w.Line($"const char* {ctx.Runtime.NativePrefix}{ext}_get_last_error(void);");
 
             w.Lines("}").Line();
