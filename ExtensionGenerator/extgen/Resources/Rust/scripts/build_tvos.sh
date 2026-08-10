@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# ##### extgen :: generated core (scripts/extgen) — customize scripts/build_ios.sh #####
-# Dynamic XCFramework: cdylib → {EXT}_Rust.framework → zip → targets.ios.outputFolder
-# Usage: build_ios.sh [--device-only|--sim-only] [--skip-zip]
-# YY: iosThirdPartyFrameworkEntries → {EXT}_Rust.xcframework embed:1
+# ##### extgen :: generated core (scripts/extgen) — customize scripts/build_tvos.sh #####
+# Dynamic XCFramework: cdylib → {EXT}_Rust.framework → zip → targets.tvos.outputFolder
+# Usage: build_tvos.sh [--device-only|--sim-only] [--skip-zip]
+# YY: tvosThirdPartyFrameworkEntries → {EXT}_Rust.xcframework embed:1
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT/rust"
@@ -11,10 +11,10 @@ export CARGO_TARGET_DIR="$ROOT/rust/target"
 
 CRATE="${EXTGEN_CRATE_NAME}"
 EXT="${EXTGEN_EXTENSION_NAME}"
-DEST_REL="${EXTGEN_IOS_OUTPUT_FOLDER}"
+DEST_REL="${EXTGEN_TVOS_OUTPUT_FOLDER}"
 FRAMEWORK_NAME="${EXTGEN_IOS_FRAMEWORK_NAME}"
 BUNDLE_ID="${EXTGEN_IOS_BUNDLE_ID}"
-MIN_IOS="${EXTGEN_IOS_MIN_VERSION}"
+MIN_TVOS="${EXTGEN_TVOS_MIN_VERSION}"
 INSTALL_NAME="@executable_path/Frameworks/${FRAMEWORK_NAME}.framework/${FRAMEWORK_NAME}"
 DYLIB_BASENAME="lib${CRATE}.dylib"
 ZIP_NAME="${FRAMEWORK_NAME}.zip"
@@ -39,12 +39,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-export IPHONEOS_DEPLOYMENT_TARGET="$MIN_IOS"
+export TVOS_DEPLOYMENT_TARGET="$MIN_TVOS"
 export CARGO_PROFILE_RELEASE_DEBUG=1
 export CARGO_PROFILE_RELEASE_STRIP=none
 
 if [[ "$(uname)" != "Darwin" ]]; then
-  echo "ERROR: iOS build requires macOS with Xcode." >&2
+  echo "ERROR: tvOS build requires macOS with Xcode." >&2
   exit 1
 fi
 if ! xcode-select -p &>/dev/null; then
@@ -52,11 +52,26 @@ if ! xcode-select -p &>/dev/null; then
   exit 1
 fi
 
-rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios >/dev/null 2>&1 || true
+# tvOS has no reliable prebuilt std on stable (rustup target add fails).
+# Build std from source via nightly -Zbuild-std.
+if ! rustup toolchain list 2>/dev/null | grep -q 'nightly'; then
+  echo "ERROR: nightly toolchain required for tvOS (-Zbuild-std). Install with:" >&2
+  echo "  rustup toolchain install nightly --component rust-src" >&2
+  exit 1
+fi
+if ! rustup component list --toolchain nightly 2>/dev/null | grep -q 'rust-src.*(installed)'; then
+  echo "ERROR: rust-src missing on nightly. Install with:" >&2
+  echo "  rustup component add rust-src --toolchain nightly" >&2
+  exit 1
+fi
+
+# Overrides Cargo.toml panic=unwind; required with -Zbuild-std=std,panic_abort.
+export CARGO_PROFILE_RELEASE_PANIC=abort
+CARGO_TVOS=(cargo +nightly build -Zbuild-std=std,panic_abort)
 
 write_framework_plist() {
   local plist_path="$1"
-  local platform="$2" # iPhoneOS | iPhoneSimulator
+  local platform="$2" # AppleTVOS | AppleTVSimulator
   cat > "$plist_path" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -79,7 +94,7 @@ write_framework_plist() {
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>MinimumOSVersion</key>
-	<string>${MIN_IOS}</string>
+	<string>${MIN_TVOS}</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>${platform}</string>
@@ -137,22 +152,29 @@ DEVICE_DYLIB=""
 SIM_DYLIB=""
 
 if [[ "$BUILD_DEVICE" -eq 1 ]]; then
-  echo "--- Building cdylib aarch64-apple-ios ---"
-  cargo build --release --target aarch64-apple-ios
-  DEVICE_DYLIB="${CARGO_TARGET_DIR}/aarch64-apple-ios/release/${DYLIB_BASENAME}"
+  echo "--- Building cdylib aarch64-apple-tvos ---"
+  "${CARGO_TVOS[@]}" --release --target aarch64-apple-tvos
+  DEVICE_DYLIB="${CARGO_TARGET_DIR}/aarch64-apple-tvos/release/${DYLIB_BASENAME}"
 fi
 
 if [[ "$BUILD_SIM" -eq 1 ]]; then
-  echo "--- Building cdylib aarch64-apple-ios-sim ---"
-  cargo build --release --target aarch64-apple-ios-sim
-  echo "--- Building cdylib x86_64-apple-ios ---"
-  cargo build --release --target x86_64-apple-ios
-  mkdir -p "${CARGO_TARGET_DIR}/ios-sim-release"
-  SIM_DYLIB="${CARGO_TARGET_DIR}/ios-sim-release/${DYLIB_BASENAME}"
-  lipo -create \
-    "${CARGO_TARGET_DIR}/aarch64-apple-ios-sim/release/${DYLIB_BASENAME}" \
-    "${CARGO_TARGET_DIR}/x86_64-apple-ios/release/${DYLIB_BASENAME}" \
-    -output "$SIM_DYLIB"
+  echo "--- Building cdylib aarch64-apple-tvos-sim ---"
+  "${CARGO_TVOS[@]}" --release --target aarch64-apple-tvos-sim
+  SIM_ARM="${CARGO_TARGET_DIR}/aarch64-apple-tvos-sim/release/${DYLIB_BASENAME}"
+
+  mkdir -p "${CARGO_TARGET_DIR}/tvos-sim-release"
+  SIM_DYLIB="${CARGO_TARGET_DIR}/tvos-sim-release/${DYLIB_BASENAME}"
+
+  echo "--- Building cdylib x86_64-apple-tvos ---"
+  if "${CARGO_TVOS[@]}" --release --target x86_64-apple-tvos; then
+    lipo -create \
+      "$SIM_ARM" \
+      "${CARGO_TARGET_DIR}/x86_64-apple-tvos/release/${DYLIB_BASENAME}" \
+      -output "$SIM_DYLIB"
+  else
+    echo "WARNING: x86_64-apple-tvos build failed; using arm64 sim only."
+    cp -f "$SIM_ARM" "$SIM_DYLIB"
+  fi
 fi
 
 FRAMEWORK_TMPDIR="$(mktemp -d)"
@@ -163,14 +185,14 @@ mkdir -p "$DEVICE_FW_DIR" "$SIM_FW_DIR"
 
 XCFRAMEWORK_ARGS=()
 if [[ "$BUILD_DEVICE" -eq 1 ]]; then
-  make_framework_from_dylib "$DEVICE_DYLIB" "$DEVICE_FW_DIR" "iPhoneOS"
+  make_framework_from_dylib "$DEVICE_DYLIB" "$DEVICE_FW_DIR" "AppleTVOS"
   XCFRAMEWORK_ARGS+=(-framework "$LAST_FRAMEWORK_PATH")
   if [[ -n "${LAST_DSYM_PATH}" && -d "${LAST_DSYM_PATH}" ]]; then
     XCFRAMEWORK_ARGS+=(-debug-symbols "$LAST_DSYM_PATH")
   fi
 fi
 if [[ "$BUILD_SIM" -eq 1 ]]; then
-  make_framework_from_dylib "$SIM_DYLIB" "$SIM_FW_DIR" "iPhoneSimulator"
+  make_framework_from_dylib "$SIM_DYLIB" "$SIM_FW_DIR" "AppleTVSimulator"
   XCFRAMEWORK_ARGS+=(-framework "$LAST_FRAMEWORK_PATH")
   if [[ -n "${LAST_DSYM_PATH}" && -d "${LAST_DSYM_PATH}" ]]; then
     XCFRAMEWORK_ARGS+=(-debug-symbols "$LAST_DSYM_PATH")
@@ -197,5 +219,5 @@ else
   mkdir -p "$DEST"
   rm -f "$DEST/$ZIP_NAME"
   (cd "$FRAMEWORK_TMPDIR" && zip -r -q "$DEST/$ZIP_NAME" "${FRAMEWORK_NAME}.xcframework")
-  echo "Deployed iOS -> $DEST/$ZIP_NAME"
+  echo "Deployed tvOS -> $DEST/$ZIP_NAME"
 fi

@@ -79,6 +79,7 @@ namespace extgen.Utils
             text = text.Replace("\r\n", "\n");
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             File.WriteAllText(destinationPath, text, encoding);
+            TrySetUnixExecuteBitForShellScript(destinationPath);
         }
 
         /// <summary>Writes UTF-8 text only when the destination does not already exist.</summary>
@@ -89,6 +90,30 @@ namespace extgen.Utils
 
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             File.WriteAllText(destinationPath, contents, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            TrySetUnixExecuteBitForShellScript(destinationPath);
+        }
+
+        /// <summary>
+        /// .sh scripts written on Unix need +x; no-op on Windows (generate-then-copy still may need chmod).
+        /// </summary>
+        private static void TrySetUnixExecuteBitForShellScript(string destinationPath)
+        {
+            if (OperatingSystem.IsWindows())
+                return;
+            if (!destinationPath.EndsWith(".sh", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                var mode = File.GetUnixFileMode(destinationPath);
+                File.SetUnixFileMode(
+                    destinationPath,
+                    mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+            }
+            catch
+            {
+                // Best-effort: some filesystems may not support Unix modes.
+            }
         }
     }
 }

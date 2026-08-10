@@ -1,6 +1,7 @@
 ﻿using codegencore.Models;
 using codegencore.Writers.Lang;
 using extgen.Bridge.ObjcNative;
+using extgen.Emitters.AppleMobile;
 using extgen.Emitters.AppleMobile.Objc;
 using extgen.Emitters.Utils;
 using extgen.Extensions;
@@ -87,22 +88,36 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
         {
             var ext = ctx.ExtName;
             var platform = ctx.Settings.Platform;
+            var linkExternalCdylib = ctx.Settings.NativeLink == AppleMobileNativeLink.ExternalCdylib;
 
             w.Comment("##### extgen :: Auto-generated file do not edit!! #####").Line();
             w.Import($"{ext}Internal_{platform}.h")
-             .Import($"native/{ext}Internal_exports.h")
              .Import("objc/runtime.h", true)
              .Line();
 
+            if (linkExternalCdylib)
+            {
+                EmitRustExternCDecls(ctx, c, w);
+            }
+            else
+            {
+                w.Import($"native/{ext}Internal_exports.h")
+                 .Line();
+
+                w.Lines("""
+
+                    extern "C" const char* extOptGetString(char* _ext, char* _opt);
+
+                    // Adapter: matches const signature expected by the C++ API
+                    static const char* ExtOptGetString(const char* ext, const char* opt)
+                    {
+                        return extOptGetString(const_cast<char*>(ext), const_cast<char*>(opt));
+                    }
+
+                    """);
+            }
+
             w.Lines("""
-
-                extern "C" const char* extOptGetString(char* _ext, char* _opt);
-
-                // Adapter: matches const signature expected by the C++ API
-                static const char* ExtOptGetString(const char* ext, const char* opt)
-                {
-                    return extOptGetString(const_cast<char*>(ext), const_cast<char*>(opt));
-                }
 
                 static BOOL GMIsSubclassOf(Class cls, Class base)
                 {
@@ -156,40 +171,73 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
 
             w.Implementation($"{ext}Internal", implBody =>
             {
-                implBody.Lines($$"""
+                if (linkExternalCdylib)
+                {
+                    implBody.Lines($$"""
 
-                    + (void)load
-                    {
-                        // Find all loaded classes
-                        int num = objc_getClassList(NULL, 0);
-                        if (num <= 0) return;
+                        + (void)load
+                        {
+                            // Find all loaded classes
+                            int num = objc_getClassList(NULL, 0);
+                            if (num <= 0) return;
 
-                        Class *classes = (Class *)malloc(sizeof(Class) * (unsigned)num);
-                        num = objc_getClassList(classes, num);
+                            Class *classes = (Class *)malloc(sizeof(Class) * (unsigned)num);
+                            num = objc_getClassList(classes, num);
 
-                        Class base = [{{ext}}Internal class];
+                            Class base = [{{ext}}Internal class];
 
-                        for (int i = 0; i < num; ++i) {
-                            Class cls = classes[i];
-                            if (cls == base) continue;
+                            for (int i = 0; i < num; ++i) {
+                                Class cls = classes[i];
+                                if (cls == base) continue;
 
-                            // We only care about direct or indirect subclasses
-                            if (GMIsSubclassOf(cls, base)) {
-                                GMInjectSelectorsIntoSubclass(cls, base);
+                                // We only care about direct or indirect subclasses
+                                if (GMIsSubclassOf(cls, base)) {
+                                    GMInjectSelectorsIntoSubclass(cls, base);
+                                }
                             }
+
+                            free(classes);
                         }
 
-                        free(classes);
+                        """);
+                }
+                else
+                {
+                    implBody.Lines($$"""
 
-                        gm::details::GMRTRunnerInterface ri{};
-                        ri.ExtOptGetString = &ExtOptGetString;
-                        GMExtensionInitialise(&ri, sizeof(ri));
-                    }
+                        + (void)load
+                        {
+                            // Find all loaded classes
+                            int num = objc_getClassList(NULL, 0);
+                            if (num <= 0) return;
 
-                    """);
+                            Class *classes = (Class *)malloc(sizeof(Class) * (unsigned)num);
+                            num = objc_getClassList(classes, num);
+
+                            Class base = [{{ext}}Internal class];
+
+                            for (int i = 0; i < num; ++i) {
+                                Class cls = classes[i];
+                                if (cls == base) continue;
+
+                                // We only care about direct or indirect subclasses
+                                if (GMIsSubclassOf(cls, base)) {
+                                    GMInjectSelectorsIntoSubclass(cls, base);
+                                }
+                            }
+
+                            free(classes);
+
+                            gm::details::GMRTRunnerInterface ri{};
+                            ri.ExtOptGetString = &ExtOptGetString;
+                            GMExtensionInitialise(&ri, sizeof(ri));
+                        }
+
+                        """);
+                }
 
                 var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
-                foreach (var fn in allFunctions) 
+                foreach (var fn in allFunctions)
                 {
                     string exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
 
@@ -202,7 +250,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
                     });
                 }
 
-                if (usesFunctions) 
+                if (usesFunctions)
                 {
                     var bufferParam = ctx.Runtime.ArgBufferParam;
                     var bufferLengthParam = ctx.Runtime.ArgBufferLengthParam;
@@ -214,7 +262,7 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
                     });
                 }
 
-                if (usesBuffers) 
+                if (usesBuffers)
                 {
                     var bufferParam = ctx.Runtime.ArgBufferParam;
                     var bufferLengthParam = ctx.Runtime.ArgBufferLengthParam;
@@ -226,6 +274,49 @@ namespace extgen.Emitters.AppleMobile.ObjcNative
                     });
                 }
             });
+        }
+
+        /// <summary>
+        /// Declares C symbols provided by the Rust cdylib / embedded framework.
+        /// </summary>
+        private static void EmitRustExternCDecls(ObjcEmitterContext ctx, IrCompilation c, ObjcWriter w)
+        {
+            var ext = ctx.ExtName;
+            var usesFunctions = c.HasFunctionType();
+            var usesBuffers = c.HasBufferType();
+
+            w.Lines("extern \"C\" {").Line();
+
+            var allFunctions = c.GetAllFunctions(IrFunctionUtil.PatchStructMethod);
+            foreach (var fn in allFunctions)
+            {
+                string exportName = $"{ctx.Runtime.NativePrefix}{fn.Name}";
+                var ps = ExportTypeUtils.ParamsFor(fn, new());
+                var ret = ExportTypeUtils.ReturnFor(fn).AsCppType();
+                var args = string.Join(", ", ps.Select(p => $"{p.HostType.AsCppType()} {p.Name}"));
+                if (string.IsNullOrEmpty(args))
+                    args = "void";
+                w.Line($"{ret} {exportName}({args});");
+            }
+
+            if (usesFunctions)
+            {
+                var bp = ctx.Runtime.RetBufferParam;
+                var bl = ctx.Runtime.RetBufferLengthParam;
+                w.Line($"double {ctx.Runtime.NativePrefix}{ext}_invocation_handler(char* {bp}, double {bl});");
+            }
+
+            if (usesBuffers)
+            {
+                var bp = ctx.Runtime.ArgBufferParam;
+                var bl = ctx.Runtime.ArgBufferLengthParam;
+                w.Line($"double {ctx.Runtime.NativePrefix}{ext}_queue_buffer(char* {bp}, double {bl});");
+            }
+
+            // Always available from Rust gm_ext_wire / ffi.rs
+            w.Line($"const char* {ctx.Runtime.NativePrefix}{ext}_get_last_error(void);");
+
+            w.Lines("}").Line();
         }
     }
 }

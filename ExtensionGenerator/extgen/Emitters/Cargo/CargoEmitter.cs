@@ -53,6 +53,12 @@ namespace extgen.Emitters.Cargo
                 sb.AppendLine();
             }
 
+            sb.AppendLine("[profile.release]");
+            sb.AppendLine("lto = \"thin\"");
+            sb.AppendLine("strip = true");
+            sb.AppendLine("panic = \"unwind\"");
+            sb.AppendLine();
+
             File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
         }
 
@@ -60,18 +66,64 @@ namespace extgen.Emitters.Cargo
         {
             var sb = new StringBuilder();
             sb.AppendLine("# ##### extgen :: generated #####");
+
+            sb.AppendLine("[env]");
+            sb.AppendLine($"MACOSX_DEPLOYMENT_TARGET = \"{settings.MacosMinVersion}\"");
+            sb.AppendLine($"IPHONEOS_DEPLOYMENT_TARGET = \"{settings.IosMinVersion}\"");
+            sb.AppendLine($"TVOS_DEPLOYMENT_TARGET = \"{settings.TvosMinVersion}\"");
+            sb.AppendLine();
+
             sb.AppendLine("[target.x86_64-pc-windows-msvc]");
             sb.AppendLine("rustflags = [\"-C\", \"target-feature=+crt-static\"]");
             sb.AppendLine();
+
+            const string androidRustflags =
+                "rustflags = [" +
+                "\"-C\", \"link-arg=-Wl,-z,max-page-size=16384\", " +
+                "\"-C\", \"link-arg=-llog\", " +
+                "\"-C\", \"link-arg=-landroid\"" +
+                "]";
             sb.AppendLine("[target.aarch64-linux-android]");
-            sb.AppendLine("rustflags = [\"-C\", \"link-arg=-Wl,-z,max-page-size=16384\"]");
+            sb.AppendLine(androidRustflags);
             sb.AppendLine();
             sb.AppendLine("[target.armv7-linux-androideabi]");
-            sb.AppendLine("rustflags = [\"-C\", \"link-arg=-Wl,-z,max-page-size=16384\"]");
+            sb.AppendLine(androidRustflags);
             sb.AppendLine();
             sb.AppendLine("[target.x86_64-linux-android]");
-            sb.AppendLine("rustflags = [\"-C\", \"link-arg=-Wl,-z,max-page-size=16384\"]");
+            sb.AppendLine(androidRustflags);
             sb.AppendLine();
+
+            // Dynamic Apple frameworks: @executable_path (GameMaker runners often lack LC_RPATH).
+            var fw = settings.IosFrameworkName;
+            var iosMin = settings.IosMinVersion;
+            var tvosMin = settings.TvosMinVersion;
+            var installName = $"@executable_path/Frameworks/{fw}.framework/{fw}";
+            string AppleMobileFlags(string versionMinFlag, string minVer) =>
+                "rustflags = [" +
+                $"\"-C\", \"link-arg={versionMinFlag}{minVer}\", " +
+                $"\"-C\", \"link-arg=-Wl,-install_name,{installName}\"" +
+                "]";
+
+            sb.AppendLine("[target.aarch64-apple-ios]");
+            sb.AppendLine(AppleMobileFlags("-miphoneos-version-min=", iosMin));
+            sb.AppendLine();
+            sb.AppendLine("[target.aarch64-apple-ios-sim]");
+            sb.AppendLine(AppleMobileFlags("-miphonesimulator-version-min=", iosMin));
+            sb.AppendLine();
+            sb.AppendLine("[target.x86_64-apple-ios]");
+            sb.AppendLine(AppleMobileFlags("-miphonesimulator-version-min=", iosMin));
+            sb.AppendLine();
+
+            sb.AppendLine("[target.aarch64-apple-tvos]");
+            sb.AppendLine(AppleMobileFlags("-mappletvos-version-min=", tvosMin));
+            sb.AppendLine();
+            sb.AppendLine("[target.aarch64-apple-tvos-sim]");
+            sb.AppendLine(AppleMobileFlags("-mappletvsimulator-version-min=", tvosMin));
+            sb.AppendLine();
+            sb.AppendLine("[target.x86_64-apple-tvos]");
+            sb.AppendLine(AppleMobileFlags("-mappletvsimulator-version-min=", tvosMin));
+            sb.AppendLine();
+
             File.WriteAllText(Path.Combine(rustRoot, ".cargo", "config.toml"), sb.ToString(), new UTF8Encoding(false));
         }
 
@@ -90,53 +142,55 @@ namespace extgen.Emitters.Cargo
             if (string.IsNullOrWhiteSpace(extName) || extName == "MyExtension")
                 extName = comp.Name;
 
+            var fwName = string.IsNullOrWhiteSpace(settings.IosFrameworkName)
+                ? $"{extName}_Rust"
+                : settings.IosFrameworkName;
+
             var tokens = new Dictionary<string, string>
             {
                 ["EXTGEN_CRATE_NAME"] = crate,
                 ["EXTGEN_EXTENSION_NAME"] = extName,
-                ["EXTGEN_COMP_NAME"] = comp.Name
+                ["EXTGEN_COMP_NAME"] = comp.Name,
+                ["EXTGEN_WINDOWS_OUTPUT_FOLDER"] = settings.WindowsOutput.Replace('\\', '/'),
+                ["EXTGEN_MACOS_OUTPUT_FOLDER"] = settings.MacosOutput.Replace('\\', '/'),
+                ["EXTGEN_LINUX_OUTPUT_FOLDER"] = settings.LinuxOutput.Replace('\\', '/'),
+                ["EXTGEN_ANDROID_OUTPUT_FOLDER"] = settings.AndroidOutput.Replace('\\', '/'),
+                ["EXTGEN_IOS_OUTPUT_FOLDER"] = settings.IosOutput.Replace('\\', '/'),
+                ["EXTGEN_TVOS_OUTPUT_FOLDER"] = settings.TvosOutput.Replace('\\', '/'),
+                ["EXTGEN_IOS_FRAMEWORK_NAME"] = fwName,
+                ["EXTGEN_IOS_BUNDLE_ID"] = settings.IosBundleId,
+                ["EXTGEN_IOS_MIN_VERSION"] = settings.IosMinVersion,
+                ["EXTGEN_TVOS_MIN_VERSION"] = settings.TvosMinVersion,
             };
 
-            // Always refresh generated cores under scripts/extgen/
-            ResourceWriter.WriteTemplatedTextResource(
-                asm,
-                "extgen.Resources.Rust.scripts.build_windows.bat",
-                Path.Combine(extgenScripts, "build_windows.bat"),
-                tokens);
+            void EmitCore(string resourceFile, string destName) =>
+                ResourceWriter.WriteTemplatedTextResource(
+                    asm,
+                    $"extgen.Resources.Rust.scripts.{resourceFile}",
+                    Path.Combine(extgenScripts, destName),
+                    tokens);
 
-            ResourceWriter.WriteTemplatedTextResource(
-                asm,
-                "extgen.Resources.Rust.scripts.build_android.sh",
-                Path.Combine(extgenScripts, "build_android.sh"),
-                tokens);
+            void EmitWrapper(string resourceFile, string destName) =>
+                ResourceWriter.WriteTemplatedTextResource(
+                    asm,
+                    $"extgen.Resources.Rust.scripts.{resourceFile}",
+                    Path.Combine(scripts, destName),
+                    tokens,
+                    replace: false);
 
-            ResourceWriter.WriteTemplatedTextResource(
-                asm,
-                "extgen.Resources.Rust.scripts.build_ios.sh",
-                Path.Combine(extgenScripts, "build_ios.sh"),
-                tokens);
+            EmitCore("build_windows.bat", "build_windows.bat");
+            EmitCore("build_android.sh", "build_android.sh");
+            EmitCore("build_macos.sh", "build_macos.sh");
+            EmitCore("build_linux.sh", "build_linux.sh");
+            EmitCore("build_ios.sh", "build_ios.sh");
+            EmitCore("build_tvos.sh", "build_tvos.sh");
 
-            // User entrypoints: IfMissing (same idea as src/CMakeLists.txt / Counter_native.cpp)
-            ResourceWriter.WriteTemplatedTextResource(
-                asm,
-                "extgen.Resources.Rust.scripts.build_windows_wrapper.bat",
-                Path.Combine(scripts, "build_windows.bat"),
-                tokens,
-                replace: false);
-
-            ResourceWriter.WriteTemplatedTextResource(
-                asm,
-                "extgen.Resources.Rust.scripts.build_android_wrapper.sh",
-                Path.Combine(scripts, "build_android.sh"),
-                tokens,
-                replace: false);
-
-            ResourceWriter.WriteTemplatedTextResource(
-                asm,
-                "extgen.Resources.Rust.scripts.build_ios_wrapper.sh",
-                Path.Combine(scripts, "build_ios.sh"),
-                tokens,
-                replace: false);
+            EmitWrapper("build_windows_wrapper.bat", "build_windows.bat");
+            EmitWrapper("build_android_wrapper.sh", "build_android.sh");
+            EmitWrapper("build_macos_wrapper.sh", "build_macos.sh");
+            EmitWrapper("build_linux_wrapper.sh", "build_linux.sh");
+            EmitWrapper("build_ios_wrapper.sh", "build_ios.sh");
+            EmitWrapper("build_tvos_wrapper.sh", "build_tvos.sh");
         }
 
         private static string? TryReadCargoPackageName(string cargoTomlPath)

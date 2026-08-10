@@ -181,6 +181,9 @@ namespace extgen.Emitters.Android.Jni
                     }
 
                     JNIEnv* env = scoped.env;
+                    if (!env) {
+                        return nullptr;
+                    }
 
                     jstring jExtName = extName ? env->NewStringUTF(extName) : nullptr;
                     jstring jOptName = optName ? env->NewStringUTF(optName) : nullptr;

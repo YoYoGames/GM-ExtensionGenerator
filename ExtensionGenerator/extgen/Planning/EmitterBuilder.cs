@@ -18,19 +18,21 @@ namespace extgen.Planning
             var emitters = new Dictionary<string, IIrEmitter>(StringComparer.OrdinalIgnoreCase);
             var rc = plan.Config;
 
-            if (plan.NeedsCpp)
+            switch (plan.PortableLanguage)
             {
-                var cppSettings = new CppEmitterSettings
+                case PortableNativeLanguage.Cpp:
                 {
-                    SourceFilename = rc.Raw.Targets.SourceFilename,
-                    SourceFolder = rc.Raw.Targets.SourceFolder
-                };
-                emitters["cpp"] = new CppEmitter(cppSettings, plan.Runtime);
-            }
-
-            if (plan.NeedsRust)
-            {
-                emitters["rust"] = new RustEmitter(RustEmitterSettings.From(plan), plan.Runtime);
+                    var cppSettings = new CppEmitterSettings
+                    {
+                        SourceFilename = rc.Raw.Targets.SourceFilename,
+                        SourceFolder = rc.Raw.Targets.SourceFolder
+                    };
+                    emitters["cpp"] = new CppEmitter(cppSettings, plan.Runtime);
+                    break;
+                }
+                case PortableNativeLanguage.Rust:
+                    emitters["rust"] = new RustEmitter(RustEmitterSettings.From(plan), plan.Runtime);
+                    break;
             }
 
             if (plan.AllowBindings)
@@ -42,9 +44,13 @@ namespace extgen.Planning
                     emitters["runtime"] = new GmlEmitter(runtimeCfg.ToSettings());
 
                 if (rc.Raw.GameMaker.Extension is { Enabled: true } yyConfig)
-                    emitters["extension"] = new YyEmitter(yyConfig.ToSettings(rc.AndroidEnabled, rc.IosEnabled, rc.TvosEnabled), plan.Runtime);
+                {
+                    var yySettings = yyConfig.ToSettings(rc.AndroidEnabled, rc.IosEnabled, rc.TvosEnabled);
+                    AppleNativePackagingPolicy.Apply(yySettings, plan);
+                    emitters["extension"] = new YyEmitter(yySettings, plan.Runtime);
+                }
 
-                if (!plan.SkipInjectors && rc.Raw.GameMaker.Injectors is { Enabled: true } injectorsCfg)
+                if (plan.EmitCppInjectors && rc.Raw.GameMaker.Injectors is { Enabled: true } injectorsCfg)
                 {
                     ExtensionConfig extConfig = rc.Raw.GameMaker.Extension ?? new();
                     emitters["injectors"] = new CppInjectorsEmitter(injectorsCfg.ToSettings(extConfig), plan.Runtime);

@@ -7,7 +7,7 @@ namespace extgen.Planning
 {
     /// <summary>
     /// Resolved emission decisions. Emitters receive settings derived from this plan
-    /// and must not re-evaluate config conditionals.
+    /// and must not re-evaluate config conditionals or branch on backend name for packaging.
     /// </summary>
     public sealed class EmitterPlan
     {
@@ -16,9 +16,12 @@ namespace extgen.Planning
         public NativeBackend Backend { get; init; }
         public BuildSystemKind BuildSystem { get; init; }
 
-        public bool NeedsNative { get; init; }
-        public bool NeedsCpp { get; init; }
-        public bool NeedsRust { get; init; }
+        /// <summary>Portable FFI language emitter to run (Cpp / Rust / none).</summary>
+        public PortableNativeLanguage PortableLanguage { get; init; }
+
+        public bool NeedsNative => PortableLanguage != PortableNativeLanguage.None;
+        public bool NeedsCpp => PortableLanguage == PortableNativeLanguage.Cpp;
+        public bool NeedsRust => PortableLanguage == PortableNativeLanguage.Rust;
 
         public bool AllowBindings { get; init; }
         public bool AllowBuild { get; init; }
@@ -29,7 +32,14 @@ namespace extgen.Planning
         public bool TvosEnabled { get; init; }
         public bool AppleNative { get; init; }
 
-        public bool SkipInjectors { get; init; }
+        /// <summary>
+        /// Backend-derived packaging and feature flags (Apple, Android JNI, injectors, …).
+        /// </summary>
+        public required NativeBackendFeatures BackendFeatures { get; init; }
+
+        public AppleNativePackaging ApplePackaging => BackendFeatures.Apple;
+        public AndroidJniPackaging AndroidJniPackaging => BackendFeatures.AndroidJni;
+        public bool EmitCppInjectors => BackendFeatures.EmitCppInjectors;
 
         public ExtGenConfig Raw => Config.Raw;
         public RuntimeNaming Runtime => Config.Raw.Runtime;

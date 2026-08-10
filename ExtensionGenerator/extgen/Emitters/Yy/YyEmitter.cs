@@ -95,7 +95,11 @@ namespace extgen.Emitters.Yy
             EnsureAppleLinkerFlags(root, "maclinkerflags", "-ObjC");
 
             if (ctx.Settings.PatchFrameworks)
-                EnsureThirdPartyXcframeworkEntry(root, "iosThirdPartyFrameworkEntries", ctx.ExtName);
+                EnsureThirdPartyXcframeworkEntry(
+                    root,
+                    "iosThirdPartyFrameworkEntries",
+                    ResolveThirdPartyFrameworkBaseName(ctx),
+                    ctx.Settings.ThirdPartyFrameworkEmbed);
         }
 
         private static void PatchYyTvosOptions(IrCompilation comp, YyEmitterContext ctx, JsonObject root)
@@ -104,8 +108,17 @@ namespace extgen.Emitters.Yy
             EnsureAppleLinkerFlags(root, "tvosmaclinkerflags", "-ObjC");
 
             if (ctx.Settings.PatchFrameworks)
-                EnsureThirdPartyXcframeworkEntry(root, "tvosThirdPartyFrameworkEntries", ctx.ExtName);
+                EnsureThirdPartyXcframeworkEntry(
+                    root,
+                    "tvosThirdPartyFrameworkEntries",
+                    ResolveThirdPartyFrameworkBaseName(ctx),
+                    ctx.Settings.ThirdPartyFrameworkEmbed);
         }
+
+        private static string ResolveThirdPartyFrameworkBaseName(YyEmitterContext ctx) =>
+            string.IsNullOrWhiteSpace(ctx.Settings.ThirdPartyFrameworkBaseName)
+                ? ctx.ExtName
+                : ctx.Settings.ThirdPartyFrameworkBaseName!;
 
         private static void WritePlainYyDefinitions(IrCompilation comp, YyEmitterContext ctx, string yyPath) 
         {
@@ -209,9 +222,9 @@ namespace extgen.Emitters.Yy
                 root[key] = string.Join(" ", parts);
         }
 
-        private static void EnsureThirdPartyXcframeworkEntry(JsonObject root, string key, string extName)
+        private static void EnsureThirdPartyXcframeworkEntry(JsonObject root, string key, string frameworkBaseName, int embed)
         {
-            var wanted = $"{extName}.xcframework";
+            var wanted = $"{frameworkBaseName}.xcframework";
 
             // Get or create array
             JsonArray arr;
@@ -226,7 +239,7 @@ namespace extgen.Emitters.Yy
             }
 
             // Check if already present (by "name" or "%Name")
-            bool exists = arr.OfType<JsonObject>().Any(o =>
+            var existingEntry = arr.OfType<JsonObject>().FirstOrDefault(o =>
             {
                 var name = o["name"]?.GetValue<string>();
                 var pctName = o["%Name"]?.GetValue<string>();
@@ -234,15 +247,19 @@ namespace extgen.Emitters.Yy
                     || string.Equals(pctName, wanted, StringComparison.Ordinal);
             });
 
-            if (exists)
+            if (existingEntry is not null)
+            {
+                if (embed != 0 && existingEntry["embed"]?.GetValue<int>() != embed)
+                    existingEntry["embed"] = embed;
                 return;
+            }
 
             // Append new framework entry
             var entry = new JsonObject
             {
                 ["$GMExtensionFrameworkEntry"] = "",
                 ["%Name"] = wanted,
-                ["embed"] = 0,
+                ["embed"] = embed,
                 ["name"] = wanted,
                 ["resourceType"] = "GMExtensionFrameworkEntry",
                 ["resourceVersion"] = "2.0",

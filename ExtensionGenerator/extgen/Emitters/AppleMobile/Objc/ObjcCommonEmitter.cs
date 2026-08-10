@@ -43,7 +43,7 @@ namespace extgen.Emitters.AppleMobile.Objc
             var options = ctx.Settings;
             var platform = ctx.Settings.Platform;
 
-            FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.h", w => EmitUserHeader(ctx, w));
+            FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.h", w => EmitUserHeader(ctx, layout, w));
             FileEmitHelpers.WriteObjcIfMissing(layout.SourceDir, $"{string.Format(options.SourceFilename, ext)}.mm", w => EmitUserImpl(ctx, w));
         }
 
@@ -254,13 +254,13 @@ namespace extgen.Emitters.AppleMobile.Objc
         }
 
         // Public user shell
-        private void EmitUserHeader(ObjcEmitterContext ctx, ObjcWriter w)
+        private void EmitUserHeader(ObjcEmitterContext ctx, ObjcLayout layout, ObjcWriter w)
         {
             var ext = ctx.ExtName;
             var platform = ctx.Settings.Platform;
 
             w.Import("Foundation/Foundation.h", true)
-                .Import($"{platform}/{ext}Internal_{platform}.h")
+                .Import($"{layout.InternalIncludePrefix}/{ext}Internal_{platform}.h")
                 .Line();
 
             w.Interface(ext, $"{ext}Internal", bridge.UserShellProtocols(ctx), null)

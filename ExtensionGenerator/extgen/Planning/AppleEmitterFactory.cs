@@ -12,9 +12,9 @@ namespace extgen.Planning
         public static IIrEmitter CreateIos(EmitterPlan plan, IosTargetConfig cfg)
         {
             var opts = cfg.ToSettings();
+            AppleNativePackagingPolicy.Apply(opts, plan.ApplePackaging);
             var runtime = plan.Runtime;
 
-            // ObjC native forwards to extern "C" — works for both Cpp and Rust staticlibs.
             return plan.Config.IosMode switch
             {
                 AppleMobileMode.Objc => new ObjcEmitter(opts, runtime),
@@ -27,6 +27,7 @@ namespace extgen.Planning
         public static IIrEmitter CreateTvos(EmitterPlan plan, TvosTargetConfig cfg)
         {
             var opts = cfg.ToSettings();
+            AppleNativePackagingPolicy.Apply(opts, plan.ApplePackaging);
             var runtime = plan.Runtime;
 
             return plan.Config.TvosMode switch

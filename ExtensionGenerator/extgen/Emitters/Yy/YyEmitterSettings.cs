@@ -20,5 +20,14 @@ namespace extgen.Emitters.Yy
         public bool TvosEnabled { get; set; }
 
         public bool AndroidEnabled { get; set; }
+
+        /// <summary>
+        /// Basename for ios/tvosThirdPartyFrameworkEntries (without .xcframework).
+        /// Null/empty → compilation name.
+        /// </summary>
+        public string? ThirdPartyFrameworkBaseName { get; set; }
+
+        /// <summary>GMExtensionFrameworkEntry.embed (0 = link, 1 = embed).</summary>
+        public int ThirdPartyFrameworkEmbed { get; set; }
     }
 }

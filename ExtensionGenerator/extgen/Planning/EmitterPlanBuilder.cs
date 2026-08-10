@@ -14,15 +14,15 @@ namespace extgen.Planning
             ArgumentNullException.ThrowIfNull(rc);
 
             var backend = rc.Raw.Build.NativeBackend;
-            var wantsNativePlatforms = WantsNativePlatforms(rc);
-
-            var needsCpp = backend == NativeBackend.Cpp && wantsNativePlatforms;
-            var needsRust = backend == NativeBackend.Rust && WantsRustNativePlatforms(rc);
-            var needsNative = needsCpp || needsRust;
+            var portableLanguage = ResolvePortableLanguage(rc, backend);
 
             ValidateRustConstraints(rc, backend);
 
-            var buildSystem = ResolveBuildSystem(rc, backend, needsNative);
+            var buildSystem = NativeBackendPolicy.ResolveBuildSystem(
+                backend,
+                rc.AllowBuild,
+                portableLanguage != PortableNativeLanguage.None,
+                rc.Raw.Build.EmitCmake);
 
             var androidJni = rc.AndroidEnabled && rc.AndroidMode == AndroidMode.Jni;
             var appleNative =
@@ -34,9 +34,7 @@ namespace extgen.Planning
                 Config = rc,
                 Backend = backend,
                 BuildSystem = buildSystem,
-                NeedsNative = needsNative,
-                NeedsCpp = needsCpp,
-                NeedsRust = needsRust,
+                PortableLanguage = portableLanguage,
                 AllowBindings = rc.AllowBindings,
                 AllowBuild = rc.AllowBuild,
                 AndroidEnabled = rc.AndroidEnabled,
@@ -44,9 +42,17 @@ namespace extgen.Planning
                 IosEnabled = rc.IosEnabled,
                 TvosEnabled = rc.TvosEnabled,
                 AppleNative = appleNative,
-                SkipInjectors = backend == NativeBackend.Rust
+                BackendFeatures = NativeBackendPolicy.Resolve(backend, rc.IosEnabled, rc.TvosEnabled),
             };
         }
+
+        private static PortableNativeLanguage ResolvePortableLanguage(ResolvedConfig rc, NativeBackend backend) =>
+            backend switch
+            {
+                NativeBackend.Cpp when WantsNativePlatforms(rc) => PortableNativeLanguage.Cpp,
+                NativeBackend.Rust when WantsRustNativePlatforms(rc) => PortableNativeLanguage.Rust,
+                _ => PortableNativeLanguage.None,
+            };
 
         private static bool WantsNativePlatforms(ResolvedConfig rc) =>
             rc.HasWindows || rc.HasMac || rc.HasLinux ||
@@ -60,19 +66,6 @@ namespace extgen.Planning
             (rc.AndroidEnabled && rc.AndroidMode == AndroidMode.Jni) ||
             (rc.IosEnabled && rc.IosMode == AppleMobileMode.Native) ||
             (rc.TvosEnabled && rc.TvosMode == AppleMobileMode.Native);
-
-        private static BuildSystemKind ResolveBuildSystem(ResolvedConfig rc, NativeBackend backend, bool needsNative)
-        {
-            if (!rc.AllowBuild || !needsNative)
-                return BuildSystemKind.None;
-
-            return backend switch
-            {
-                NativeBackend.Rust => BuildSystemKind.Cargo,
-                NativeBackend.Cpp => rc.Raw.Build.EmitCmake ? BuildSystemKind.Cmake : BuildSystemKind.None,
-                _ => BuildSystemKind.None
-            };
-        }
 
         private static void ValidateRustConstraints(ResolvedConfig rc, NativeBackend backend)
         {
@@ -94,12 +87,6 @@ namespace extgen.Planning
             if (rc.TvosEnabled && rc.TvosMode != AppleMobileMode.Native)
                 throw new InvalidOperationException(
                     "nativeBackend=rust requires targets.tvos.mode = \"native\" when tvOS is enabled.");
-
-            if (!WantsRustNativePlatforms(rc) &&
-                (rc.HasWindows || rc.HasMac || rc.HasLinux || rc.AndroidEnabled || rc.IosEnabled || rc.TvosEnabled))
-            {
-                // Covered by mode checks above; keep for clarity if modes wrong.
-            }
 
             if (!rc.HasWindows && !rc.HasMac && !rc.HasLinux &&
                 !rc.AndroidEnabled && !rc.IosEnabled && !rc.TvosEnabled)

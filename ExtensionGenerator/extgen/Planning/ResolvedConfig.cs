@@ -43,7 +43,7 @@ namespace extgen.Planning
         /// <summary>
         /// True when any target requires a native (C ABI) implementation layer,
         /// regardless of whether that layer is C++ or Rust.
-        /// Prefer <see cref="EmitterPlan.NeedsCpp"/> / <see cref="EmitterPlan.NeedsRust"/> for emission.
+        /// Prefer <see cref="EmitterPlan.PortableLanguage"/> for emission decisions.
         /// </summary>
         public bool WantsNativePlatforms =>
             HasWindows || HasMac || HasLinux ||

@@ -45,7 +45,7 @@ namespace extgen.Emitters.Android.Jni
             var nativeRegister = $"Java_{packageUnderscore}_{bridgeClass}_nativeRegister";
 
             // Helper to get direct buffer ptr
-            sb.AppendLine("fn direct_buf_ptr(env: &mut JNIEnv, buf: JObject) -> Option<*mut c_char> {");
+            sb.AppendLine("fn direct_buf_ptr(env: &mut JNIEnv<'_>, buf: JObject<'_>) -> Option<*mut c_char> {");
             sb.AppendLine("    let bb = unsafe { JByteBuffer::from_raw(buf.as_raw()) };");
             sb.AppendLine("    env.get_direct_buffer_address(&bb).ok().map(|p| p as *mut c_char)");
             sb.AppendLine("}");
@@ -58,7 +58,7 @@ namespace extgen.Emitters.Android.Jni
 
             // nativeRegister + RegisterNatives
             sb.AppendLine("#[no_mangle]");
-            sb.AppendLine($"pub extern \"system\" fn {nativeRegister}(mut env: JNIEnv, class: JClass) {{");
+            sb.AppendLine($"pub extern \"system\" fn {nativeRegister}(mut env: JNIEnv<'_>, class: JClass<'_>) {{");
             sb.AppendLine("    let methods = [");
             foreach (var s in specs)
             {
@@ -92,8 +92,8 @@ namespace extgen.Emitters.Android.Jni
                            || s.ExportReturnType == ExportType.String;
 
             sb.AppendLine("extern \"system\" fn " + wrap + "(");
-            sb.AppendLine(needsEnv ? "    mut env: JNIEnv," : "    _env: JNIEnv,");
-            sb.AppendLine("    _class: JClass,");
+            sb.AppendLine(needsEnv ? "    mut env: JNIEnv<'_>," : "    _env: JNIEnv<'_>,");
+            sb.AppendLine("    _class: JClass<'_>,");
 
             var paramDecls = new List<string>();
             foreach (var p in s.ExportParams)
@@ -102,8 +102,8 @@ namespace extgen.Emitters.Android.Jni
                 paramDecls.Add(p.HostType switch
                 {
                     ExportType.Double => $"    {id}: jdouble",
-                    ExportType.String => $"    {id}: JString",
-                    ExportType.Pointer => $"    {id}: JObject",
+                    ExportType.String => $"    {id}: JString<'_>",
+                    ExportType.Pointer => $"    {id}: JObject<'_>",
                     _ => $"    {id}: jdouble"
                 });
             }

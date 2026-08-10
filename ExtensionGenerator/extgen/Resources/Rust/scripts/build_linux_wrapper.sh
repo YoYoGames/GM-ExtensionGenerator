@@ -4,4 +4,4 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 export CARGO_TARGET_DIR="${SCRIPT_DIR}/../rust/target"
-exec "$SCRIPT_DIR/extgen/build_android.sh" "$@"
+exec "$SCRIPT_DIR/extgen/build_linux.sh" "$@"
