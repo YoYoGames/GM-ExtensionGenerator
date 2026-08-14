@@ -15,8 +15,9 @@ namespace extgen.Emitters.Gml
     /// </summary>
     public sealed class GmlEmitter(GmlEmitterSettings settings) : IIrEmitter
     {
-        private const string InternalArgBuffer = "__args_buffer";
-        private const string InternalRetBuffer = "__ret_buffer";
+        private const string InternalArgBuffer = "__args_buffer__";
+        private const string InternalRetBuffer = "__ret_buffer__";
+        private const string InternalDecodersArray = "__decoders__";
 
         private const string ExtCoreArgsBuffer = "__ext_core_get_args_buffer";
         private const string ExtCoreRetBuffer = "__ext_core_get_ret_buffer";
@@ -119,10 +120,10 @@ namespace extgen.Emitters.Gml
             w.Line("/// @ignore");
             w.Function($"__{c.Name}_get_decoders", [], funcBody =>
             {
-                funcBody.Assign("__decoders__",
+                funcBody.Assign(InternalDecodersArray,
                     expr => expr.ArrayLiteral(c.Structs.Select(s => $"__{s.Name}_decode"), true),
                     VariableScope.Static);
-                funcBody.Return("__decoders__");
+                funcBody.Return(InternalDecodersArray);
             });
 
             // dispatcher (only if any param uses Function)
@@ -235,6 +236,7 @@ namespace extgen.Emitters.Gml
             const string bufferName = "_buffer";
 
             var usesDynamic = s.Fields.Any(p =>
+                p.Type.ContainsBuiltin(BuiltinKind.Any) ||
                 p.Type.ContainsBuiltin(BuiltinKind.AnyArray) ||
                 p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
 
@@ -250,7 +252,7 @@ namespace extgen.Emitters.Gml
             w.Function($"__{s.Name}_decode", [bufferName, "_offset"], fn =>
             {
                 if (usesDynamic)
-                    fn.Assign("__decoders__", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
+                    fn.Assign(InternalDecodersArray, $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
 
                 fn.Call("buffer_seek", bufferName, "buffer_seek_start", "_offset").Line(";");
 
@@ -314,9 +316,10 @@ namespace extgen.Emitters.Gml
             if (usesFunctions)
                 body.Assign("__dispatcher__", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Local).Line();
 
-            var usesDynamic = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.AnyArray) || p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
+            var usesDynamic = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.AnyArray) || p.Type.ContainsBuiltin(BuiltinKind.AnyMap)) ||
+                fn.ReturnType.ContainsBuiltin(BuiltinKind.Any) || fn.ReturnType.ContainsBuiltin(BuiltinKind.AnyArray) || fn.ReturnType.ContainsBuiltin(BuiltinKind.AnyMap);
             if (usesDynamic)
-                body.Assign("__decoders__", $"__{ctx.ExtName}_get_decoders()", VariableScope.Static).Line();
+                body.Assign(InternalDecodersArray, $"__{ctx.ExtName}_get_decoders()", VariableScope.Local).Line();
 
             if (needArgsBuf)
             {
@@ -526,7 +529,7 @@ namespace extgen.Emitters.Gml
                 case BuiltinKind.Any:
                 case BuiltinKind.AnyArray:
                 case BuiltinKind.AnyMap:
-                    w.Assign(id, expr => expr.Call(ExtCoreUnmarshalValue, buf, "__decoders__"));
+                    w.Assign(id, expr => expr.Call(ExtCoreUnmarshalValue, buf, InternalDecodersArray));
                     return;
 
                 case BuiltinKind.Bool:
