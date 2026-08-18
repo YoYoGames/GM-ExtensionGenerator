@@ -115,6 +115,7 @@ namespace extgen.Emitters.Android.Java
             bool needsEnum = s.Fields.Any(f => f.Type.ContainsEnum());
 
             w.Import($"{pkg}.{ctx.Runtime.WireClass}");
+            w.Import($"{pkg}.{ctx.Runtime.WireClass}.GMValue");
             w.Import($"{pkg}.codecs.*");
             if (needsEnum) w.Import($"{pkg}.enums.*");
             w.Line();
@@ -125,7 +126,7 @@ namespace extgen.Emitters.Android.Java
             if (needsArray) w.Import("java.util.Arrays");
             w.Line();
 
-            var components = s.Fields.Select(f => new Param(typeMap.Map(f.Type), f.Name));
+            var components = s.Fields.Select(f => new Param(typeMap.Map(f.Type, owned: true), f.Name));
 
             w.Record(s.Name, components, recordBody => 
             {
@@ -156,6 +157,7 @@ namespace extgen.Emitters.Android.Java
             w.Import("java.nio.ByteBuffer").Line();
 
             w.Import($"{pkg}.GMExtWire");
+            w.Import($"{pkg}.{wire}.GMValue");
             if (needsOptional) w.Import("java.util.Optional");
             if (needsList) w.Import("java.util.List");
             if (needsArray) w.Import("java.util.Arrays");
@@ -171,7 +173,7 @@ namespace extgen.Emitters.Android.Java
                     var args = new List<string>();
                     foreach (var f in s.Fields)
                     {
-                        wireHelpers.DecodeLines(read, f.Type, f.Name, true, "b");
+                        wireHelpers.DecodeLines(read, f.Type, f.Name, true, "b", owned: true);
                         args.Add(f.Name);
                         read.Line();
                     }
@@ -228,7 +230,7 @@ namespace extgen.Emitters.Android.Java
                 foreach (var fn in allFunctions)
                 {
                     var ret = typeMap.Map(fn.ReturnType, owned: true);
-                    var ps = fn.Parameters.Select(p => new Param(typeMap.Map(p.Type), p.Name));
+                    var ps = fn.Parameters.Select(p => new Param(typeMap.Map(p.Type, owned: false), p.Name));
                     body.FunctionDecl(fn.Name, ps, ret, modifiers: ["public"]);
                 }
             }, ["public"]);

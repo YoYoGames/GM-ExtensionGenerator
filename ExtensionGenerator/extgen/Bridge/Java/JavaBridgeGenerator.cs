@@ -212,7 +212,7 @@ namespace extgen.Bridge.Java
                 foreach (var p in fn.Parameters)
                 {
                     m.Comment($"field: {p.Name}, type: {p.Type.ToDebugString()}");
-                    Wire.DecodeLines(m, p.Type, p.Name, declare: true, bufferVar: Runtime.ArgBufferParam);
+                    Wire.DecodeLines(m, p.Type, p.Name, declare: true, bufferVar: Runtime.ArgBufferParam, owned: false);
                     m.Line();
                     callArgs.Add(p.Name);
                 }

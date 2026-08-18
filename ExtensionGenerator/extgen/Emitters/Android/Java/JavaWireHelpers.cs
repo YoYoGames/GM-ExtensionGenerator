@@ -140,7 +140,7 @@ namespace extgen.Emitters.Android.Java
         /// <summary>
         /// Generates a read expression for a non-collection type from the buffer.
         /// </summary>
-        public override string ReadExpr(IrType t, string bufferVar)
+        private string ReadNonWrapped(IrType t, string bufferVar, bool owned)
         {
             var wire = _runtime.WireClass;
 
@@ -165,14 +165,16 @@ namespace extgen.Emitters.Android.Java
                 IrType.Builtin { Kind: BuiltinKind.Function } =>
                     $"{wire}.readGMFunction({bufferVar}, {_runtime.DispatchQueueField})",
 
+                // Dynamic types: owned positions (struct fields) take the stream types so the value
+                // can be re-emitted verbatim; views are read-only and cannot be written back.
                 IrType.Builtin { Kind: BuiltinKind.Any } =>
-                    $"{wire}.readGMValue({bufferVar})",
+                    owned ? $"{wire}.readDataStream({bufferVar})" : $"{wire}.readGMValue({bufferVar})",
 
                 IrType.Builtin { Kind: BuiltinKind.AnyArray } =>
-                    $"{wire}.readGMArray({bufferVar})",
+                    owned ? $"{wire}.readArrayStream({bufferVar})" : $"{wire}.readGMArray({bufferVar})",
 
                 IrType.Builtin { Kind: BuiltinKind.AnyMap } =>
-                    $"{wire}.readGMObject({bufferVar})",
+                    owned ? $"{wire}.readStructStream({bufferVar})" : $"{wire}.readGMObject({bufferVar})",
 
                 IrType.Builtin { Kind: BuiltinKind.Buffer } =>
                     $"{_runtime.BufferQueueField}.poll()",
@@ -180,6 +182,9 @@ namespace extgen.Emitters.Android.Java
                 _ => throw new NotSupportedException($"read unsupported type {t}")
             };
         }
+
+        public override string ReadExpr(IrType t, string bufferVar)
+            => ReadNonWrapped(t, bufferVar, owned: true);
 
         /// <summary>
         /// Generates a write expression for a non-collection type into the buffer.
@@ -223,8 +228,20 @@ namespace extgen.Emitters.Android.Java
         /// Emits Java code to decode a value from the buffer, handling optionals and arrays.
         /// </summary>
         public override void DecodeLines(JavaWriter w, IrType t, string accessor, bool declare, string bufferVar)
+            => DecodeLines(w, t, accessor, declare, bufferVar, owned: true);
+
+        /// <summary>
+        /// Emits Java code to decode a value from the buffer with ownership control.
+        /// </summary>
+        public void DecodeLines(
+            JavaWriter w,
+            IrType t,
+            string accessor,
+            bool declare,
+            string bufferVar,
+            bool owned)
         {
-            var javaType = _typeMap.Map(t);
+            var javaType = _typeMap.Map(t, owned: owned);
 
             // Nullable -> Optional<T> with leading presence bool
             if (IrType.IsNullable(t))
@@ -236,7 +253,7 @@ namespace extgen.Emitters.Android.Java
                     var inner = IrType.StripNullable(t);
                     var tmp = $"__opt_{accessor}";
 
-                    DecodeLines(then, inner, tmp, true, bufferVar);
+                    DecodeLines(then, inner, tmp, true, bufferVar, owned);
                     then.Line($"{accessor} = java.util.Optional.of({tmp});");
                 });
 
@@ -249,21 +266,21 @@ namespace extgen.Emitters.Android.Java
             if (t is IrType.Array a)
             {
                 var el = a.Element;
-                var elJavaType = _typeMap.Map(el);
+                var elJavaType = _typeMap.Map(el, owned: owned);
 
                 if (a.FixedLength is int n)
                 {
                     string arrInit = $"new {elJavaType}[{n}]";
                     w.Assign(
                         accessor,
-                        $"{_runtime.WireClass}.readFixedArray({bufferVar}, {n}, bb -> {ReadExpr(el, "bb")}, {arrInit})",
+                        $"{_runtime.WireClass}.readFixedArray({bufferVar}, {n}, bb -> {ReadNonWrapped(el, "bb", owned)}, {arrInit})",
                         declare ? javaType : null);
                 }
                 else
                 {
                     w.Assign(
                         accessor,
-                        $"{_runtime.WireClass}.readList({bufferVar}, bb -> {ReadExpr(el, "bb")})",
+                        $"{_runtime.WireClass}.readList({bufferVar}, bb -> {ReadNonWrapped(el, "bb", owned)})",
                         declare ? javaType : null);
                 }
 
@@ -271,7 +288,7 @@ namespace extgen.Emitters.Android.Java
             }
 
             // Plain scalar / enum / struct / function / any / buffer
-            w.Assign(accessor, ReadExpr(t, bufferVar), declare ? javaType : null);
+            w.Assign(accessor, ReadNonWrapped(t, bufferVar, owned), declare ? javaType : null);
         }
 
         /// <summary>
