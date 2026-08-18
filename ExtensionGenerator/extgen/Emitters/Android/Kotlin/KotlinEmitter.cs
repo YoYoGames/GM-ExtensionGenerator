@@ -37,7 +37,7 @@ namespace extgen.Emitters.Android.Kotlin
 
             // Kotlin shares artifacts but emits .kt instead of .java
 
-            FileEmitHelpers.WriteKotlinIfMissing(layout.BaseDir, $"{c.Name}Kotlin.kt", w => EmitKotlinImpl(ctx, w));
+            FileEmitHelpers.WriteKotlinIfMissing(layout.BaseDir, $"{c.Name}Kotlin.kt", w => EmitKotlinImpl(ctx, c, w));
         }
 
         private static void EmitJavaLayer(KotlinEmitterContext ctx, IrCompilation c, JavaLayout layout)
@@ -56,18 +56,28 @@ namespace extgen.Emitters.Android.Kotlin
             common.EmitJavaUserShell(c, layout);
         }
 
-        private void EmitKotlinImpl(KotlinEmitterContext ctx, KotlinWriter w)
+        private void EmitKotlinImpl(KotlinEmitterContext ctx, IrCompilation c, KotlinWriter w)
         {
             string pkg = ctx.Runtime.BasePackage;
             string wire = runtime.WireClass;
+
+            // Only import the generated sub-packages that actually got types. extgen creates the
+            // folders unconditionally, and a star import of an empty package is a hard error in
+            // Kotlin ("unresolved reference"), unlike Java where the unused import is harmless.
+            bool needsEnum = c.Enums.Any();
+            bool needsRecords = c.Structs.Any();
 
             w.Package(pkg).Line();
 
             w.Import($"{pkg}.{wire}.GMFunction");
             w.Import($"{pkg}.{wire}.GMValue");
-            w.Import($"{pkg}.records.*");
-            w.Import($"{pkg}.codecs.*");
-            w.Import($"{pkg}.enums.*").Line();
+            if (needsRecords)
+            {
+                w.Import($"{pkg}.records.*");
+                w.Import($"{pkg}.codecs.*");
+            }
+            if (needsEnum) w.Import($"{pkg}.enums.*");
+            w.Line();
 
             // class MyExtKotlin : MyExtInterface { }
             w.Class(
