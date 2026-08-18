@@ -27,6 +27,9 @@ namespace extgen.Emitters.Android.Jni
 
         private string Generate(JniEmitterContext ctx, IrCompilation comp, IReadOnlyList<JniFunctionSpec> specs)
         {
+            var usesFunctions = comp.HasFunctionType();
+            var usesBuffers = comp.HasBufferType();
+
             var sb = new StringBuilder();
             sb.AppendLine("// ##### extgen :: Auto-generated Android JNI bridge (Rust) #####");
             sb.AppendLine("#![allow(non_snake_case)]");
@@ -51,6 +54,26 @@ namespace extgen.Emitters.Android.Jni
             sb.AppendLine("}");
             sb.AppendLine();
 
+            if (usesFunctions)
+            {
+                EmitSyntheticBufferLenWrapper(
+                    sb,
+                    wrapName: "jni_wrap_invocation_handler",
+                    nativeName: $"{ctx.Runtime.NativePrefix}{ctx.ExtName}_invocation_handler",
+                    bufferParam: ctx.Runtime.RetBufferParam,
+                    lengthParam: ctx.Runtime.RetBufferLengthParam);
+            }
+
+            if (usesBuffers)
+            {
+                EmitSyntheticBufferLenWrapper(
+                    sb,
+                    wrapName: "jni_wrap_queue_buffer",
+                    nativeName: $"{ctx.Runtime.NativePrefix}{ctx.ExtName}_queue_buffer",
+                    bufferParam: ctx.Runtime.ArgBufferParam,
+                    lengthParam: ctx.Runtime.ArgBufferLengthParam);
+            }
+
             foreach (var s in specs)
             {
                 EmitWrapper(sb, ctx, s);
@@ -60,6 +83,16 @@ namespace extgen.Emitters.Android.Jni
             sb.AppendLine("#[no_mangle]");
             sb.AppendLine($"pub extern \"system\" fn {nativeRegister}(mut env: JNIEnv<'_>, class: JClass<'_>) {{");
             sb.AppendLine("    let methods = [");
+            if (usesFunctions)
+            {
+                sb.AppendLine(
+                    $"        NativeMethod {{ name: \"{ctx.Runtime.JniPrefix}{ctx.ExtName}_invocation_handler\".into(), sig: \"(Ljava/nio/ByteBuffer;D)D\".into(), fn_ptr: jni_wrap_invocation_handler as *mut c_void }},");
+            }
+            if (usesBuffers)
+            {
+                sb.AppendLine(
+                    $"        NativeMethod {{ name: \"{ctx.Runtime.JniPrefix}{ctx.ExtName}_queue_buffer\".into(), sig: \"(Ljava/nio/ByteBuffer;D)D\".into(), fn_ptr: jni_wrap_queue_buffer as *mut c_void }},");
+            }
             foreach (var s in specs)
             {
                 var sigArgs = string.Concat(s.ExportParams.Select(p => p.HostType.AsJniSig()));
@@ -80,6 +113,31 @@ namespace extgen.Emitters.Android.Jni
             sb.AppendLine();
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// JNI wrapper for synthetic helpers: (ByteBuffer, double length) -> double.
+        /// Used by queue_buffer and invocation_handler (same shape as CppJniBridgeEmitter).
+        /// </summary>
+        private static void EmitSyntheticBufferLenWrapper(
+            StringBuilder sb,
+            string wrapName,
+            string nativeName,
+            string bufferParam,
+            string lengthParam)
+        {
+            sb.AppendLine($"extern \"system\" fn {wrapName}(");
+            sb.AppendLine("    mut env: JNIEnv<'_>,");
+            sb.AppendLine("    _class: JClass<'_>,");
+            sb.AppendLine($"    {bufferParam}: JObject<'_>,");
+            sb.AppendLine($"    {lengthParam}: jdouble,");
+            sb.AppendLine(") -> jdouble {");
+            sb.AppendLine(
+                $"    let {bufferParam}_ptr = match direct_buf_ptr(&mut env, {bufferParam}) {{ Some(p) => p, None => return -1.0 }};");
+            sb.AppendLine(
+                $"    unsafe {{ ffi::{nativeName}({bufferParam}_ptr, {lengthParam}) }}");
+            sb.AppendLine("}");
+            sb.AppendLine();
         }
 
         private static string WrapperName(JniEmitterContext ctx, JniFunctionSpec s) =>
