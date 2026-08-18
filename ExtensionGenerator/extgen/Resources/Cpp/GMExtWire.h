@@ -1721,14 +1721,18 @@ namespace gm::runtime {
 
 namespace gm::wire::codec {
 
+    // BufferReader::data() is already cursor-relative (span data + position), so the start of the
+    // value has to be captured *before* readValue advances past it. Adding the old position to the
+    // post-read data() double-counts the offset and slices from the wrong place entirely.
+
     template<>
     inline gm::wire::DataStream readValue<gm::wire::DataStream>(BufferReader& buf)
     {
+        const std::byte* _begin = buf.data();
         size_t _init = buf.position();
         readValue(buf);
-        size_t _end = buf.position();
 
-        BufferReader _sub(buf.data() + _init, _end - _init);
+        BufferReader _sub(_begin, buf.position() - _init);
         gm::wire::DataStream ds;
         ds.buildFrom(_sub);
         return ds;
@@ -1737,11 +1741,11 @@ namespace gm::wire::codec {
     template<>
     inline gm::wire::ArrayStream readValue<gm::wire::ArrayStream>(BufferReader& buf)
     {
+        const std::byte* _begin = buf.data();
         size_t _init = buf.position();
         readValue(buf);
-        size_t _end = buf.position();
 
-        BufferReader _sub(buf.data() + _init, _end - _init);
+        BufferReader _sub(_begin, buf.position() - _init);
         gm::wire::ArrayStream as;
         as.buildFrom(_sub);
         return as;
@@ -1750,11 +1754,11 @@ namespace gm::wire::codec {
     template<>
     inline gm::wire::StructStream readValue<gm::wire::StructStream>(BufferReader& buf)
     {
+        const std::byte* _begin = buf.data();
         size_t _init = buf.position();
         readValue(buf);
-        size_t _end = buf.position();
 
-        BufferReader _sub(buf.data() + _init, _end - _init);
+        BufferReader _sub(_begin, buf.position() - _init);
         gm::wire::StructStream ss;
         ss.buildFrom(_sub);
         return ss;
