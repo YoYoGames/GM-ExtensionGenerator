@@ -46,6 +46,7 @@ namespace extgen.Parsing.Gmidl
             ["object"] = GMIDLPrimitive.Object,
             ["array"] = GMIDLPrimitive.Array,
             ["any"] = GMIDLPrimitive.GMVal,
+            ["gmval"] = GMIDLPrimitive.GMVal, // the GMIDL keyword spelling, so `gmval?` reaches IR_DYN_001
 
             ["func"] = GMIDLPrimitive.Function,
             ["function"] = GMIDLPrimitive.Function,
