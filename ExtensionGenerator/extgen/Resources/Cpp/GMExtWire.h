@@ -1362,9 +1362,9 @@ namespace gm::wire {
 
         virtual void writeTo(gm::byteio::IByteWriter& output) const { output.writeBytes(buffer.data(), buffer.size()); }
 
-    protected:
         virtual void buildFrom(gm::byteio::BufferReader& bv) { buffer.assign(bv.data(), bv.data() + bv.remaining()); }
 
+    protected:
         friend class GMFunction;
     };
 
@@ -1497,6 +1497,7 @@ namespace gm::wire {
         // collection helpers (if you want Swift to pass these too)
         void push(const ArrayStream& arr) { *this << arr; }
         void push(const StructStream& obj) { *this << obj; }
+
     };
 
     class StructStream : public gm::wire::details::CollectionStream {
@@ -1561,6 +1562,7 @@ namespace gm::wire {
         void add(const char* key, const ArrayStream& arr) { addKeyValue(key, arr); }
 
         void add(const char* key, const StructStream& obj) { addKeyValue(key, obj); }
+
 
         void writeTo(gm::byteio::IByteWriter& output) const override
         {
@@ -1707,6 +1709,19 @@ namespace gm::runtime {
 } // namespace gm::runtime
 
 namespace gm::wire::codec {
+
+    template<>
+    inline gm::wire::DataStream readValue<gm::wire::DataStream>(BufferReader& buf)
+    {
+        size_t _init = buf.position();
+        readValue(buf);
+        size_t _end = buf.position();
+
+        BufferReader _sub(buf.data() + _init, _end - _init);
+        gm::wire::DataStream ds;
+        ds.buildFrom(_sub);
+        return ds;
+    }
 
     template<>
     inline gm::wire::ArrayStream readValue<gm::wire::ArrayStream>(BufferReader& buf)
