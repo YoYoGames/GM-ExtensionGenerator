@@ -1354,6 +1354,13 @@ namespace gm::wire {
             return *this;
         }
 
+        // non-templated 'undefined' helper (Swift cannot call the std::optional operator<<)
+        void writeUndefined()
+        {
+            gm::byteio::VectorWriter w(buffer);
+            gm::wire::codec::writeValue(w, gm::wire::GMKind::Undefined);
+        }
+
         const std::vector<std::byte>& getBuffer() const { return buffer; }
 
         size_t getLength() { return buffer.size(); }
@@ -1498,6 +1505,8 @@ namespace gm::wire {
         void push(const ArrayStream& arr) { *this << arr; }
         void push(const StructStream& obj) { *this << obj; }
 
+        // 'undefined' element; non-templated so Swift can call it
+        void pushUndefined() { *this << std::optional<double>{}; }
     };
 
     class StructStream : public gm::wire::details::CollectionStream {
@@ -1563,6 +1572,8 @@ namespace gm::wire {
 
         void add(const char* key, const StructStream& obj) { addKeyValue(key, obj); }
 
+        // 'undefined' value; non-templated so Swift can call it
+        void addUndefined(const char* key) { addKeyValue(key, std::optional<double>{}); }
 
         void writeTo(gm::byteio::IByteWriter& output) const override
         {
