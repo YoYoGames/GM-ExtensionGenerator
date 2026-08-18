@@ -537,10 +537,19 @@ public class GMExtWire
 
         @Override
         public void buildFrom(ByteBuffer src) {
-            byte srcTag = src.get();
+            // Consume the collection header (tag + count) and keep only the payload, so a later
+            // writeTo() re-emits the header exactly once. Mirrors C++ parseCollectionHeader().
+            ByteBuffer r = src.asReadOnlyBuffer().order(ORDER);
+            r.rewind();
+
+            byte srcTag = r.get();
             if (tag != srcTag)
                 throw new IllegalArgumentException("Incompatible 'tag' when building from ByteBuffer.");
-            super.buildFrom(src);
+
+            count = r.getShort();
+
+            buf.clear();
+            buf.writeBytes(r);
         }
     }
 
