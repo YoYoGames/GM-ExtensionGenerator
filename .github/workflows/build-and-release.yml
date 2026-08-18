@@ -2,9 +2,11 @@ name: Auto release
 
 on:
   push:
+    branches:
+      - main
     paths:
-      - "/gamemaker.extension_core.yymps"
-      - "/ExtensionGenerator/**"
+      - "gamemaker.extension_core.yymps"
+      - "ExtensionGenerator/**"
   workflow_dispatch:
 
 permissions:
