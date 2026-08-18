@@ -57,7 +57,10 @@ namespace extgen.Parsing.Gmidl
                 // Buffer and Function
                 new NoBufferOrFunctionInStructFieldsRule(),
                 new NoBufferOrFunctionReturnTypesRule(),
-                
+
+                // Dynamic types
+                new NoNullableDynamicTypesRule(),
+
                 // Enum
                 new EnumUnderlyingMustBeIntegralScalarRule(),
                 new EnumMemberNamesMustBeUniqueRule(),

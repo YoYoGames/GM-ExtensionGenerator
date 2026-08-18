@@ -390,6 +390,73 @@ namespace extgen.Parsing.Validation
     }
 
     /// <summary>
+    /// Validates that the dynamic types ('gmval', 'array', 'object') are never marked nullable.
+    /// </summary>
+    /// <remarks>
+    /// The dynamic marshaller already carries GML's 'undefined' as an inhabitant of the value itself
+    /// (GMKind::Undefined, tag 251, no payload). Adding '?' layers a second, unrelated "absent"
+    /// encoding on top of that: a leading presence byte emitted by writeValue(IByteWriter&amp;,
+    /// const std::optional&lt;T&gt;&amp;). The two are redundant — a nullable dynamic can spell "nothing"
+    /// twice (presence 0, or presence 1 followed by the Undefined tag) — and the redundancy is a
+    /// trap, because DataStream's own optional overload writes the Undefined *tag* rather than a
+    /// presence byte, so the two spellings are easy to mix up in hand-written native code.
+    /// Model an absent dynamic value as a plain 'gmval' carrying 'undefined'.
+    /// </remarks>
+    public sealed class NoNullableDynamicTypesRule : IIrRule
+    {
+        /// <summary>
+        /// Maps a dynamic builtin to the type name authors write in GMIDL.
+        /// </summary>
+        private static string Spell(BuiltinKind kind) => kind switch
+        {
+            BuiltinKind.Any => "gmval",
+            BuiltinKind.AnyArray => "array",
+            BuiltinKind.AnyMap => "object",
+            _ => kind.ToString().ToLowerInvariant()
+        };
+
+        /// <summary>
+        /// Describes where the offending type was declared, in the author's terms.
+        /// </summary>
+        private static string Describe(IrTypeOccurrence occ) => occ.OwnerKind switch
+        {
+            IrTypeOwnerKind.StructField => $"Struct '{occ.OwnerName}' field '{occ.MemberName}'",
+            IrTypeOwnerKind.FunctionReturn => $"Function '{occ.OwnerName}' return type",
+            IrTypeOwnerKind.FunctionParameter => $"Function '{occ.OwnerName}' parameter '{occ.MemberName}'",
+            IrTypeOwnerKind.CompilationConstant => $"Constant '{occ.MemberName}'",
+            IrTypeOwnerKind.EnumUnderlying => $"Enum '{occ.OwnerName}' underlying type",
+            _ => $"Type at {occ.Path}"
+        };
+
+        /// <inheritdoc />
+        public IEnumerable<IrDiagnostic> Validate(IrCompilation comp)
+        {
+            foreach (var occ in IrWalkers.WalkIrTypes(comp))
+            {
+                // Only the Nullable node itself is reported; the walker also yields its underlying
+                // Builtin, which must not produce a second diagnostic for the same declaration.
+                if (occ.Type is not IrType.Nullable { Underlying: IrType.Builtin b })
+                    continue;
+
+                if (b.Kind is not (BuiltinKind.Any or BuiltinKind.AnyArray or BuiltinKind.AnyMap))
+                    continue;
+
+                var spelling = Spell(b.Kind);
+
+                yield return new IrDiagnostic(
+                    Code: "IR_DYN_001",
+                    Message: $"{Describe(occ)} cannot be a nullable dynamic type ('{spelling}?'). " +
+                             $"Dynamic values already carry 'undefined' on the wire, so '?' is redundant: " +
+                             $"it adds a second, conflicting presence-byte encoding for the same meaning. " +
+                             $"Declare it as '{(b.Kind == BuiltinKind.Any ? "gmval" : spelling)}' and pass " +
+                             $"'undefined' as the value instead.",
+                    Severity: IrSeverity.Error,
+                    Path: occ.Path);
+            }
+        }
+    }
+
+    /// <summary>
     /// Validates that function return types do not contain buffer or function types.
     /// </summary>
     public sealed class NoBufferOrFunctionReturnTypesRule : IIrRule
