@@ -19,20 +19,11 @@ namespace extgen.Emitters.Rust
         private readonly RuntimeNaming _runtime = runtime;
         private readonly string _structCodecPrefix = structCodecPrefix;
 
-        public void EnsureSupported(IrType t, bool asReturn)
-        {
-            if (asReturn && ContainsBuiltin(t, BuiltinKind.Function))
-                throw new NotSupportedException("rust emitter: function types as return values are not supported.");
-            if (asReturn && ContainsBuiltin(t, BuiltinKind.Buffer))
-                throw new NotSupportedException("rust emitter: buffers as return values are not supported.");
-        }
-
         /// <summary>
         /// Emit decode of <paramref name="t"/> from reader into a let-binding <paramref name="accessor"/>.
         /// </summary>
         public void DecodeLet(StringBuilder sb, string indent, IrType t, string accessor, string reader)
         {
-            EnsureSupported(t, asReturn: false);
             var rustTy = _typeMap.MapParam(t);
             sb.Append(indent).Append("let ").Append(accessor).Append(": ").Append(rustTy)
               .Append(" = ").Append(DecodeExpr(t, reader)).Append(";\n");
@@ -43,7 +34,6 @@ namespace extgen.Emitters.Rust
         /// </summary>
         public void EncodeStmt(StringBuilder sb, string indent, IrType t, string accessor, string writer)
         {
-            EnsureSupported(t, asReturn: true);
             sb.Append(indent).Append(EncodeExpr(t, writer, accessor)).Append(";\n");
         }
 
@@ -144,11 +134,11 @@ namespace extgen.Emitters.Rust
                 BuiltinKind.Buffer =>
                     $"{_runtime.BufferQueueField}.pop_front()?",
                 BuiltinKind.Any =>
-                    $"{reader}.unpack_value()?.into_owned()",
+                    $"{reader}.unpack_value_owned()?",
                 BuiltinKind.AnyArray =>
-                    $"{{ match {reader}.unpack_value()? {{ gm_ext_wire::GMValue::Array(__a) => __a.into_iter().map(|__v| __v.into_owned()).collect(), _ => return None }} }}",
+                    $"{{ match {reader}.unpack_value_owned()? {{ gm_ext_wire::GMValueOwned::Array(__a) => __a, _ => return None }} }}",
                 BuiltinKind.AnyMap =>
-                    $"{{ match {reader}.unpack_value()? {{ gm_ext_wire::GMValue::Struct(__m) => __m.into_iter().map(|(k, v)| (k.to_string(), v.into_owned())).collect(), _ => return None }} }}",
+                    $"{{ match {reader}.unpack_value_owned()? {{ gm_ext_wire::GMValueOwned::Struct(__m) => __m, _ => return None }} }}",
                 _ => throw new NotSupportedException($"rust emitter: cannot read builtin '{b.Kind}'.")
             };
 
@@ -170,8 +160,9 @@ namespace extgen.Emitters.Rust
                 BuiltinKind.Pointer => $"{writer}.write_u64({accessor} as u64)?",
                 BuiltinKind.Any or BuiltinKind.AnyArray or BuiltinKind.AnyMap =>
                     $"{accessor}.write_to(&mut {writer})?",
-                BuiltinKind.Buffer or BuiltinKind.Function =>
-                    throw new NotSupportedException($"rust emitter: cannot write builtin '{b.Kind}'."),
+                BuiltinKind.Function => $"{writer}.write_idl_function({accessor}.id())?",
+                BuiltinKind.Buffer =>
+                    $"{writer}.write_idl_buffer({accessor}.len as u32, {accessor}.ptr as u64)?",
                 _ => throw new NotSupportedException($"rust emitter: cannot write builtin '{b.Kind}'.")
             };
 
@@ -224,14 +215,5 @@ namespace extgen.Emitters.Rust
             };
             return $"{accessor} as {rust}";
         }
-
-        private static bool ContainsBuiltin(IrType t, BuiltinKind kind) =>
-            t switch
-            {
-                IrType.Builtin b => b.Kind == kind,
-                IrType.Nullable n => ContainsBuiltin(n.Underlying, kind),
-                IrType.Array a => ContainsBuiltin(a.Element, kind),
-                _ => false
-            };
     }
 }

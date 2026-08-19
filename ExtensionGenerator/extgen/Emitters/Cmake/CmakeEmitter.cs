@@ -3,6 +3,7 @@ using extgen.Models.Config;
 using extgen.Models.Config.Targets.Consoles;
 using extgen.Models.Config.Targets.Desktop;
 using extgen.Models.Config.Targets.Mobile;
+using extgen.Options.Android;
 using extgen.Utils;
 
 namespace extgen.Emitters.Cmake
@@ -176,7 +177,7 @@ namespace extgen.Emitters.Cmake
                 ["EXTGEN_TVOS_DISABLED"] = targets.Tvos is TvosTargetConfig { Enabled: true, Mode: AppleMobileMode.Objc or AppleMobileMode.Swift } ? "false" : "true",
 
                 // iOS|tvOS (Objc wrapper)
-                ["EXTGEN_IOS_NATIVE_DISABLED"] = targets.Ios is IosTargetConfig { Enabled: true, Mode: AppleMobileMode.Native, Enabled: true } ? "false" : "true",
+                ["EXTGEN_IOS_NATIVE_DISABLED"] = targets.Ios is IosTargetConfig { Enabled: true, Mode: AppleMobileMode.Native } ? "false" : "true",
                 ["EXTGEN_TVOS_NATIVE_DISABLED"] = targets.Tvos is TvosTargetConfig { Enabled: true, Mode: AppleMobileMode.Native } ? "false" : "true",
 
                 ["EXTGEN_IOS_OUTPUT_FOLDER"] = targets.Ios is IosTargetConfig { Enabled: true } i ? i.Output : "../iOSSourceFromMac",

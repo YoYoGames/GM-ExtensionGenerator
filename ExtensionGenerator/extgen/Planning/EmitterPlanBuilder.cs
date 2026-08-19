@@ -61,7 +61,8 @@ namespace extgen.Planning
 
             if (rc.HasXbox || rc.HasPs4 || rc.HasPs5 || rc.HasSwitch)
                 throw new InvalidOperationException(
-                    "nativeBackend=rust does not support console targets yet (Xbox/PS4/PS5/Switch).");
+                    "nativeBackend=rust does not support console targets (Xbox/PS4/PS5/Switch). " +
+                    "Use nativeBackend=cpp for consoles (single C++ codebase across all platforms).");
 
             if (rc.AndroidEnabled && rc.AndroidMode != AndroidMode.Jni)
                 throw new InvalidOperationException(

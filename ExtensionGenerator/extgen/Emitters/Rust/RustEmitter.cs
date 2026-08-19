@@ -221,7 +221,7 @@ namespace extgen.Emitters.Rust
             sb.AppendLine();
             if (comp.Structs.Length > 0)
             {
-                sb.AppendLine("use gm_ext_wire::{GMBufferReader, GMSliceWriter};");
+                sb.AppendLine("use gm_ext_wire::{DataStream, GMBufferReader, GMValueOwned, GmStruct, GrowableWireWriter, WireByteWriter};");
                 sb.AppendLine("use super::types::{enums, structs};");
                 sb.AppendLine();
             }
@@ -247,7 +247,6 @@ namespace extgen.Emitters.Rust
                 foreach (var f in s.Fields)
                 {
                     var fName = RustCodeGen.SanitizeIdent(f.Name);
-                    wire.EnsureSupported(f.Type, asReturn: false);
                     sb.Append("    let ").Append(fName).Append(" = ").Append(wire.DecodeExpr(f.Type, "r")).Append(";\n");
                 }
                 sb.AppendLine($"    Some({fq} {{");
@@ -260,20 +259,55 @@ namespace extgen.Emitters.Rust
                 sb.AppendLine("}");
                 sb.AppendLine();
 
-                sb.AppendLine($"pub fn encode_{id}(mut w: &mut GMSliceWriter<'_>, obj: &{fq}) -> Option<()> {{");
+                sb.AppendLine($"pub fn encode_{id}<W: WireByteWriter>(w: &mut W, obj: &{fq}) -> Option<()> {{");
                 foreach (var f in s.Fields)
                 {
                     var fName = RustCodeGen.SanitizeIdent(f.Name);
-                    wire.EnsureSupported(f.Type, asReturn: true);
                     wire.EncodeStmt(sb, "    ", f.Type, $"obj.{fName}", "w");
                 }
                 sb.AppendLine("    Some(())");
                 sb.AppendLine("}");
                 sb.AppendLine();
 
-                sb.AppendLine($"pub fn write_typed_{id}(w: &mut GMSliceWriter<'_>, obj: &{fq}) -> Option<()> {{");
+                sb.AppendLine($"impl GmStruct for {fq} {{");
+                sb.AppendLine($"    const CODEC_ID: u32 = CODEC_ID_{id.ToUpperInvariant()};");
+                sb.AppendLine("    fn encode_fields<W: WireByteWriter>(&self, w: &mut W) -> Option<()> {");
+                sb.AppendLine($"        encode_{id}(w, self)");
+                sb.AppendLine("    }");
+                sb.AppendLine("}");
+                sb.AppendLine();
+
+                sb.AppendLine($"pub fn write_typed_{id}<W: WireByteWriter>(w: &mut W, obj: &{fq}) -> Option<()> {{");
                 sb.AppendLine($"    w.write_typed_struct_header(CODEC_ID_{id.ToUpperInvariant()})?;");
                 sb.AppendLine($"    encode_{id}(w, obj)");
+                sb.AppendLine("}");
+                sb.AppendLine();
+
+                sb.AppendLine($"pub fn write_typed_{id}_to_stream(ds: &mut DataStream, obj: &{fq}) -> Option<()> {{");
+                sb.AppendLine("    ds.push_gm_struct(obj)");
+                sb.AppendLine("}");
+                sb.AppendLine();
+            }
+
+            if (comp.Structs.Length > 0)
+            {
+                sb.AppendLine("pub fn typed_struct_to_owned(codec_id: u32, r: &mut GMBufferReader<'_>) -> Option<GMValueOwned> {");
+                sb.AppendLine("    match codec_id {");
+                foreach (var s in comp.Structs)
+                {
+                    var id = RustCodeGen.SanitizeIdent(s.Name);
+                    sb.AppendLine($"        CODEC_ID_{id.ToUpperInvariant()} => {{");
+                    sb.AppendLine($"            let obj = decode_{id}(r)?;");
+                    sb.AppendLine("            let mut payload = Vec::new();");
+                    sb.AppendLine("            {");
+                    sb.AppendLine("                let mut w = GrowableWireWriter::new(&mut payload);");
+                    sb.AppendLine($"                encode_{id}(&mut w, &obj)?;");
+                    sb.AppendLine("            }");
+                    sb.AppendLine("            Some(GMValueOwned::TypedStruct { codec_id, payload })");
+                    sb.AppendLine("        }");
+                }
+                sb.AppendLine("        _ => None,");
+                sb.AppendLine("    }");
                 sb.AppendLine("}");
                 sb.AppendLine();
             }
@@ -323,6 +357,11 @@ namespace extgen.Emitters.Rust
             sb.AppendLine("use crate::user;");
             var needsCodecs = functions.Any(f => IrAnalysis.NeedsArgsBuffer(f) || IrAnalysis.NeedsRetBuffer(f));
             if (needsCodecs && comp.Structs.Length > 0)
+                sb.AppendLine("use super::codecs;");
+            else if (comp.Structs.Length > 0 && functions.Any(f => f.Parameters.Any(p =>
+                         p.Type.ContainsBuiltin(BuiltinKind.Any)
+                         || p.Type.ContainsBuiltin(BuiltinKind.AnyArray)
+                         || p.Type.ContainsBuiltin(BuiltinKind.AnyMap))))
                 sb.AppendLine("use super::codecs;");
             if (functions.Any(f =>
                     f.Parameters.Any(p => MentionsEnum(p.Type)) || MentionsEnum(f.ReturnType)))
@@ -384,7 +423,7 @@ namespace extgen.Emitters.Rust
 
             for (var i = 0; i < functions.Count; i++)
             {
-                EmitOneFfi(sb, ctx, functions[i], specs[i], wire);
+                EmitOneFfi(sb, ctx, functions[i], specs[i], wire, attachTypedStructDecoder: comp.Structs.Length > 0);
             }
 
             File.WriteAllText(Path.Combine(layout.GeneratedDir, "ffi.rs"), sb.ToString(), new UTF8Encoding(false));
@@ -395,7 +434,8 @@ namespace extgen.Emitters.Rust
             RustEmitterContext ctx,
             IrFunction fn,
             NativeExportSpec spec,
-            RustWireHelpers wire)
+            RustWireHelpers wire,
+            bool attachTypedStructDecoder)
         {
             var ret = spec.ReturnType.AsRustType();
             var paramsList = RustCodeGen.RustParamList(spec.Params);
@@ -409,7 +449,7 @@ namespace extgen.Emitters.Rust
 
             if (spec.NeedsArgsBuffer || spec.NeedsRetBuffer)
             {
-                EmitBufferModeBody(sb, fn, spec, wire, userName, rt);
+                EmitBufferModeBody(sb, fn, spec, wire, userName, rt, attachTypedStructDecoder);
             }
             else
             {
@@ -436,7 +476,8 @@ namespace extgen.Emitters.Rust
             NativeExportSpec spec,
             RustWireHelpers wire,
             string userName,
-            RuntimeNaming rt)
+            RuntimeNaming rt,
+            bool attachTypedStructDecoder)
         {
             var stringRet = spec.ReturnType == ExportType.String && !spec.NeedsRetBuffer;
             var optionTy = stringRet ? "Option<String>" : "Option<f64>";
@@ -445,11 +486,18 @@ namespace extgen.Emitters.Rust
             var callArgs = new List<string>();
             if (spec.NeedsArgsBuffer)
             {
+                var needsAnyUnpack = fn.Parameters.Any(p =>
+                    p.Type.ContainsBuiltin(BuiltinKind.Any)
+                    || p.Type.ContainsBuiltin(BuiltinKind.AnyArray)
+                    || p.Type.ContainsBuiltin(BuiltinKind.AnyMap));
                 sb.AppendLine($"            let mut __br = unsafe {{ GMBufferReader::from_raw_parts({rt.ArgBufferParam} as *const u8, {rt.ArgBufferLengthParam} as usize) }};");
+                if (needsAnyUnpack && attachTypedStructDecoder)
+                {
+                    sb.AppendLine("            let mut __br = __br.with_typed_struct_owned_decoder(codecs::typed_struct_to_owned);");
+                }
                 foreach (var p in fn.Parameters)
                 {
                     var id = RustCodeGen.SanitizeIdent(p.Name);
-                    wire.EnsureSupported(p.Type, asReturn: false);
                     sb.Append("            let ").Append(id).Append(" = ").Append(wire.DecodeExpr(p.Type, "__br")).Append(";\n");
                     callArgs.Add(id);
                 }
@@ -476,7 +524,6 @@ namespace extgen.Emitters.Rust
 
             if (spec.NeedsRetBuffer)
             {
-                wire.EnsureSupported(fn.ReturnType, asReturn: true);
                 if (isVoid)
                 {
                     sb.AppendLine($"            {call};");

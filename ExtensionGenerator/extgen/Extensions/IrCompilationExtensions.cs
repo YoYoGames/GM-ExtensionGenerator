@@ -13,7 +13,10 @@ namespace extgen.Extensions
             // 2. Flatten all functions (from the class AND all structs)
             var allFunctions = c.GetAllFunctions((s, f) => f);
 
-            return allFields.Any(f => f.Type.ContainsBuiltin(BuiltinKind.Function)) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
+            return allFields.Any(f => f.Type.ContainsBuiltin(BuiltinKind.Function))
+                || allFunctions.Any(f =>
+                    f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function))
+                    || f.ReturnType.ContainsBuiltin(BuiltinKind.Function));
         }
 
         public static bool HasBufferType(this IrCompilation c)
@@ -24,7 +27,10 @@ namespace extgen.Extensions
             // 2. Flatten all functions (from the class AND all structs)
             var allFunctions = c.GetAllFunctions((s, f) => f);
 
-            return allFields.Any(f => f.Type.ContainsBuiltin(BuiltinKind.Buffer)) || allFunctions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer)));
+            return allFields.Any(f => f.Type.ContainsBuiltin(BuiltinKind.Buffer))
+                || allFunctions.Any(f =>
+                    f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Buffer))
+                    || f.ReturnType.ContainsBuiltin(BuiltinKind.Buffer));
         }
 
         public static bool HasOptionalTypes(this IrCompilation c) 

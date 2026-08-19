@@ -81,14 +81,8 @@ namespace extgen.Emitters.Rust
                 BuiltinKind.Float64 => "f64",
                 BuiltinKind.String => owned ? "String" : "&str",
                 BuiltinKind.Pointer => "*mut u8",
-                BuiltinKind.Buffer => owned
-                    ? throw new NotSupportedException(
-                        "rust emitter: buffer as owning/return type is not supported.")
-                    : "gm_ext_wire::GMBuffer",
-                BuiltinKind.Function => owned
-                    ? throw new NotSupportedException(
-                        "rust emitter: function as owning/return type is not supported.")
-                    : "gm_ext_wire::GMFunction",
+                BuiltinKind.Buffer => "gm_ext_wire::GMBuffer",
+                BuiltinKind.Function => "gm_ext_wire::GMFunction",
                 BuiltinKind.Any => owned
                     ? "gm_ext_wire::DataStream"
                     : "gm_ext_wire::GMValueOwned",

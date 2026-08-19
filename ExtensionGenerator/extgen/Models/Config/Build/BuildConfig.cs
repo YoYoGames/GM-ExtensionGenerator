@@ -8,8 +8,8 @@ namespace extgen.Models.Config.Build
     public sealed class BuildConfig
     {
         /// <summary>
-        /// Native implementation language. Default is C++ (existing behavior).
-        /// When set to Rust, Cargo is used instead of CMake and Rust emitters run.
+        /// Native implementation language. Default is C++.
+        /// Rust uses Cargo; consoles require <c>cpp</c>.
         /// </summary>
         [JsonPropertyName("nativeBackend")]
         public NativeBackend NativeBackend { get; set; } = NativeBackend.Cpp;

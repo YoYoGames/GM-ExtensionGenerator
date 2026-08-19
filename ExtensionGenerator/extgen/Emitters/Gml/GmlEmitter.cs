@@ -125,8 +125,10 @@ namespace extgen.Emitters.Gml
                 funcBody.Return("__decoders__");
             });
 
-            // dispatcher (only if any param uses Function)
-            var usesFunctions = c.Functions.Any(f => f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function)));
+            // dispatcher (params or returns that use Function)
+            var usesFunctions = c.Functions.Any(f =>
+                f.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function))
+                || f.ReturnType.ContainsBuiltin(BuiltinKind.Function));
             if (usesFunctions)
             {
                 w.Line("/// @ignore");
@@ -310,7 +312,8 @@ namespace extgen.Emitters.Gml
             body.Assign("__available__", $"__{ctx.ExtName}_is_available()", VariableScope.Local);
             body.Line("if (!__available__) return;").Line();
 
-            var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function));
+            var usesFunctions = fn.Parameters.Any(p => p.Type.ContainsBuiltin(BuiltinKind.Function))
+                || fn.ReturnType.ContainsBuiltin(BuiltinKind.Function);
             if (usesFunctions)
                 body.Assign("__dispatcher__", $"__{ctx.ExtName}_get_dispatcher()", VariableScope.Local).Line();
 
@@ -544,8 +547,18 @@ namespace extgen.Emitters.Gml
                     w.Assign(id, expr => expr.Call("buffer_read", buf, GmlBufCode(new IrType.Builtin(kind))));
                     return;
 
-                // Buffer/function are not read directly from ret buffer
-                // (buffers are queued; functions come through dispatcher system)
+                case BuiltinKind.Function:
+                    w.Assign($"{id}_handle", expr => expr.Call("buffer_read", buf, "buffer_u64"), VariableScope.Local);
+                    w.Assign($"{id}_ref", $"ds_map_find_value(__ext_core_function_map(), {id}_handle)", VariableScope.Local);
+                    w.Assign(id, $"is_undefined({id}_ref) ? undefined : {id}_ref[0]");
+                    return;
+
+                case BuiltinKind.Buffer:
+                    w.Assign($"{id}_len", expr => expr.Call("buffer_read", buf, "buffer_u32"), VariableScope.Local);
+                    w.Assign($"{id}_addr", expr => expr.Call("buffer_read", buf, "buffer_u64"), VariableScope.Local);
+                    w.Assign(id, expr => expr.Call("__ext_core_buffer_from_native", $"{id}_addr", $"{id}_len"));
+                    return;
+
                 default:
                     throw new NotSupportedException($"GML emitter: builtin read kind {kind} not supported.");
             }

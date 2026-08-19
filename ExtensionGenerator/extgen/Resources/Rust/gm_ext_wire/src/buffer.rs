@@ -54,13 +54,17 @@ impl TryFrom<u8> for GMType {
     }
 }
 
-/// Decoder for TypedStruct payloads encountered while unpacking tagged GMValue trees.
+/// Decoder for borrowed TypedStruct payloads while unpacking tagged GMValue trees.
 pub type TypedStructDecoder<'a> = dyn Fn(u32, &mut GMBufferReader<'a>) -> Option<GMValue<'a>> + 'a;
+
+/// Owned TypedStruct decoder for FFI Any / round-trip.
+pub type TypedStructOwnedDecoder = fn(u32, &mut GMBufferReader<'_>) -> Option<GMValueOwned>;
 
 pub struct GMBufferReader<'a> {
     data: &'a [u8],
     pub cursor: usize,
     typed_struct_decoder: Option<&'a TypedStructDecoder<'a>>,
+    typed_struct_owned_decoder: Option<TypedStructOwnedDecoder>,
 }
 
 impl<'a> GMBufferReader<'a> {
@@ -69,12 +73,19 @@ impl<'a> GMBufferReader<'a> {
             data,
             cursor: 0,
             typed_struct_decoder: None,
+            typed_struct_owned_decoder: None,
         }
     }
 
-    /// Attach a codec-id → value decoder used when unpacking `GMType::TypedStruct`.
+    /// Attach a borrowed TypedStruct decoder.
     pub fn with_typed_struct_decoder(mut self, decoder: &'a TypedStructDecoder<'a>) -> Self {
         self.typed_struct_decoder = Some(decoder);
+        self
+    }
+
+    /// Attach an owned TypedStruct decoder for `unpack_value_owned`.
+    pub fn with_typed_struct_owned_decoder(mut self, decoder: TypedStructOwnedDecoder) -> Self {
+        self.typed_struct_owned_decoder = Some(decoder);
         self
     }
 
@@ -226,19 +237,21 @@ impl<'a> GMBufferReader<'a> {
                 if let Some(decoder) = self.typed_struct_decoder {
                     decoder(codec_id, self)
                 } else {
-                    // Payload size is codec-specific; fail rather than desync the reader.
+                    crate::error::set_last_error("typed kinds not expected from GML");
                     None
                 }
             }
             GMType::TypedArray => {
-                // Layout: [250][u16 count][elem_type]… — if elem is TypedStruct(249):
-                // [250][count][249][u32 codec_id once][payload × count]
+                // [250][u16 count][elem]; TypedStruct elem: [249][u32 codec_id once][payload × count]
                 let len = self.read_u16()? as usize;
                 let elem = self.read_u8()?;
                 if elem == GMType::TypedStruct as u8 {
                     let codec_id = self.read_u32()?;
+                    let Some(decoder) = self.typed_struct_decoder else {
+                        crate::error::set_last_error("typed kinds not expected from GML");
+                        return None;
+                    };
                     let mut values = Vec::with_capacity(len);
-                    let decoder = self.typed_struct_decoder?;
                     for _ in 0..len {
                         values.push(decoder(codec_id, self)?);
                     }
@@ -259,6 +272,95 @@ impl<'a> GMBufferReader<'a> {
                         }
                     }
                     Some(GMValue::Array(values))
+                }
+            }
+            GMType::F16 => None,
+        }
+    }
+
+    /// Unpack a tagged GMValue into an owned snapshot.
+    pub fn unpack_value_owned(&mut self) -> Option<GMValueOwned> {
+        let gm_type = self.read_type()?;
+        match gm_type {
+            GMType::U8 => Some(GMValueOwned::U8(self.read_u8()?)),
+            GMType::I8 => Some(GMValueOwned::I8(self.read_i8()?)),
+            GMType::U16 => Some(GMValueOwned::U16(self.read_u16()?)),
+            GMType::I16 => Some(GMValueOwned::I16(self.read_i16()?)),
+            GMType::U32 => Some(GMValueOwned::U32(self.read_u32()?)),
+            GMType::I32 => Some(GMValueOwned::I32(self.read_i32()?)),
+            GMType::U64 => Some(GMValueOwned::U64(self.read_u64()?)),
+            GMType::F32 => Some(GMValueOwned::F32(self.read_f32()?)),
+            GMType::F64 => Some(GMValueOwned::F64(self.read_f64()?)),
+            GMType::Bool => Some(GMValueOwned::Bool(self.read_bool()?)),
+            GMType::String => Some(GMValueOwned::String(self.read_idl_string()?.to_string())),
+            GMType::Pointer => Some(GMValueOwned::Pointer(self.read_u64()?)),
+            GMType::Buffer => {
+                let length = self.read_u32()?;
+                let address = self.read_u64()?;
+                Some(GMValueOwned::Buffer { length, address })
+            }
+            GMType::Array => {
+                let len = self.read_u16()? as usize;
+                let mut arr = Vec::with_capacity(len);
+                for _ in 0..len {
+                    arr.push(self.unpack_value_owned()?);
+                }
+                Some(GMValueOwned::Array(arr))
+            }
+            GMType::Struct => {
+                let len = self.read_u16()? as usize;
+                let mut map = HashMap::with_capacity(len);
+                for _ in 0..len {
+                    let key_ty = self.read_type()?;
+                    if key_ty != GMType::String {
+                        return None;
+                    }
+                    let key = self.read_idl_string()?.to_string();
+                    let value = self.unpack_value_owned()?;
+                    map.insert(key, value);
+                }
+                Some(GMValueOwned::Struct(map))
+            }
+            GMType::Undefined => Some(GMValueOwned::Undefined),
+            GMType::TypedStruct => {
+                let codec_id = self.read_u32()?;
+                if let Some(decoder) = self.typed_struct_owned_decoder {
+                    decoder(codec_id, self)
+                } else {
+                    crate::error::set_last_error("typed kinds not expected from GML");
+                    None
+                }
+            }
+            GMType::TypedArray => {
+                let len = self.read_u16()? as usize;
+                let elem = self.read_u8()?;
+                if elem == GMType::TypedStruct as u8 {
+                    let codec_id = self.read_u32()?;
+                    let Some(decoder) = self.typed_struct_owned_decoder else {
+                        crate::error::set_last_error("typed kinds not expected from GML");
+                        return None;
+                    };
+                    let mut values = Vec::with_capacity(len);
+                    for _ in 0..len {
+                        values.push(decoder(codec_id, self)?);
+                    }
+                    Some(GMValueOwned::Array(values))
+                } else {
+                    let mut values = Vec::with_capacity(len);
+                    for _ in 0..len {
+                        match elem {
+                            9 => values.push(GMValueOwned::F64(self.read_f64()?)),
+                            6 => values.push(GMValueOwned::I32(self.read_i32()?)),
+                            5 => values.push(GMValueOwned::U32(self.read_u32()?)),
+                            10 => values.push(GMValueOwned::Bool(self.read_bool()?)),
+                            1 => values.push(GMValueOwned::U8(self.read_u8()?)),
+                            2 => values.push(GMValueOwned::I8(self.read_i8()?)),
+                            8 => values.push(GMValueOwned::F32(self.read_f32()?)),
+                            12 => values.push(GMValueOwned::U64(self.read_u64()?)),
+                            _ => return None,
+                        }
+                    }
+                    Some(GMValueOwned::Array(values))
                 }
             }
             GMType::F16 => None,
@@ -304,7 +406,93 @@ pub enum GMValueOwned {
     Buffer { length: u32, address: u64 },
     Array(Vec<GMValueOwned>),
     Struct(HashMap<String, GMValueOwned>),
+    /// TypedStruct: codec id + raw IDL field payload (after `[249][u32]`).
+    TypedStruct { codec_id: u32, payload: Vec<u8> },
     Undefined,
+}
+
+impl GMValueOwned {
+    /// Write as a tagged GMValue tree.
+    pub fn write_to<W: WireByteWriter + ?Sized>(&self, w: &mut W) -> Option<()> {
+        match self {
+            GMValueOwned::U8(v) => {
+                w.write_u8(GMType::U8 as u8)?;
+                w.write_u8(*v)
+            }
+            GMValueOwned::I8(v) => {
+                w.write_u8(GMType::I8 as u8)?;
+                w.write_i8(*v)
+            }
+            GMValueOwned::U16(v) => {
+                w.write_u8(GMType::U16 as u8)?;
+                w.write_u16(*v)
+            }
+            GMValueOwned::I16(v) => {
+                w.write_u8(GMType::I16 as u8)?;
+                w.write_i16(*v)
+            }
+            GMValueOwned::U32(v) => {
+                w.write_u8(GMType::U32 as u8)?;
+                w.write_u32(*v)
+            }
+            GMValueOwned::I32(v) => {
+                w.write_u8(GMType::I32 as u8)?;
+                w.write_i32(*v)
+            }
+            GMValueOwned::U64(v) => {
+                w.write_u8(GMType::U64 as u8)?;
+                w.write_u64(*v)
+            }
+            GMValueOwned::F32(v) => {
+                w.write_u8(GMType::F32 as u8)?;
+                w.write_f32(*v)
+            }
+            GMValueOwned::F64(v) => {
+                w.write_u8(GMType::F64 as u8)?;
+                w.write_f64(*v)
+            }
+            GMValueOwned::Bool(v) => {
+                w.write_u8(GMType::Bool as u8)?;
+                w.write_bool(*v)
+            }
+            GMValueOwned::String(s) => {
+                w.write_u8(GMType::String as u8)?;
+                w.write_idl_string(s)
+            }
+            GMValueOwned::Pointer(v) => {
+                w.write_u8(GMType::Pointer as u8)?;
+                w.write_u64(*v)
+            }
+            GMValueOwned::Buffer { length, address } => {
+                w.write_u8(GMType::Buffer as u8)?;
+                w.write_u32(*length)?;
+                w.write_u64(*address)
+            }
+            GMValueOwned::Array(items) => {
+                w.write_u8(GMType::Array as u8)?;
+                w.write_u16(items.len() as u16)?;
+                for item in items {
+                    item.write_to(w)?;
+                }
+                Some(())
+            }
+            GMValueOwned::Struct(map) => {
+                w.write_u8(GMType::Struct as u8)?;
+                w.write_u16(map.len() as u16)?;
+                for (k, v) in map {
+                    w.write_u8(GMType::String as u8)?;
+                    w.write_idl_string(k)?;
+                    v.write_to(w)?;
+                }
+                Some(())
+            }
+            GMValueOwned::TypedStruct { codec_id, payload } => {
+                w.write_typed_struct_header(*codec_id)?;
+                w.write_bytes(payload)
+            }
+            GMValueOwned::Undefined => w.write_u8(GMType::Undefined as u8),
+        }
+    }
 }
 
 impl<'a> GMValue<'a> {
@@ -430,6 +618,82 @@ impl GMBufferWriter {
     }
 }
 
+/// Raw IDL byte writer (no GMType tags).
+pub trait WireByteWriter {
+    fn write_bytes(&mut self, bytes: &[u8]) -> Option<()>;
+    fn write_u8(&mut self, val: u8) -> Option<()> {
+        self.write_bytes(&[val])
+    }
+    fn write_i8(&mut self, val: i8) -> Option<()> {
+        self.write_u8(val as u8)
+    }
+    fn write_u16(&mut self, val: u16) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_i16(&mut self, val: i16) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_u32(&mut self, val: u32) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_i32(&mut self, val: i32) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_u64(&mut self, val: u64) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_i64(&mut self, val: i64) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_f32(&mut self, val: f32) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_f64(&mut self, val: f64) -> Option<()> {
+        self.write_bytes(&val.to_le_bytes())
+    }
+    fn write_bool(&mut self, val: bool) -> Option<()> {
+        self.write_u8(if val { 1 } else { 0 })
+    }
+    /// IDL string: `u32 LE len` + UTF-8 + `NUL`.
+    fn write_idl_string(&mut self, val: &str) -> Option<()> {
+        self.write_u32(val.len() as u32)?;
+        self.write_bytes(val.as_bytes())?;
+        self.write_u8(0)
+    }
+    /// `[249][u32 codec_id]` then IDL field payload.
+    fn write_typed_struct_header(&mut self, codec_id: u32) -> Option<()> {
+        self.write_u8(GMType::TypedStruct as u8)?;
+        self.write_u32(codec_id)
+    }
+    /// Function handle as `u64`.
+    fn write_idl_function(&mut self, id: u64) -> Option<()> {
+        self.write_u64(id)
+    }
+    /// Buffer as `u32 length` + `u64 address`.
+    fn write_idl_buffer(&mut self, length: u32, address: u64) -> Option<()> {
+        self.write_u32(length)?;
+        self.write_u64(address)
+    }
+}
+
+/// Growable raw IDL writer over a `Vec<u8>`.
+pub struct GrowableWireWriter<'a> {
+    data: &'a mut Vec<u8>,
+}
+
+impl<'a> GrowableWireWriter<'a> {
+    pub fn new(data: &'a mut Vec<u8>) -> Self {
+        Self { data }
+    }
+}
+
+impl WireByteWriter for GrowableWireWriter<'_> {
+    fn write_bytes(&mut self, bytes: &[u8]) -> Option<()> {
+        self.data.extend_from_slice(bytes);
+        Some(())
+    }
+}
+
 /// Raw IDL writer over an external mutable slice (return / arg buffer protocol).
 pub struct GMSliceWriter<'a> {
     data: &'a mut [u8],
@@ -457,8 +721,10 @@ impl<'a> GMSliceWriter<'a> {
     pub fn remaining(&self) -> usize {
         self.data.len().saturating_sub(self.cursor)
     }
+}
 
-    pub fn write_bytes(&mut self, bytes: &[u8]) -> Option<()> {
+impl WireByteWriter for GMSliceWriter<'_> {
+    fn write_bytes(&mut self, bytes: &[u8]) -> Option<()> {
         if self.cursor + bytes.len() > self.data.len() {
             return None;
         }
@@ -466,60 +732,117 @@ impl<'a> GMSliceWriter<'a> {
         self.cursor += bytes.len();
         Some(())
     }
+}
 
+// Inherent methods delegating to WireByteWriter.
+impl GMSliceWriter<'_> {
+    pub fn write_bytes(&mut self, bytes: &[u8]) -> Option<()> {
+        WireByteWriter::write_bytes(self, bytes)
+    }
     pub fn write_u8(&mut self, val: u8) -> Option<()> {
-        self.write_bytes(&[val])
+        WireByteWriter::write_u8(self, val)
     }
-
     pub fn write_i8(&mut self, val: i8) -> Option<()> {
-        self.write_u8(val as u8)
+        WireByteWriter::write_i8(self, val)
     }
-
     pub fn write_u16(&mut self, val: u16) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_u16(self, val)
     }
-
     pub fn write_i16(&mut self, val: i16) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_i16(self, val)
     }
-
     pub fn write_u32(&mut self, val: u32) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_u32(self, val)
     }
-
     pub fn write_i32(&mut self, val: i32) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_i32(self, val)
     }
-
     pub fn write_u64(&mut self, val: u64) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_u64(self, val)
     }
-
     pub fn write_i64(&mut self, val: i64) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_i64(self, val)
     }
-
     pub fn write_f32(&mut self, val: f32) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_f32(self, val)
     }
-
     pub fn write_f64(&mut self, val: f64) -> Option<()> {
-        self.write_bytes(&val.to_le_bytes())
+        WireByteWriter::write_f64(self, val)
     }
-
     pub fn write_bool(&mut self, val: bool) -> Option<()> {
-        self.write_u8(if val { 1 } else { 0 })
+        WireByteWriter::write_bool(self, val)
     }
-
-    /// IDL string: `u32 LE len` + UTF-8 + `NUL`.
     pub fn write_idl_string(&mut self, val: &str) -> Option<()> {
-        self.write_u32(val.len() as u32)?;
-        self.write_bytes(val.as_bytes())?;
-        self.write_u8(0)
+        WireByteWriter::write_idl_string(self, val)
+    }
+    pub fn write_typed_struct_header(&mut self, codec_id: u32) -> Option<()> {
+        WireByteWriter::write_typed_struct_header(self, codec_id)
+    }
+}
+
+#[cfg(test)]
+mod owned_typed_struct_tests {
+    use super::*;
+    use crate::stream::DataStream;
+
+    fn decode_point_owned(codec_id: u32, r: &mut GMBufferReader<'_>) -> Option<GMValueOwned> {
+        if codec_id != 0 {
+            return None;
+        }
+        let x = r.read_i32()?;
+        let y = r.read_i32()?;
+        let mut payload = Vec::new();
+        {
+            let mut w = GrowableWireWriter::new(&mut payload);
+            w.write_i32(x)?;
+            w.write_i32(y)?;
+        }
+        Some(GMValueOwned::TypedStruct { codec_id, payload })
     }
 
-    pub fn write_typed_struct_header(&mut self, codec_id: u32) -> Option<()> {
-        self.write_u8(GMType::TypedStruct as u8)?;
-        self.write_u32(codec_id)
+    #[test]
+    fn typed_struct_owned_round_trip_bytes() {
+        let mut ds = DataStream::new();
+        ds.push_typed_struct(0, |w| {
+            w.write_i32(10)?;
+            w.write_i32(-20)?;
+            Some(())
+        })
+        .unwrap();
+        let original = ds.as_bytes().to_vec();
+
+        let mut r = GMBufferReader::new(&original).with_typed_struct_owned_decoder(decode_point_owned);
+        let owned = r.unpack_value_owned().expect("owned unpack");
+        match &owned {
+            GMValueOwned::TypedStruct { codec_id, payload } => {
+                assert_eq!(*codec_id, 0);
+                assert_eq!(payload.len(), 8);
+            }
+            other => panic!("expected TypedStruct, got {other:?}"),
+        }
+
+        let mut again = Vec::new();
+        {
+            let mut w = GrowableWireWriter::new(&mut again);
+            owned.write_to(&mut w).unwrap();
+        }
+        assert_eq!(again, original);
+    }
+
+    #[test]
+    fn typed_struct_owned_rejects_without_decoder() {
+        crate::error::clear_last_error();
+        let bytes = {
+            let mut ds = DataStream::new();
+            ds.push_typed_struct(0, |w| {
+                w.write_i32(1)?;
+                w.write_i32(2)?;
+                Some(())
+            })
+            .unwrap();
+            ds.as_bytes().to_vec()
+        };
+        let mut r = GMBufferReader::new(&bytes);
+        assert!(r.unpack_value_owned().is_none());
     }
 }

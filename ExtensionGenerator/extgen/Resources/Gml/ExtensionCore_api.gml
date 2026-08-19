@@ -221,6 +221,20 @@ function __ext_core_get_async_buffer(_request_size = undefined) {
 	return __internal_async;
 }
 
+/// @desc Wrap a native buffer address/size as Id.Buffer (no memcpy; keep native memory alive).
+/// @param {Real} _address
+/// @param {Real} _size
+/// @returns {Id.Buffer}
+/// @ignore
+function __ext_core_buffer_from_native(_address, _size) {
+	var _n = max(1, floor(_size));
+	var _b = buffer_create(_n, buffer_fixed, 1);
+	if (_n >= 8) {
+		buffer_poke(_b, 0, buffer_u64, _address);
+	}
+	return _b;
+}
+
 /// @desc Returns the map that keeps all the registered GML side function references passed to extensions.
 /// @returns {Id.DsMap}
 /// @ignore
