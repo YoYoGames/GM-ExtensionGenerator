@@ -47,6 +47,16 @@ namespace extgen.Planning
             if (packaging.Kind != AppleNativePackagingKind.GameMakerSourcesPlusExternalFramework)
                 return;
 
+            yy.ThirdPartyFrameworkEmbed = packaging.ThirdPartyFrameworkEmbed;
+
+            // build.rust.iosFrameworkName overrides the default "{Ext}_Rust" YY entry.
+            var rustFw = plan.Config.Raw.Build.Rust?.IosFrameworkName;
+            if (!string.IsNullOrWhiteSpace(rustFw))
+            {
+                yy.ThirdPartyFrameworkBaseName = rustFw.Trim();
+                return;
+            }
+
             var baseName = yy.ExtensionName ?? plan.Runtime.ExtensionName;
             if (string.IsNullOrWhiteSpace(baseName))
                 baseName = "Extension";
@@ -54,7 +64,6 @@ namespace extgen.Planning
             yy.ThirdPartyFrameworkBaseName = packaging.ThirdPartyFrameworkSuffix is null
                 ? baseName
                 : baseName + packaging.ThirdPartyFrameworkSuffix;
-            yy.ThirdPartyFrameworkEmbed = packaging.ThirdPartyFrameworkEmbed;
         }
     }
 }

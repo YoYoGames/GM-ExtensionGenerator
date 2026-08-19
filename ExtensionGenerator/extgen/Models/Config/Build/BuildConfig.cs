@@ -9,7 +9,8 @@ namespace extgen.Models.Config.Build
     {
         /// <summary>
         /// Native implementation language. Default is C++.
-        /// Rust uses Cargo; consoles require <c>cpp</c>.
+        /// Rust uses Cargo for desktop/mobile only — console targets require <c>cpp</c>
+        /// (no mixed rust+cpp mode).
         /// </summary>
         [JsonPropertyName("nativeBackend")]
         public NativeBackend NativeBackend { get; set; } = NativeBackend.Cpp;
@@ -21,5 +22,9 @@ namespace extgen.Models.Config.Build
         /// <summary>CMake-specific configuration.</summary>
         [JsonPropertyName("cmake")]
         public CmakeConfig Cmake { get; set; } = new();
+
+        /// <summary>Optional Cargo / Apple framework overrides when <see cref="NativeBackend"/> is Rust.</summary>
+        [JsonPropertyName("rust")]
+        public RustBuildConfig Rust { get; set; } = new();
     }
 }

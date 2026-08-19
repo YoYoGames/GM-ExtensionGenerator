@@ -31,7 +31,9 @@ namespace extgen.Emitters.Cargo
             if (File.Exists(path))
                 return;
 
-            var crate = RustEmitterSettings.SanitizeCrateName(comp.Name);
+            var crate = settings.CrateName;
+            if (string.IsNullOrWhiteSpace(crate))
+                crate = RustEmitterSettings.SanitizeCrateName(comp.Name);
 
             var sb = new StringBuilder();
             sb.AppendLine("[package]");
@@ -153,10 +155,11 @@ namespace extgen.Emitters.Cargo
             var extgenScripts = Path.Combine(scripts, "extgen");
             Directory.CreateDirectory(extgenScripts);
 
-            // Prefer hand-maintained [package].name when Cargo.toml already exists (IfMissing),
-            // but always sanitize so hyphens become underscores (matches cargo's DLL/SO stem).
+            // Prefer existing Cargo.toml [package].name; else config build.rust.crateName / extension name.
             var crate = RustEmitterSettings.SanitizeCrateName(
-                TryReadCargoPackageName(Path.Combine(rustRoot, "Cargo.toml")) ?? comp.Name);
+                TryReadCargoPackageName(Path.Combine(rustRoot, "Cargo.toml"))
+                ?? settings.CrateName
+                ?? comp.Name);
             var extName = settings.ExtensionName;
             if (string.IsNullOrWhiteSpace(extName) || extName == "MyExtension")
                 extName = comp.Name;

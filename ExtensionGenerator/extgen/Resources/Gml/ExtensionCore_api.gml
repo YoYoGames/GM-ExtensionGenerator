@@ -78,6 +78,12 @@ function __ext_core_buffer_unmarshal_value(_buff, _decoders)
 		{
 			return undefined;
 		}
+		case EXT_CORE_GM_TYPE_BUFFER:
+		{
+			var _len = buffer_read(_buff, buffer_u32);
+			var _addr = buffer_read(_buff, buffer_u64);
+			return __ext_core_buffer_from_native(_addr, _len);
+		}
 		case buffer_string:
 			buffer_read(_buff, buffer_u32); // Fall to the default (this is the string size)
 		default:
@@ -221,18 +227,36 @@ function __ext_core_get_async_buffer(_request_size = undefined) {
 	return __internal_async;
 }
 
-/// @desc Wrap a native buffer address/size as Id.Buffer (no memcpy; keep native memory alive).
+/// @desc Build a placeholder Id.Buffer that stores native address+size (no memcpy, no alias).
+/// Layout (12 bytes, buffer_fixed): [0..7] u64 address, [8..11] u32 size.
+/// Native memory must remain valid until GML is finished with the address/size.
+/// Use __ext_core_buffer_native_address / __ext_core_buffer_native_size — do not treat
+/// this buffer's contents as the payload bytes.
 /// @param {Real} _address
 /// @param {Real} _size
 /// @returns {Id.Buffer}
 /// @ignore
 function __ext_core_buffer_from_native(_address, _size) {
-	var _n = max(1, floor(_size));
-	var _b = buffer_create(_n, buffer_fixed, 1);
-	if (_n >= 8) {
-		buffer_poke(_b, 0, buffer_u64, _address);
-	}
+	var _b = buffer_create(12, buffer_fixed, 1);
+	buffer_poke(_b, 0, buffer_u64, _address);
+	buffer_poke(_b, 8, buffer_u32, max(0, floor(_size)));
 	return _b;
+}
+
+/// @desc Native address stored in a returned-buffer placeholder.
+/// @param {Id.Buffer} _buffer
+/// @returns {Real}
+/// @ignore
+function __ext_core_buffer_native_address(_buffer) {
+	return buffer_peek(_buffer, 0, buffer_u64);
+}
+
+/// @desc Native size stored in a returned-buffer placeholder.
+/// @param {Id.Buffer} _buffer
+/// @returns {Real}
+/// @ignore
+function __ext_core_buffer_native_size(_buffer) {
+	return buffer_peek(_buffer, 8, buffer_u32);
 }
 
 /// @desc Returns the map that keeps all the registered GML side function references passed to extensions.

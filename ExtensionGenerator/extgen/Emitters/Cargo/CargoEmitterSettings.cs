@@ -1,3 +1,4 @@
+using extgen.Models.Config.Build;
 using extgen.Models.Config.Targets.Desktop;
 using extgen.Models.Config.Targets.Mobile;
 using System.Text.RegularExpressions;
@@ -36,14 +37,19 @@ namespace extgen.Emitters.Cargo
             if (string.IsNullOrWhiteSpace(extName))
                 extName = "MyExtension";
 
-            var fwName = $"{extName}_Rust";
+            var rust = plan.Config.Raw.Build.Rust ?? new RustBuildConfig();
+
+            var fwName = FirstNonEmpty(rust.IosFrameworkName, $"{extName}_Rust")!;
             var bundleSlug = Regex.Replace(extName.ToLowerInvariant(), @"[^a-z0-9]+", "");
             if (string.IsNullOrEmpty(bundleSlug))
                 bundleSlug = "extension";
 
+            var crateSeed = FirstNonEmpty(rust.CrateName, extName)!;
+            var crate = global::extgen.Emitters.Rust.RustEmitterSettings.SanitizeCrateName(crateSeed);
+
             return new()
             {
-                CrateName = global::extgen.Emitters.Rust.RustEmitterSettings.SanitizeCrateName(extName),
+                CrateName = crate,
                 ExtensionName = extName,
                 HasWindows = plan.Config.HasWindows,
                 HasMac = plan.Config.HasMac,
@@ -70,8 +76,14 @@ namespace extgen.Emitters.Cargo
                     ? t.Output
                     : "../tvOSSourceFromMac",
                 IosFrameworkName = fwName,
-                IosBundleId = $"com.extgen.{bundleSlug}.rust",
+                IosBundleId = FirstNonEmpty(rust.IosBundleId, $"com.extgen.{bundleSlug}.rust")!,
+                MacosMinVersion = FirstNonEmpty(rust.MacosMinVersion, "11.0")!,
+                IosMinVersion = FirstNonEmpty(rust.IosMinVersion, "13.0")!,
+                TvosMinVersion = FirstNonEmpty(rust.TvosMinVersion, "13.0")!,
             };
         }
+
+        private static string? FirstNonEmpty(string? preferred, string fallback) =>
+            !string.IsNullOrWhiteSpace(preferred) ? preferred.Trim() : fallback;
     }
 }
