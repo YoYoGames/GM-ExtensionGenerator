@@ -20,7 +20,6 @@
     <None Remove="Resources\Cpp\GMExtUtils.h" />
     <None Remove="Resources\Cpp\GMExtWire.cpp" />
     <None Remove="Resources\Cpp\GMExtWire.h" />
-    <None Remove="Resources\Java\GMExtWire.java" />
     <None Remove="Resources\Swift\GMExtUtils.swift" />
     <None Remove="Resources\Swift\GMExtUtilsBridge.h" />
     <None Remove="Resources\Swift\GMExtWire.swift" />
@@ -58,10 +57,6 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\Gml\ExtensionCore_api.gml">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Resources\Java\GMExtUtils.java" />
-    <EmbeddedResource Include="Resources\Java\GMExtWire.java">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\Swift\GMExtUtils.swift" />
