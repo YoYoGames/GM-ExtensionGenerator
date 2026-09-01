@@ -60,6 +60,7 @@ namespace extgen.Emitters.Gml
             EmitFunctions(ctx, c.Functions, enums, w);
 
             EmitHandlerRegistration(c, w);
+            EmitExports(c, w);
         }
 
         private static void EmitFunctions(GmlEmitterContext ctx, ImmutableArray<IrFunction> funcs, IIrTypeEnumResolver enums, GmlWriter w)
@@ -147,6 +148,46 @@ namespace extgen.Emitters.Gml
                 funcBody.Return("__available__");
             });
         }
+
+        /// <summary>
+        /// Emits the <c>#export</c> directive naming this file's public surface.
+        /// </summary>
+        /// <remarks>
+        /// A prefab's symbols are private to the prefab unless exported, so without this line a
+        /// project that installs the extension as a prefab cannot see a single generated name.
+        /// The compiler promotes exactly three kinds of symbol across that boundary - macros,
+        /// enums and script functions - and warns about anything else it is handed. Native
+        /// extension functions are therefore left out on purpose: they resolve through the merged
+        /// extension table rather than the export list, so naming one here would only produce an
+        /// "unable to find symbol" warning.
+        /// </remarks>
+        private static void EmitExports(IrCompilation c, GmlWriter w)
+        {
+            // Same order the declarations appear in above, so the line reads as a summary of the file.
+            IEnumerable<string> exported =
+            [
+                .. c.Constants.Select(cst => cst.Name),
+                .. c.Enums.Select(e => e.Name),
+                .. c.Structs.Where(s => !s.Hidden).Select(s => s.Name),
+                .. c.Functions.Where(fn => !fn.Hidden && HasWrapper(fn)).Select(fn => fn.Name),
+            ];
+
+            var names = exported.Distinct(StringComparer.Ordinal).ToList();
+            if (names.Count == 0)
+                return;
+
+            w.Section("Exports").Line();
+
+            // #export is parsed to the end of the line, so the list is never wrapped.
+            w.Line($"#export {string.Join(", ", names)}");
+        }
+
+        /// <summary>
+        /// Whether a function gets a GML wrapper. One that needs neither buffer is called straight
+        /// through as an extension function, so there is no script for the export list to name.
+        /// </summary>
+        private static bool HasWrapper(IrFunction fn)
+            => IrAnalysis.NeedsArgsBuffer(fn) || IrAnalysis.NeedsRetBuffer(fn);
 
         private static void EmitConstant(IrConstant cst, GmlWriter w)
             => w.Line($"#macro {cst.Name} {cst.Literal}");
@@ -276,10 +317,7 @@ namespace extgen.Emitters.Gml
 
         private static void EmitWrapper(GmlEmitterContext ctx, IIrTypeEnumResolver enums, IrFunction fn, GmlWriter w)
         {
-            bool needArgsBuf = IrAnalysis.NeedsArgsBuffer(fn);
-            bool needRetBuf = IrAnalysis.NeedsRetBuffer(fn);   
-
-            if (!needArgsBuf && !needRetBuf)
+            if (!HasWrapper(fn))
             {
                 w.Comment($"Skipping function {fn.Name} (no wrapper is required)").Line();
                 return;
