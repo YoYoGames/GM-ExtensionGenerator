@@ -56,7 +56,8 @@ namespace extgen.Mappers
             => new()
             {
                 OutputFile = cfg.Output,
-                Overwrite = cfg.Overwrite
+                Overwrite = cfg.Overwrite,
+                MacrosGroup = cfg.MacrosGroup
             };
 
         public static GmlEmitterSettings ToSettings(this WrapperConfig cfg)

@@ -36,12 +36,12 @@ namespace extgen.Emitters.Doc
             emit(doc);
         }
 
-        private static void EmitAll(DocWriter w, IrCompilation c)
+        private void EmitAll(DocWriter w, IrCompilation c)
         {
             EmitFunctions(w, c);
             EmitStructs(w, c.Structs);
             EmitEnums(w, c.Enums);
-            EmitConstants(w, c.Constants);
+            EmitConstants(w, c.Name, c.Constants);
         }
 
         private static void EmitFunctions(DocWriter w, IrCompilation c)
@@ -126,11 +126,16 @@ namespace extgen.Emitters.Doc
             }
         }
 
-        private static void EmitConstants(DocWriter w, ImmutableArray<IrConstant> constants)
+        private void EmitConstants(DocWriter w, string ext, ImmutableArray<IrConstant> constants)
         {
+            // No constants, no partial: the struct and enum emitters already emit nothing for an
+            // empty collection, and an empty named partial is what collides across extensions.
+            if (constants.IsDefaultOrEmpty)
+                return;
+
             w.JsDoc(spec =>
             {
-                spec.Tag("const_partial", "macros");
+                spec.Tag("const_partial", string.Format(settings.MacrosGroup, ext));
 
                 foreach (var c in constants)
                 {

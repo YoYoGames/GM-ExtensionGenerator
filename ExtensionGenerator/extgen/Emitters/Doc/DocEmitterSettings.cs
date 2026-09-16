@@ -6,5 +6,7 @@ namespace extgen.Emitters.Doc
         public string OutputFile { get; set; } = "./extget_docs.js";
 
         public bool Overwrite { get; set; } = true;
+
+        public string MacrosGroup { get; set; } = "macros";
     }
 }

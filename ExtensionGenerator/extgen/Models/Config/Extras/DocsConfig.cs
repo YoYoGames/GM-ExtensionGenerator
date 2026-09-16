@@ -15,5 +15,12 @@ namespace extgen.Models.Config.Extras
         /// <summary>If true, overwrite existing files. If false, be additive.</summary>
         [JsonPropertyName("overwrite")]
         public bool Overwrite { get; set; } = true;
+
+        /// <summary>
+        /// Name of the constants partial group. "{0}" expands to the extension name, as it does in
+        /// outputFile. Two extensions whose docs share one folder must not share this name.
+        /// </summary>
+        [JsonPropertyName("macrosGroup")]
+        public string MacrosGroup { get; set; } = "macros";
     }
 }
