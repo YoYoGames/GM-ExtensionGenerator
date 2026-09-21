@@ -6,8 +6,8 @@ cmake_minimum_required(VERSION 3.18)
 # toggles for Apple Framework/XCFramework vs .dylib - Android AAR (Prefab) or
 # raw per-ABI .so; auto-extract with stamp - Publishes: * EXT_TP_RUNTIME_DLLS
 # (list of runtime binaries the parent may copy) * EXT_TP_ANDROID_AAR   (aar
-# path if consumed; parent can add Gradle dep) - Comment/uncomment “OPTIONAL
-# SECTIONS” to fit your SDK
+# path if consumed; parent can add Gradle dep) - Comment/uncomment "OPTIONAL
+# SECTIONS" to fit your SDK
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -76,7 +76,7 @@ if(WIN32)
   option(EXT_TP_WINDOWS_USE_SHARED "Link prebuilt .so on Windows" OFF)
 
   if(EXT_TP_WINDOWS_USE_SHARED)
-    # Layout knobs; adjust to your SDK’s folder layout.
+    # Layout knobs; adjust to your SDK's folder layout.
     set(SDK_WIN_LIB_DEBUG
         "${SDK_ROOT}/lib/debug/${SDK_BASENAME}.lib"
         CACHE FILEPATH "Win import lib (Debug)")
@@ -254,7 +254,7 @@ elseif(ANDROID)
   option(EXT_TP_ANDROID_USE_RAW_SO
          "Consume raw per-ABI .so under SDK_ROOT/lib/android/<abi>" OFF)
 
-  # ----- A) AAR path(s). We’ll pick Debug if exists; else Release.
+  # ----- A) AAR path(s). We'll pick Debug if exists; else Release.
   set(SDK_ANDROID_AAR_DEBUG
       "${SDK_ROOT}/lib/debug/${SDK_BASENAME}.aar"
       CACHE FILEPATH "Android AAR (Debug)")
@@ -332,7 +332,7 @@ elseif(ANDROID)
     # _ext_tp_append_runtime("${_AAR_JNI_SO}")
 
   elseif(EXT_TP_ANDROID_USE_RAW_SO)
-    # Directly import lib…so from per-ABI location
+    # Directly import lib...so from per-ABI location
     if(NOT EXISTS "${SDK_ANDROID_SO_PER_ABI}")
       message(
         FATAL_ERROR

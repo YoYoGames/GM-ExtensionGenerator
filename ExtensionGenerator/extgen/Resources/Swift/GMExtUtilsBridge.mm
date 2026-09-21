@@ -1,4 +1,4 @@
-﻿#import "GMExtUtilsBridge.h"
+#import "GMExtUtilsBridge.h"
 
 // Include the C++ header that declares gm::ExtUtils.
 // Adjust this include path if needed for your project layout.
