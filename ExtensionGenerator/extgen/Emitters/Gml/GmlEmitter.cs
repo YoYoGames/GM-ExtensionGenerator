@@ -397,6 +397,12 @@ namespace extgen.Emitters.Gml
                 ReadValue(enums, body, "__result__", fn.ReturnType, InternalRetBuffer);
                 body.Line("return __result__;");
             }
+            else if (fn.ReturnType is IrType.Builtin { Kind: BuiltinKind.Bool })
+            {
+                // A bool return rides the native double; bool() makes it a GML bool so the
+                // value passes the is_bool gate of any wrapper it is fed back into.
+                body.Line("return bool(__return_value__);");
+            }
             else
             {
                 body.Line("return __return_value__;");
@@ -572,7 +578,12 @@ namespace extgen.Emitters.Gml
                     w.Assign(id, expr => expr.Call(ExtCoreUnmarshalValue, buf, InternalDecodersArray));
                     return;
 
+                // buffer_read(buffer_bool) answers an int32, not a GML bool; bool() makes
+                // struct fields, returns and array elements pass the is_bool gate.
                 case BuiltinKind.Bool:
+                    w.Assign(id, expr => expr.Call("bool", $"buffer_read({buf}, buffer_bool)"));
+                    return;
+
                 case BuiltinKind.Int8:
                 case BuiltinKind.UInt8:
                 case BuiltinKind.Int16:
