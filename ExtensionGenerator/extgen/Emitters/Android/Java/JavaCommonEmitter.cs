@@ -93,7 +93,10 @@ namespace extgen.Emitters.Android.Java
                         from.Switch("v", build => {
                             foreach (var m in e.Members.Where(m => m.DefaultLiteral is not null))
                                 build.Case(m.DefaultLiteral!, caseBody => caseBody.Return($"{e.Name}.{m.Name}"), false);
-                            build.Default(defaultBody => defaultBody.Line($"throw new IllegalArgumentException(\"Unknown {e.Name} value: \" + v);"), false);
+                            // An unknown value is null, not an exception: the bridge calls this
+                            // with whatever int GML passed and catches nothing, so a throw would
+                            // reach the runner. Hand code checks null and reports InvalidArgument.
+                            build.Default(defaultBody => defaultBody.Return("null"), false);
                         });
                     },
                     returnType: e.Name,
