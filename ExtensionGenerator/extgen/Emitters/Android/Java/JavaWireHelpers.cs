@@ -254,7 +254,12 @@ namespace extgen.Emitters.Android.Java
                     var tmp = $"__opt_{accessor}";
 
                     DecodeLines(then, inner, tmp, true, bufferVar, owned);
-                    then.Line($"{accessor} = java.util.Optional.of({tmp});");
+
+                    // An enum's from() is null for an unknown value, and
+                    // Optional.of(null) would throw past the bridge: an
+                    // unknown value reads as absent instead.
+                    var wrap = inner is IrType.Named { Kind: NamedKind.Enum } ? "ofNullable" : "of";
+                    then.Line($"{accessor} = java.util.Optional.{wrap}({tmp});");
                 });
 
                 return;
