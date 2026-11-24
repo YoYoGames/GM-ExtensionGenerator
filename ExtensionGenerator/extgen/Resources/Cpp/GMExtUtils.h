@@ -332,10 +332,16 @@ namespace gm {
 
         static void Init(const gm::details::GMRTRunnerInterface& runner)
         {
-            s_getExtensionOption = runner.ExtOptGetString;
-            s_allowPath = runner.AllowPath;
+            // Take only the fields this table sets: on Apple mobile the Objective-C +load
+            // initialiser passes a full table first, and a later, smaller one (the injected
+            // Init_<Ext>, or an older GMRT's) must not clear what it set.
+            if (runner.ExtOptGetString)
+                s_getExtensionOption = runner.ExtOptGetString;
+            if (runner.AllowPath)
+                s_allowPath = runner.AllowPath;
 #if defined(TARGET_APPLE_MOBILE)
-            s_getExtensionVersion = runner.ExtGetVersion;
+            if (runner.ExtGetVersion)
+                s_getExtensionVersion = runner.ExtGetVersion;
 #endif
 
             // Run the single registered hook once.
