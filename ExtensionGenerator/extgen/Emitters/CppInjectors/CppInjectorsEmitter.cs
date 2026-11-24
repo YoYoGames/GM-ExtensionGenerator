@@ -43,15 +43,14 @@ namespace extgen.Emitters.CppInjectors
         {
             var name = ctx.Compilation.Name;
 
-            // Exported by GMRT (libs/framework/dynamiclibs/RunnerInterface). Declared here too so the
-            // injection doesn't depend on the stub file declaring it.
-            w.Line("extern \"C\" void ExtensionFiles_AllowPath(const char* path, bool isDirectory);");
-            w.Line();
-
+            // ExtensionFiles_AllowPath is exported by GMRT (libs/framework/dynamiclibs/RunnerInterface),
+            // and GMRT's stub prelude declares it and defines GMRT_HAS_EXTENSION_FILES_ALLOW_PATH. On a
+            // GMRT without it the injection passes null, so the extension still links and the
+            // whitelist calls do nothing.
             w.Struct("GMRTRunnerInterface", structBody => {
-                // Same field order as gm::details::GMRTRunnerInterface in GMExtUtils.h (desktop layout).
+                // Same field order as gm::details::GMRTRunnerInterface in GMExtUtils.h.
                 structBody.Line("const char* (*ExtOptGetString)(const char* _ext, const char* _opt);");
-                structBody.Line("void (*AllowPath)(const char* _path, bool _isDirectory);");
+                structBody.Line("void (*AllowPath)(const char* _path, bool _isDirectory, bool _allowWrite);");
             });
 
             var filename = settings.ExtensionFileName ?? $"{name}.ext";
@@ -61,7 +60,11 @@ namespace extgen.Emitters.CppInjectors
                 fncBody.Lines($$"""
                     GMRTRunnerInterface ri;
                     ri.ExtOptGetString = &ExtensionOptions_GetValue;
+                    #if defined(GMRT_HAS_EXTENSION_FILES_ALLOW_PATH)
                     ri.AllowPath = &ExtensionFiles_AllowPath;
+                    #else
+                    ri.AllowPath = nullptr;
+                    #endif
 
                     """);
 

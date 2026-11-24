@@ -9,6 +9,8 @@
 #include <atomic>
 #include <cstring>
 #include <mutex>
+#include <string>
+#include <unordered_map>
 
 #if defined(OS_ANDROID)
 #include <android/log.h>
@@ -109,19 +111,44 @@ namespace gm {
         return oss.str();
     }
 
-    void ExtUtils::AllowPath(const char* path, bool isDirectory)
+    void ExtUtils::AllowPath(const char* path, bool isDirectory, bool allowWrite)
     {
         if (path == nullptr || *path == '\0')
             return;
 
+        // Glyph lookups typically run every frame: remember what was allowed, and with
+        // which access, so a repeat costs one lookup instead of a scan of the runner's lists.
+        // A path is only remembered once a runner function has taken it.
+        static std::mutex s_mutex;
+        static std::unordered_map<std::string, bool> s_allowed; // key: 'd'/'f' + path; value: write allowed
+        const std::string key = std::string(isDirectory ? "d" : "f") + path;
+        {
+            std::lock_guard<std::mutex> lock(s_mutex);
+            auto it = s_allowed.find(key);
+            if (it != s_allowed.end() && (it->second || !allowWrite))
+                return;
+        }
+        auto remember = [&] {
+            std::lock_guard<std::mutex> lock(s_mutex);
+            s_allowed[key] = allowWrite;
+        };
+
         if (s_allowPath) {
             // GMRT adds the separator variants itself.
-            s_allowPath(path, isDirectory);
+            s_allowPath(path, isDirectory, allowWrite);
+            remember();
             return;
         }
 
         WhitelistFn bundleFn = isDirectory ? s_addDirectoryToBundleWhitelist : s_addFileToBundleWhitelist;
         WhitelistFn saveFn = isDirectory ? s_addDirectoryToSaveWhitelist : s_addFileToSaveWhitelist;
+#if !defined(__linux__) || defined(__ANDROID__)
+        // The classic runner's bundle lookup checks the load (bundle) list on Windows and
+        // macOS, so reading needs only that; its save list also allows writing. Linux reads
+        // check only the save list, so there a read needs it too.
+        if (!allowWrite)
+            saveFn = nullptr;
+#endif
         if (!bundleFn && !saveFn) {
             static std::atomic<bool> s_warned{false};
             if (!s_warned.exchange(true))
@@ -138,6 +165,7 @@ namespace gm {
 
         if (!isDirectory) {
             add(path);
+            remember();
             return;
         }
 
@@ -153,15 +181,16 @@ namespace gm {
         add(dir + '\\');
 #endif
         add(dir + '/');
+        remember();
     }
 
 } // namespace gm
 
 namespace gm::files {
 
-    void AllowFile(const char* path) { gm::ExtUtils::AllowPath(path, false); }
+    void AllowFile(const char* path, Access access) { gm::ExtUtils::AllowPath(path, false, access == Access::ReadWrite); }
 
-    void AllowDirectory(const char* path) { gm::ExtUtils::AllowPath(path, true); }
+    void AllowDirectory(const char* path, Access access) { gm::ExtUtils::AllowPath(path, true, access == Access::ReadWrite); }
 
 } // namespace gm::files
 
@@ -197,8 +226,8 @@ GMEXPORT void GMExtensionInitialise(const struct gm::details::GMRTRunnerInterfac
         return;
     }
 
-    // Older runners pass a table without the newer fields at the end (AllowPath), so
-    // accept anything up to them and leave the missing fields null.
+    // A GMRT without ExtensionFiles_AllowPath may pass just ExtOptGetString, so accept
+    // anything that holds it and leave the missing fields null.
     if (_functions_size < offsetof(gm::details::GMRTRunnerInterface, AllowPath)) {
         LOG_ERROR("GMExtensionInitialise called with mismatched incompatible table");
         return;
