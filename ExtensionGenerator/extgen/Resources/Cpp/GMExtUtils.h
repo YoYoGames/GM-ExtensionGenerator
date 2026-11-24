@@ -154,10 +154,10 @@ namespace gm::details {
         void (*unused_66)(); // DsListAddInt64
 
         // whitelisting
-        void (*unused_67)(); // AddDirectoryToBundleWhitelist
-        void (*unused_68)(); // AddFileToBundleWhitelist
-        void (*unused_69)(); // AddDirectoryToSaveWhitelist
-        void (*unused_70)(); // AddFileToSaveWhitelist
+        void (*AddDirectoryToBundleWhitelist)(const char* _pszFilename);
+        void (*AddFileToBundleWhitelist)(const char* _pszFilename);
+        void (*AddDirectoryToSaveWhitelist)(const char* _pszFilename);
+        void (*AddFileToSaveWhitelist)(const char* _pszFilename);
 
         // utilities
         void (*unused_71)(); // KIND_NAME_RValue
@@ -213,6 +213,10 @@ namespace gm::details {
         // Only the Apple-mobile objc initializer currently wires this up.
         const char* (*ExtGetVersion)(const char* _ext);
 #endif
+        // Adds a path to the runner's file whitelists (read and save), so GML file
+        // functions accept it. Added after the fields above: GMExtensionInitialise
+        // reads it only when the table passed in is large enough to hold it.
+        void (*AllowPath)(const char* _path, bool _isDirectory);
     };
 
 }
@@ -234,6 +238,17 @@ namespace gm::log {
 #define LOG_INFO(fmt, ...) ::gm::log::Write(::gm::log::Level::Info, "INFO", __func__, fmt, ##__VA_ARGS__)
 #define LOG_WARNING(fmt, ...) ::gm::log::Write(::gm::log::Level::Warning, "WARNING", __func__, fmt, ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...) ::gm::log::Write(::gm::log::Level::Error, "ERROR", __func__, fmt, ##__VA_ARGS__)
+
+namespace gm::files {
+
+    // Let the game's GML file functions (file_*, buffer_load, sprite_add, ...) use a
+    // file or directory outside the game's sandbox, such as a path an SDK returns.
+    // The path is added to the runner's load and save whitelists. Null or empty
+    // paths are ignored. Call after the runner has initialised the extension.
+    GM_CORE_LOCAL void AllowFile(const char* path);
+    GM_CORE_LOCAL void AllowDirectory(const char* path);
+
+} // namespace gm::files
 
 namespace gm {
 
@@ -294,6 +309,10 @@ namespace gm {
         static void Init(const gm::details::GMS2RunnerInterface& runner)
         {
             s_getExtensionOption = runner.ExtOptGetString;
+            s_addDirectoryToBundleWhitelist = runner.AddDirectoryToBundleWhitelist;
+            s_addFileToBundleWhitelist = runner.AddFileToBundleWhitelist;
+            s_addDirectoryToSaveWhitelist = runner.AddDirectoryToSaveWhitelist;
+            s_addFileToSaveWhitelist = runner.AddFileToSaveWhitelist;
 
             // Run the single registered hook once.
             gm::RunInitHookOnce();
@@ -305,6 +324,7 @@ namespace gm {
 #if defined(TARGET_APPLE_MOBILE)
             s_getExtensionVersion = runner.ExtGetVersion;
 #endif
+            s_allowPath = runner.AllowPath;
 
             // Run the single registered hook once.
             gm::RunInitHookOnce();
@@ -313,7 +333,21 @@ namespace gm {
         // Utility: returns hex string (optionally spaced: "aa bb cc")
         static GM_CORE_LOCAL std::string BufferToHex(const void* buffer, std::size_t length, bool spaced = true);
 
+        // Implementation of gm::files::AllowFile / AllowDirectory.
+        static GM_CORE_LOCAL void AllowPath(const char* path, bool isDirectory);
+
     private:
+        using WhitelistFn = void (*)(const char* path);
+        using AllowPathFn = void (*)(const char* path, bool isDirectory);
+
+        // Classic runner (YYRunnerInterface) whitelist functions.
+        inline static WhitelistFn s_addDirectoryToBundleWhitelist = nullptr;
+        inline static WhitelistFn s_addFileToBundleWhitelist = nullptr;
+        inline static WhitelistFn s_addDirectoryToSaveWhitelist = nullptr;
+        inline static WhitelistFn s_addFileToSaveWhitelist = nullptr;
+        // GMRT whitelist function.
+        inline static AllowPathFn s_allowPath = nullptr;
+
         inline static GetExtensionOptionFn s_getExtensionOption = nullptr;
 #if defined(TARGET_APPLE_MOBILE)
         inline static GetExtensionVersionFn s_getExtensionVersion = nullptr;

@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 #include <atomic>
+#include <cstring>
 #include <mutex>
 
 #if defined(OS_ANDROID)
@@ -107,7 +109,61 @@ namespace gm {
         return oss.str();
     }
 
+    void ExtUtils::AllowPath(const char* path, bool isDirectory)
+    {
+        if (path == nullptr || *path == '\0')
+            return;
+
+        if (s_allowPath) {
+            // GMRT adds the separator variants itself.
+            s_allowPath(path, isDirectory);
+            return;
+        }
+
+        WhitelistFn bundleFn = isDirectory ? s_addDirectoryToBundleWhitelist : s_addFileToBundleWhitelist;
+        WhitelistFn saveFn = isDirectory ? s_addDirectoryToSaveWhitelist : s_addFileToSaveWhitelist;
+        if (!bundleFn && !saveFn) {
+            static std::atomic<bool> s_warned{false};
+            if (!s_warned.exchange(true))
+                LOG_WARNING("the runner has not initialised the extension with a whitelist function; '%s' was not added", path);
+            return;
+        }
+
+        auto add = [&](const std::string& p) {
+            if (bundleFn)
+                bundleFn(p.c_str());
+            if (saveFn)
+                saveFn(p.c_str());
+        };
+
+        if (!isDirectory) {
+            add(path);
+            return;
+        }
+
+        // The runner matches a directory entry as a plain prefix, so it needs a trailing
+        // separator, or "C:/mods" would also allow "C:/mods2". Games often append '/' to a
+        // backslash path on Windows, so add both separators there.
+        std::string dir(path);
+        while (!dir.empty() && (dir.back() == '/' || dir.back() == '\\'))
+            dir.pop_back();
+        if (dir.empty())
+            return;
+#if defined(OS_WINDOWS) || defined(_WIN32)
+        add(dir + '\\');
+#endif
+        add(dir + '/');
+    }
+
 } // namespace gm
+
+namespace gm::files {
+
+    void AllowFile(const char* path) { gm::ExtUtils::AllowPath(path, false); }
+
+    void AllowDirectory(const char* path) { gm::ExtUtils::AllowPath(path, true); }
+
+} // namespace gm::files
 
 // -------------------------------
 // GameMaker entry point
@@ -141,11 +197,14 @@ GMEXPORT void GMExtensionInitialise(const struct gm::details::GMRTRunnerInterfac
         return;
     }
 
-    if (_functions_size < sizeof(gm::details::GMRTRunnerInterface)) {
+    // Older runners pass a table without the newer fields at the end (AllowPath), so
+    // accept anything up to them and leave the missing fields null.
+    if (_functions_size < offsetof(gm::details::GMRTRunnerInterface, AllowPath)) {
         LOG_ERROR("GMExtensionInitialise called with mismatched incompatible table");
         return;
     }
 
-    // Wire your utilities (TODO body inside Init per your request)
-    gm::ExtUtils::Init(*_pFunctions);
+    gm::details::GMRTRunnerInterface runner{};
+    std::memcpy(&runner, _pFunctions, std::min(_functions_size, sizeof(runner)));
+    gm::ExtUtils::Init(runner);
 }

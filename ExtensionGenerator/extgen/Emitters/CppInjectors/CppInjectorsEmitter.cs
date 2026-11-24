@@ -43,8 +43,15 @@ namespace extgen.Emitters.CppInjectors
         {
             var name = ctx.Compilation.Name;
 
+            // Exported by GMRT (libs/framework/dynamiclibs/RunnerInterface). Declared here too so the
+            // injection doesn't depend on the stub file declaring it.
+            w.Line("extern \"C\" void ExtensionFiles_AllowPath(const char* path, bool isDirectory);");
+            w.Line();
+
             w.Struct("GMRTRunnerInterface", structBody => {
+                // Same field order as gm::details::GMRTRunnerInterface in GMExtUtils.h (desktop layout).
                 structBody.Line("const char* (*ExtOptGetString)(const char* _ext, const char* _opt);");
+                structBody.Line("void (*AllowPath)(const char* _path, bool _isDirectory);");
             });
 
             var filename = settings.ExtensionFileName ?? $"{name}.ext";
@@ -54,6 +61,7 @@ namespace extgen.Emitters.CppInjectors
                 fncBody.Lines($$"""
                     GMRTRunnerInterface ri;
                     ri.ExtOptGetString = &ExtensionOptions_GetValue;
+                    ri.AllowPath = &ExtensionFiles_AllowPath;
 
                     """);
 
