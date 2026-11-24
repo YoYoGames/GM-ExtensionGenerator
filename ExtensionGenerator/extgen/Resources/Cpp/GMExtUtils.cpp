@@ -181,6 +181,14 @@ namespace gm {
         add(dir + '\\');
 #endif
         add(dir + '/');
+        // The prefix entries don't match the directory's own path, which SDKs return without a
+        // separator (directory_exists on it, for example): allow that exactly too.
+        WhitelistFn exactBundleFn = s_addFileToBundleWhitelist;
+        WhitelistFn exactSaveFn = saveFn ? s_addFileToSaveWhitelist : nullptr;
+        if (exactBundleFn)
+            exactBundleFn(dir.c_str());
+        if (exactSaveFn)
+            exactSaveFn(dir.c_str());
         remember();
     }
 
