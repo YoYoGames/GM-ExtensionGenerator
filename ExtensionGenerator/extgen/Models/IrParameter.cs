@@ -5,7 +5,13 @@ namespace extgen.Models
     /// <summary>
     /// Represents a function parameter in the intermediate representation.
     /// </summary>
-    public sealed record IrParameter(string Name, IrType Type, bool IsOptional)
+    /// <param name="GmlDefault">
+    /// For an optional parameter: a GML expression the generated wrapper assigns when the argument is undefined,
+    /// before it's encoded (the <c>gml_default</c> attribute). It can use the wrapper's parameter names, which are the
+    /// spec names with a leading underscore. The spec's backtick value can't contain spaces. Null when the native
+    /// side's own default applies.
+    /// </param>
+    public sealed record IrParameter(string Name, IrType Type, bool IsOptional, string? GmlDefault = null)
     {
         /// <summary>
         /// Creates a "self" parameter with the specified type.

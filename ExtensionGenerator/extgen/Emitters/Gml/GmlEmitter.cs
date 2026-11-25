@@ -361,6 +361,13 @@ namespace extgen.Emitters.Gml
             if (usesDynamic)
                 body.Assign(InternalDecodersArray, $"__{ctx.ExtName}_get_decoders()", VariableScope.Local).Line();
 
+            // gml_default: fill in an undefined optional argument before any argument is encoded, so a default can use
+            // the other arguments as the caller passed them
+            foreach (var p in fn.Parameters.Where(p => p.GmlDefault is not null))
+                body.Line($"if (is_undefined({p.Name})) {p.Name} = {p.GmlDefault};");
+            if (fn.Parameters.Any(p => p.GmlDefault is not null))
+                body.Line();
+
             if (needArgsBuf)
             {
                 body.Assign(InternalArgBuffer, expr => expr.Call(ExtCoreArgsBuffer, []), VariableScope.Local).Line();
