@@ -210,10 +210,20 @@ namespace extgen.Parsing.Gmidl
             if (param.Data.Optional)
                 param.Attributes.Enable("optional");
 
+            var type = ParseType(param.Data.Type, param.Attributes);
+
+            // gml_default: a GML expression for an optional argument the caller leaves undefined, computed in the
+            // wrapper (e.g. from another argument), e.g. [gml_default=`buffer_tell(_data)`]. The GMIDL lexer doesn't allow
+            // spaces in a backtick value
+            var gmlDefault = param.Attributes.GetAsString("gml_default");
+            if (gmlDefault is not null && type is not IrType.Nullable && !param.Data.Optional)
+                throw new InvalidOperationException($"gml_default on '{param.Name}': only an optional parameter can have one");
+
             return new IrParameter(
                 param.Name,
-                ParseType(param.Data.Type, param.Attributes),
-                param.Data.Optional);
+                type,
+                param.Data.Optional,
+                string.IsNullOrWhiteSpace(gmlDefault) ? null : gmlDefault.Trim());
         }
 
         private IrType ParseType(GMIDLType gmidlType, GMIDLAttributes attributes)
